@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <a href="{{ url_for('tools.tools_page') }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mb-4">
+      <i class="fas fa-arrow-left"></i> Back to Tools
+    </a>
+    <h2 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+      <i class="fas fa-qrcode text-purple-600"></i> QR Code Generator
+    </h2>
+    <p class="text-gray-500 dark:text-gray-400 mt-2">Generate QR codes from text, URLs, or any data.</p>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Content</label>
+          <textarea id="qr-text" rows="4" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter text or URL..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Foreground</label>
+            <input type="color" id="fill-color" value="#000000" class="w-full h-10 rounded-xl cursor-pointer border-none p-0 bg-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Background</label>
+            <input type="color" id="back-color" value="#FFFFFF" class="w-full h-10 rounded-xl cursor-pointer border-none p-0 bg-transparent">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Size</label>
+          <select id="box-size" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+            <option value="5">Small</option>
+            <option value="10" selected>Medium</option>
+            <option value="15">Large</option>
+            <option value="20">Extra Large</option>
+          </select>
+        </div>
+        <button id="generate-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl shadow transition font-medium">
+          <i class="fas fa-qrcode mr-2"></i> Generate QR Code
+        </button>
+      </div>
+      <div class="flex flex-col items-center justify-center">
+        <div id="spinner" class="hidden text-center"><i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i></div>
+        <div id="result" class="hidden text-center">
+          <img id="qr-preview" class="rounded-xl border border-gray-200 dark:border-gray-600 max-w-full">
+          <div class="mt-4 flex gap-3 justify-center">
+            <button id="download-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl shadow transition font-medium flex items-center gap-2">
+              <i class="fas fa-download"></i> Download PNG
+            </button>
+          </div>
+        </div>
+        <div id="empty-state" class="text-center text-gray-400 dark:text-gray-500">
+          <i class="fas fa-qrcode text-6xl mb-3 opacity-30"></i>
+          <p>Enter content and generate</p>
+        </div>
+        <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm w-full"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('generate-btn').addEventListener('click', async () => {
+    const text = document.getElementById('qr-text').value.trim();
+    if (!text) { showQrError('Please enter some content'); return; }
+    document.getElementById('spinner').classList.remove('hidden');
+    document.getElementById('result').classList.add('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+    document.getElementById('error-msg').classList.add('hidden');
+
+    try {
+      const resp = await fetch('{{ url_for("tools.qr_generator") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          fill_color: document.getElementById('fill-color').value,
+          back_color: document.getElementById('back-color').value,
+          box_size: parseInt(document.getElementById('box-size').value)
+        })
+      });
+      const data = await resp.json();
+      document.getElementById('spinner').classList.add('hidden');
+      if (data.success) {
+        document.getElementById('qr-preview').src = data.image;
+        document.getElementById('result').classList.remove('hidden');
+      } else {
+        showQrError(data.error || 'Generation failed');
+      }
+    } catch (err) {
+      document.getElementById('spinner').classList.add('hidden');
+      showQrError('Network error: ' + err.message);
+    }
+  });
+
+  document.getElementById('download-btn').addEventListener('click', () => {
+    const img = document.getElementById('qr-preview');
+    if (!img.src) return;
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.download = 'qrcode.png';
+    a.click();
+  });
+
+  function showQrError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+</script>
+{% endblock %}

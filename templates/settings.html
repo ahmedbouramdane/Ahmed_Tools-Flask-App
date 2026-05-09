@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+  <h2 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+    <i class="fas fa-sliders-h text-indigo-600"></i> Settings
+  </h2>
+
+  <form method="POST" action="{{ url_for('settings.save_settings') }}">
+
+    <!-- ==================== APPEARANCE ==================== -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+        <i class="fas fa-paint-brush text-indigo-600"></i> Appearance
+      </h3>
+
+      <!-- Theme Selection -->
+      <div class="mb-6">
+        <label class="block font-medium text-gray-800 dark:text-white mb-2">Theme</label>
+        <select name="theme" id="theme-select"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
+                       bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+                       focus:ring-2 focus:ring-indigo-500 outline-none">
+          <option value="light" {{ 'selected' if current_user.theme == 'light' else '' }}>Light</option>
+          <option value="dark" {{ 'selected' if current_user.theme == 'dark' else '' }}>Dark</option>
+          <option value="auto" {{ 'selected' if current_user.theme == 'auto' else '' }}>Auto (System)</option>
+        </select>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose your preferred theme</p>
+      </div>
+
+      <!-- Font Family -->
+      <div>
+        <label class="block font-medium text-gray-800 dark:text-white mb-2">Font Family</label>
+        <select name="font_family" id="font-select"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
+                       bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+                       focus:ring-2 focus:ring-indigo-500 outline-none">
+          <option value="Inter" {{ 'selected' if current_user.font_family == 'Inter' else '' }}>Inter (Sans‑serif)</option>
+          <option value="Cairo" {{ 'selected' if current_user.font_family == 'Cairo' else '' }}>Cairo (Arabic‑friendly)</option>
+          <option value="JetBrains Mono" {{ 'selected' if current_user.font_family == 'JetBrains Mono' else '' }}>JetBrains Mono (Monospace)</option>
+        </select>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Instantly applied to all pages</p>
+      </div>
+    </div>
+
+    <!-- ==================== SIDEBAR ==================== -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+        <i class="fas fa-columns text-indigo-600"></i> Sidebar
+      </h3>
+      <div>
+        <label class="block font-medium text-gray-800 dark:text-white mb-2">Default Sidebar Width</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="sidebar-width-slider" min="180" max="400" value="280"
+                 class="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+          <span id="sidebar-width-display" class="text-sm font-medium text-gray-600 dark:text-gray-400 w-12">280px</span>
+        </div>
+        <button id="apply-sidebar-width" class="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition">Apply Width</button>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Current width is saved automatically when you resize the sidebar by dragging.</p>
+      </div>
+    </div>
+
+    <!-- ==================== NOTIFICATIONS ==================== -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+        <i class="fas fa-bell text-indigo-600"></i> Notifications
+      </h3>
+
+      <div class="space-y-4">
+        <!-- Toggle: Popup notifications -->
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="font-medium text-gray-800 dark:text-white">Popup Alerts</label>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Show browser notifications for new messages</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="notifications_enabled" class="sr-only peer" {{ 'checked' if current_user.notifications_enabled else '' }}>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+          </label>
+        </div>
+
+        <!-- Toggle: Unread badge -->
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="font-medium text-gray-800 dark:text-white">Unread Message Badge</label>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Show red badge with unread count in sidebar</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="unread_badge_enabled" class="sr-only peer" {{ 'checked' if current_user.unread_badge_enabled else '' }}>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+          </label>
+        </div>
+
+        <!-- Toggle: Notification sound -->
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="font-medium text-gray-800 dark:text-white">Message Sound</label>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Play sound when receiving new messages</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="notification_sound_enabled" class="sr-only peer" {{ 'checked' if current_user.notification_sound_enabled else '' }}>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <label class="block font-medium text-gray-800 dark:text-white mb-2">
+          Notification Sound URL
+        </label>
+        <input type="url" name="notification_sound" value="{{ current_user.notification_sound_url }}"
+               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
+                      bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+                      focus:ring-2 focus:ring-indigo-500 outline-none"
+               placeholder="https://example.com/sound.mp3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for default</p>
+      </div>
+
+      <div class="mt-6">
+        <label class="block font-medium text-gray-800 dark:text-white mb-2">
+          Reminder before task due (minutes)
+        </label>
+        <input type="number" name="reminder_minutes" value="{{ current_user.default_reminder_minutes }}" min="1"
+               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
+                      bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+                      focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+    </div>
+
+    <button type="submit"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-xl shadow transition">
+      <i class="fas fa-save mr-2"></i> Save All Settings
+    </button>
+  </form>
+</div>
+
+<script>
+  const themeSelect = document.getElementById('theme-select');
+
+  function updateTheme(theme) {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else if (theme === 'light') {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('theme', 'auto');
+    }
+  }
+
+  themeSelect?.addEventListener('change', function() {
+    updateTheme(this.value);
+  });
+
+  // Font preview
+  const fontSelect = document.getElementById('font-select');
+  fontSelect?.addEventListener('change', function() {
+    const font = this.value;
+    document.documentElement.style.fontFamily = font === 'Cairo' ? 'Cairo, sans-serif' :
+                                                font === 'JetBrains Mono' ? '"JetBrains Mono", monospace' :
+                                                'Inter, sans-serif';
+    localStorage.setItem('font_family', font);
+  });
+
+  // Sidebar width slider
+  const widthSlider = document.getElementById('sidebar-width-slider');
+  const widthDisplay = document.getElementById('sidebar-width-display');
+  const applyWidthBtn = document.getElementById('apply-sidebar-width');
+  const savedWidth = localStorage.getItem('sidebarWidth') || '280px';
+  if (widthSlider) {
+    widthSlider.value = parseInt(savedWidth);
+    widthDisplay.textContent = parseInt(savedWidth) + 'px';
+    widthSlider.addEventListener('input', function() {
+      widthDisplay.textContent = this.value + 'px';
+    });
+  }
+  applyWidthBtn?.addEventListener('click', function() {
+    const w = widthSlider.value + 'px';
+    localStorage.setItem('sidebarWidth', w);
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    if (sidebar) sidebar.style.width = w;
+    if (mainContent && !sidebar?.classList.contains('collapsed') && window.innerWidth >= 1024) {
+      mainContent.style.marginLeft = w;
+    }
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Sidebar width updated', showConfirmButton: false, timer: 2000 });
+  });
+</script>
+{% endblock %}

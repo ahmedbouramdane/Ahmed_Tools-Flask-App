@@ -1,0 +1,1070 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="w-full max-w-7xl mx-auto lg:px-4 h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] flex gap-0 lg:gap-4 relative overflow-hidden" id="chat-container">
+  <div id="chat-sidebar-backdrop" class="fixed inset-0 bg-black/60 z-30 hidden transition-opacity duration-300"></div>
+
+  <!-- Chat sidebar (history list) -->
+  <div id="chat-sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-80 max-w-[85vw] flex-shrink-0 bg-white dark:bg-gray-800 shadow-2xl lg:shadow-sm border-r lg:border border-gray-100 dark:border-gray-700 p-4 flex flex-col overflow-hidden transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+    <div class="flex items-center justify-between mb-4 sidebar-header-content flex-shrink-0 relative">
+      <h3 class="text-lg font-bold text-gray-800 dark:text-white sidebar-header-title"><i class="fas fa-comments text-indigo-600 mr-2"></i> Chats</h3>
+      <div class="flex items-center gap-2 sidebar-header-actions">
+        <form method="POST" action="{{ url_for('chat.new_chat') }}">
+          <button type="submit" class="text-green-600 hover:bg-green-50 dark:hover:bg-gray-700 p-2 rounded-lg transition" title="New chat">
+            <i class="fas fa-plus"></i>
+          </button>
+        </form>
+      </div>
+      <div id="chat-sidebar-resize" class="absolute right-0 top-0 w-1.5 h-full cursor-col-resize hover:bg-indigo-500/30 active:bg-indigo-500/50 transition-colors rounded-full" style="right: -3px;"></div>
+    </div>
+    <div class="flex-1 overflow-y-auto space-y-2 overflow-x-hidden" id="chat-history-list">
+      {% for chat in chats %}
+      <div class="flex flex-col gap-1 bg-gray-50/50 dark:bg-gray-800/50 p-2 rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition group">
+        <div class="flex items-center gap-2">
+          <a href="{{ url_for('chat.chat_view', chat_id=chat.id) }}"
+             class="flex-1 px-3 py-2 rounded-lg text-sm font-medium truncate transition flex items-center gap-2
+                    {% if current_chat and current_chat.id == chat.id %}
+                      bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300
+                    {% else %}
+                      hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300
+                    {% endif %}">
+            <i class="fas fa-comment-dots text-indigo-400 flex-shrink-0"></i>
+            <span class="truncate">{{ chat.title }}</span>
+          </a>
+          <form method="POST" action="{{ url_for('chat.chat_delete', chat_id=chat.id) }}" class="hidden group-hover:block chat-delete-form flex-shrink-0">
+            <button type="submit" onclick="return confirm('Delete this chat?');"
+                    class="text-red-400 hover:text-red-600 p-1 transition bg-white dark:bg-gray-800 rounded shadow-sm" title="Delete">
+              <i class="fas fa-trash text-xs"></i>
+            </button>
+          </form>
+        </div>
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 px-3">{{ chat.created_at.strftime('%b %d, %Y') }}</p>
+      </div>
+      {% endfor %}
+      {% if not chats %}
+      <p class="text-gray-500 dark:text-gray-400 text-sm px-3 py-4 text-center">No chats yet.</p>
+      {% endif %}
+    </div>
+    <button id="close-chat-sidebar-mobile" class="lg:hidden mt-3 w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition">
+      <i class="fas fa-times mr-1"></i> Close
+    </button>
+  </div>
+
+  <!-- Main chat area -->
+  <div class="flex-1 bg-white dark:bg-gray-800 rounded-none lg:rounded-2xl shadow-sm border-0 lg:border border-gray-100 dark:border-gray-700 flex flex-col overflow-hidden min-w-0" id="chat-main">
+    {% if current_chat %}
+    <!-- Chat header -->
+    <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-3 lg:px-4 lg:py-4 flex items-center justify-between gap-2 flex-shrink-0" id="chat-header">
+      <div class="flex items-center gap-2 min-w-0">
+        <button id="toggle-chat-sidebar" class="flex-shrink-0 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition p-1" title="Chat history">
+          <i class="fas fa-bars text-lg"></i>
+        </button>
+        <i class="fas fa-robot text-indigo-600 text-lg hidden sm:inline-block flex-shrink-0"></i>
+        <span class="font-semibold text-gray-800 dark:text-white truncate text-sm sm:text-base" id="chat-title-display">{{ current_chat.title }}</span>
+        <button onclick="renameChat('{{ current_chat.id }}')"
+                class="flex-shrink-0 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition p-1" title="Rename chat">
+          <i class="fas fa-edit text-xs sm:text-sm"></i>
+        </button>
+      </div>
+      <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+        <div class="hidden sm:flex items-center gap-2 text-sm">
+          <label class="text-gray-600 dark:text-gray-400" title="Typing speed"><i class="fas fa-gauge-high text-xs"></i></label>
+          <input type="range" id="typing-speed-slider" min="3" max="25" value="8" step="1"
+                 class="w-14 md:w-20 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                 onchange="updateTypingSpeed(this.value)">
+          <span id="speed-display" class="text-xs text-gray-600 dark:text-gray-400 w-8">8ms</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline" id="message-count">{{ current_chat.messages | length }}</span>
+        <form method="POST" action="{{ url_for('chat.chat_delete', chat_id=current_chat.id) }}" class="inline">
+          <button type="submit" onclick="return confirm('Delete this chat?');" class="text-red-400 hover:text-red-600 p-1.5 transition rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete chat">
+            <i class="fas fa-trash text-xs sm:text-sm"></i>
+          </button>
+        </form>
+        <button id="fullscreen-btn" class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1.5 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Full screen">
+          <i class="fas fa-expand text-xs sm:text-sm"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages container -->
+    <div class="flex-1 overflow-y-auto px-3 py-3 lg:px-4 lg:py-4 space-y-3 bg-gray-50 dark:bg-gray-900" id="chat-messages">
+      {% for msg in messages %}
+      <div class="flex items-start gap-2 {{ 'justify-end' if msg.role == 'user' else 'justify-start' }}">
+        <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 relative group
+                    {{ 'bg-indigo-600 text-white' if msg.role == 'user' else 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200' }}">
+          {% if msg.role == 'assistant' %}
+            <div class="assistant-content markdown-body text-sm" data-raw="{{ msg.content | forceescape }}" style="word-break: break-word;"></div>
+            <div class="flex justify-between items-center mt-2">
+              <span class="text-xs text-gray-400 dark:text-gray-500">{{ msg.created_at.strftime('%H:%M') }}</span>
+              <button onclick="downloadPDF(this.parentElement.parentElement)" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition" title="Download PDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+          {% else %}
+            <div class="user-content whitespace-pre-wrap text-sm break-words">{{ msg.content }}</div>
+            <span class="text-xs text-indigo-200 mt-1 block">{{ msg.created_at.strftime('%H:%M') }}</span>
+          {% endif %}
+          <button onclick="deleteMessage({{ msg.id }})"
+                  class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 flex items-center justify-center
+                         bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 shadow transition-opacity"
+                  title="Delete message">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not messages %}
+      <div class="text-center text-gray-400 dark:text-gray-500 mt-16" id="empty-chat">
+        <i class="fas fa-robot text-4xl sm:text-5xl mb-3"></i>
+        <p class="text-base sm:text-lg">Say hello!</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Input -->
+    <div class="border-t border-gray-200 dark:border-gray-700 p-3 lg:p-4 bg-white dark:bg-gray-800 flex-shrink-0">
+      <form id="chat-form" class="flex gap-2" autocomplete="off">
+        <input type="text" id="message-input" name="message" placeholder="Type a message..." required autofocus autocomplete="off"
+               class="flex-1 px-4 py-2.5 lg:py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm" style="direction: ltr;">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 lg:px-5 lg:py-3 rounded-xl shadow transition flex-shrink-0">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+
+    {% else %}
+    <!-- No chat selected -->
+    <div class="relative flex items-center justify-center h-full text-center text-gray-400 dark:text-gray-500 p-6">
+      <button id="toggle-chat-sidebar-empty" class="absolute top-4 left-4 lg:hidden text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition p-2" title="Chat history">
+        <i class="fas fa-bars text-xl"></i>
+      </button>
+      <div>
+        <i class="fas fa-comments text-5xl sm:text-6xl mb-4 opacity-50"></i>
+        <p class="text-lg sm:text-xl">Select a conversation or start a new one.</p>
+        <form method="POST" action="{{ url_for('chat.new_chat') }}" class="mt-6">
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl shadow font-semibold transition inline-flex items-center gap-2">
+            <i class="fas fa-plus"></i> New Chat
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  #chat-sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #chat-sidebar.collapsed {
+    width: 80px !important;
+    min-width: 80px !important;
+  }
+  #chat-sidebar.collapsed .chat-title-text,
+  #chat-sidebar.collapsed .chat-date-text,
+  #chat-sidebar.collapsed .sidebar-header-content h3,
+  #chat-sidebar.collapsed .sidebar-header-content span,
+  #chat-sidebar.collapsed .sidebar-header-title,
+  #chat-sidebar.collapsed .sidebar-header-title i {
+    display: none !important;
+  }
+  #chat-sidebar.collapsed .sidebar-header-content {
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  #chat-sidebar.collapsed .sidebar-header-actions {
+    margin: 0 !important;
+  }
+  #chat-sidebar.collapsed a {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 0 !important;
+  }
+  #chat-sidebar.collapsed a i:first-child {
+    margin: 0 !important;
+  }
+  #chat-sidebar.collapsed a span,
+  #chat-sidebar.collapsed .chat-delete-form,
+  #chat-sidebar.collapsed p {
+    display: none !important;
+  }
+  #chat-sidebar.collapsed #close-chat-sidebar-mobile {
+    display: none !important;
+  }
+  
+  /* Force text color visibility in both themes */
+  .assistant-content,
+  .assistant-content *,
+  .markdown-body,
+  .markdown-body * {
+    color: inherit;
+  }
+  .dark .assistant-content,
+  .dark .assistant-content *,
+  .dark .markdown-body,
+  .dark .markdown-body * {
+    color: #ffffff !important;
+  }
+  .dark .assistant-content strong,
+  .dark .markdown-body strong {
+    color: #a78bfa !important;
+  }
+  /* Inline code (not inside pre): pink — :where() zeroes specificity so block rules can override */
+  .dark .assistant-content code:where(:not([class*="language-"])),
+  .dark .markdown-body code:where(:not([class*="language-"])) {
+    color: #f472b6 !important;
+  }
+  .dark .assistant-content h1,
+  .dark .assistant-content h2,
+  .dark .assistant-content h3,
+  .dark .markdown-body h1,
+  .dark .markdown-body h2,
+  .dark .markdown-body h3 {
+    color: #ffffff !important;
+  }
+  /* Force ALL code elements to white in dark mode (pre code beats :where() inline rule) */
+  .dark .assistant-content pre code,
+  .dark .assistant-content pre,
+  .dark .markdown-body pre code,
+  .dark .markdown-body pre {
+    color: #ffffff !important;
+  }
+  .dark .assistant-content .token,
+  .dark .markdown-body .token {
+    color: #ffffff !important;
+  }
+  .dark .assistant-content .line-numbers-rows > span:before,
+  .dark .markdown-body .line-numbers-rows > span:before {
+    color: #64748b !important;
+  }
+
+  /* Smooth typing animation for AI responses */
+  .assistant-content.typing {
+    position: relative;
+  }
+  
+  .assistant-content.typing::after {
+    content: '▌';
+    animation: blink 0.7s infinite;
+    margin-left: 2px;
+    color: currentColor;
+  }
+  
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  
+  /* Stop typing button animation */
+  #stop-typing-btn-temp:not(.hidden) {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  /* Typing speed slider styling */
+  input[type="range"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4f46e5;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4f46e5;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  
+  /* Dark mode slider */
+  .dark input[type="range"]::-webkit-slider-thumb {
+    background: #818cf8;
+  }
+
+  .dark input[type="range"]::-moz-range-thumb {
+    background: #818cf8;
+  }
+
+  /* Enhanced code block header */
+  .code-block-wrapper {
+    margin: 1em 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .dark .code-block-wrapper {
+    border-color: #374151;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #e2e8f0;
+    color: #475569;
+    border-bottom: 1px solid #d1d5db;
+    letter-spacing: 0.02em;
+  }
+  .dark .code-block-header {
+    background: #1e293b;
+    color: #94a3b8;
+    border-bottom-color: #374151;
+  }
+  .code-block-header .lang-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .code-block-header .lang-label i {
+    font-size: 0.85rem;
+  }
+  .copy-code-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(99,102,241,0.1);
+    color: #6366f1;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-code-btn:hover {
+    background: #6366f1;
+    color: white;
+  }
+  .copy-code-btn.copied {
+    background: #10b981;
+    color: white;
+  }
+  .dark .copy-code-btn {
+    background: rgba(129,140,248,0.15);
+    color: #818cf8;
+  }
+  .dark .copy-code-btn:hover {
+    background: #818cf8;
+    color: #1e293b;
+  }
+  .code-block-wrapper pre {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  /* Aggressive dark-mode force-white for all code-related elements */
+  .dark .code-block-wrapper pre,
+  .dark .code-block-wrapper pre code,
+  .dark .code-block-wrapper .token,
+  .dark .code-block-wrapper .token.attr-name,
+  .dark .code-block-wrapper .token.attr-value,
+  .dark .code-block-wrapper .token.builtin,
+  .dark .code-block-wrapper .token.class-name,
+  .dark .code-block-wrapper .token.comment,
+  .dark .code-block-wrapper .token.constant,
+  .dark .code-block-wrapper .token.deleted,
+  .dark .code-block-wrapper .token.function,
+  .dark .code-block-wrapper .token.keyword,
+  .dark .code-block-wrapper .token.number,
+  .dark .code-block-wrapper .token.operator,
+  .dark .code-block-wrapper .token.prolog,
+  .dark .code-block-wrapper .token.property,
+  .dark .code-block-wrapper .token.punctuation,
+  .dark .code-block-wrapper .token.regex,
+  .dark .code-block-wrapper .token.selector,
+  .dark .code-block-wrapper .token.string,
+  .dark .code-block-wrapper .token.symbol,
+  .dark .code-block-wrapper .token.tag,
+  .dark .code-block-wrapper .token.url,
+  .dark .code-block-wrapper .token.variable {
+    color: #ffffff !important;
+  }
+</style>
+<script>
+  // Marked config
+  marked.setOptions({ breaks: true, gfm: true });
+
+  // Ensure Prism autoloader knows where to find language components
+  if (typeof Prism !== 'undefined' && Prism.plugins && Prism.plugins.autoloader) {
+    Prism.plugins.autoloader.languagesPath = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/';
+  }
+
+  // Force white text on all code-related elements in dark mode
+  function forceCodeWhiteInDarkMode() {
+    if (!document.documentElement.classList.contains('dark')) return;
+    document.querySelectorAll(
+      '.assistant-content pre code, .assistant-content pre, ' +
+      '.assistant-content .token, .code-block-wrapper pre, ' +
+      '.code-block-wrapper pre code, .code-block-wrapper .token'
+    ).forEach(function(el) {
+      el.style.setProperty('color', '#ffffff', 'important');
+    });
+  }
+
+  // MutationObserver: catch async Prism autoloader adding .token elements
+  var codeWhiteObserver = new MutationObserver(function(mutations) {
+    if (!document.documentElement.classList.contains('dark')) return;
+    for (var m = 0; m < mutations.length; m++) {
+      for (var n = 0; n < mutations[m].addedNodes.length; n++) {
+        var node = mutations[m].addedNodes[n];
+        if (node.nodeType === 1) {
+          if (node.matches && (node.matches('.token') || node.matches('pre code') || node.matches('pre'))) {
+            node.style.setProperty('color', '#ffffff', 'important');
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll('.token, pre code, pre').forEach(function(el) {
+              el.style.setProperty('color', '#ffffff', 'important');
+            });
+          }
+        }
+      }
+    }
+  });
+
+  // Initialize typing speed from localStorage
+  function initializeTypingSpeed() {
+    const savedSpeed = localStorage.getItem('typingSpeed') || '8';
+    const slider = document.getElementById('typing-speed-slider');
+    const display = document.getElementById('speed-display');
+    if (slider) {
+      slider.value = savedSpeed;
+      display.textContent = savedSpeed + 'ms';
+    }
+  }
+
+  function updateTypingSpeed(value) {
+    localStorage.setItem('typingSpeed', value);
+    const display = document.getElementById('speed-display');
+    display.textContent = value + 'ms';
+  }
+
+  // Initialize on load
+  document.addEventListener('DOMContentLoaded', initializeTypingSpeed);
+
+  // ---------- Chat sidebar toggle ----------
+  const chatSidebar = document.getElementById('chat-sidebar');
+  const toggleChatSidebarBtn = document.getElementById('toggle-chat-sidebar');
+  
+  let chatSidebarVisible = true;
+  if (window.innerWidth < 1024) {
+    chatSidebarVisible = false; // default closed on mobile
+  } else {
+    chatSidebarVisible = localStorage.getItem('chatSidebarVisible') !== 'false';
+  }
+
+  const chatBackdrop = document.getElementById('chat-sidebar-backdrop');
+  function applyChatSidebarState() {
+    if (window.innerWidth < 1024) {
+      // Mobile logic
+      chatSidebar.classList.remove('collapsed');
+      chatSidebar.style.width = '280px';
+      if (chatSidebarVisible) {
+        chatSidebar.classList.remove('-translate-x-[120%]');
+        chatSidebar.classList.add('translate-x-0');
+        chatBackdrop?.classList.remove('hidden');
+      } else {
+        chatSidebar.classList.add('-translate-x-[120%]');
+        chatSidebar.classList.remove('translate-x-0');
+        chatBackdrop?.classList.add('hidden');
+      }
+    } else {
+      // Desktop logic
+      chatSidebar.classList.remove('-translate-x-[120%]', 'translate-x-0');
+      chatBackdrop?.classList.add('hidden');
+      if (chatSidebarVisible) {
+        chatSidebar.classList.remove('collapsed');
+        chatSidebar.style.width = localStorage.getItem('chatSidebarWidth') || '280px';
+      } else {
+        chatSidebar.classList.add('collapsed');
+        chatSidebar.style.width = '80px';
+      }
+    }
+  }
+  
+  window.addEventListener('resize', applyChatSidebarState);
+  chatBackdrop?.addEventListener('click', toggleSidebarAction);
+
+
+  applyChatSidebarState();
+
+  const toggleChatSidebarEmptyBtn = document.getElementById('toggle-chat-sidebar-empty');
+
+  function toggleSidebarAction() {
+    chatSidebarVisible = !chatSidebarVisible;
+    localStorage.setItem('chatSidebarVisible', chatSidebarVisible);
+    applyChatSidebarState();
+  }
+
+  toggleChatSidebarBtn?.addEventListener('click', toggleSidebarAction);
+  toggleChatSidebarEmptyBtn?.addEventListener('click', toggleSidebarAction);
+
+  // Chat sidebar resize (drag)
+  const chatResizeHandle = document.getElementById('chat-sidebar-resize');
+  let isChatResizing = false, chatStartX, chatStartWidth;
+  chatResizeHandle?.addEventListener('mousedown', (e) => {
+    isChatResizing = true;
+    chatStartX = e.clientX;
+    chatStartWidth = parseInt(window.getComputedStyle(chatSidebar).width, 10);
+    document.addEventListener('mousemove', onChatMouseMove);
+    document.addEventListener('mouseup', onChatMouseUp);
+  });
+  function onChatMouseMove(e) {
+    if (!isChatResizing) return;
+    const newWidth = chatStartWidth + (e.clientX - chatStartX);
+    if (newWidth >= 200 && newWidth <= 450) {
+      chatSidebar.style.width = newWidth + 'px';
+      localStorage.setItem('chatSidebarWidth', newWidth);
+    }
+  }
+  function onChatMouseUp() {
+    isChatResizing = false;
+    document.removeEventListener('mousemove', onChatMouseMove);
+    document.removeEventListener('mouseup', onChatMouseUp);
+  }
+
+  // ---------- Full‑screen mode ----------
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+  const chatContainer = document.getElementById('chat-container');
+  let isFullscreen = false;
+
+  fullscreenBtn?.addEventListener('click', () => {
+    isFullscreen = !isFullscreen;
+    if (isFullscreen) {
+      chatContainer.classList.add('fixed', 'inset-0', 'z-50', 'bg-white', 'dark:bg-gray-900', 'p-4');
+      chatContainer.style.maxWidth = '100%';
+      fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+    } else {
+      chatContainer.classList.remove('fixed', 'inset-0', 'z-50', 'bg-white', 'dark:bg-gray-900', 'p-4');
+      chatContainer.style.maxWidth = '';
+      fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+    }
+  });
+
+  // ---------- Initial static messages rendering (unchanged) ----------
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.assistant-content[data-raw]').forEach(el => {
+      const raw = el.getAttribute('data-raw');
+      if (raw) {
+        const isArabic = detectArabic(raw);
+        el.style.direction = isArabic ? 'rtl' : 'ltr';
+        el.style.textAlign = isArabic ? 'right' : 'left';
+        el.innerHTML = marked.parse(raw);
+        
+        // Apply RTL to parent container
+        const messageContainer = el.closest('.flex.items-start');
+        if (messageContainer) {
+          messageContainer.style.direction = isArabic ? 'rtl' : 'ltr';
+        }
+        
+        el.querySelectorAll('pre code').forEach(block => {
+          const langClass = block.className.match(/language-(\w+)/);
+          if (langClass) {
+            block.parentElement.classList.add('line-numbers', 'language-' + langClass[1]);
+          } else {
+            block.parentElement.classList.add('line-numbers');
+            block.classList.add('language-text');
+          }
+        });
+        Prism.highlightAllUnder(el);
+        enhanceCodeBlocks(el);
+        forceCodeWhiteInDarkMode();
+        renderMathInElement(el, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\(", right: "\\)", display: false},
+            {left: "\\[", right: "\\]", display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    });
+    scrollToBottom();
+
+    // Start MutationObserver to catch async Prism autoloader additions
+    var chatMessagesEl = document.getElementById('chat-messages');
+    if (chatMessagesEl) {
+      codeWhiteObserver.observe(chatMessagesEl, { childList: true, subtree: true });
+    }
+
+    // Watch for theme toggles (dark/light)
+    var themeObserver = new MutationObserver(function() {
+      if (document.documentElement.classList.contains('dark')) {
+        forceCodeWhiteInDarkMode();
+      }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  // AJAX messaging (only if chat exists)
+  {% if current_chat %}
+  const messageInput = document.getElementById('message-input');
+  
+  // Auto-detect Arabic and apply RTL styling
+  messageInput?.addEventListener('input', () => {
+    const isArabic = detectArabic(messageInput.value);
+    messageInput.style.direction = isArabic ? 'rtl' : 'ltr';
+    messageInput.style.textAlign = isArabic ? 'right' : 'left';
+    messageInput.style.fontFamily = isArabic ? "'Cairo', sans-serif" : 'inherit';
+  });
+  
+  const chatForm = document.getElementById('chat-form');
+  if (chatForm) {
+    chatForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const input = document.getElementById('message-input');
+      const message = input.value.trim();
+      if (!message) return;
+      input.value = '';
+      input.disabled = true;
+      input.style.direction = 'ltr';
+      input.style.fontFamily = 'inherit';
+
+      const emptyChat = document.getElementById('empty-chat');
+      if (emptyChat) emptyChat.remove();
+
+      appendMessage('user', message, new Date().toTimeString().slice(0,5));
+
+      const thinkingEl = document.createElement('div');
+      thinkingEl.className = 'flex justify-start mb-4';
+      thinkingEl.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
+      document.getElementById('chat-messages').appendChild(thinkingEl);
+      scrollToBottom();
+
+      try {
+        const resp = await fetch("{{ url_for('chat.chat_send', chat_id=current_chat.id) }}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: new URLSearchParams({ message })
+        });
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.error || 'Request failed');
+        }
+        const data = await resp.json();
+
+        thinkingEl.remove();
+        appendAIMessage(data.ai_message.content, data.ai_message.created_at, data.ai_message.id);
+
+        const countSpan = document.getElementById('message-count');
+        if (countSpan) {
+          const current = parseInt(countSpan.innerText) || 0;
+          countSpan.innerText = (current + 2) + ' messages';
+        }
+      } catch (err) {
+        thinkingEl.remove();
+        const errorEl = document.createElement('div');
+        errorEl.className = 'text-red-500 text-sm text-center mb-2';
+        errorEl.textContent = 'Error: ' + err.message;
+        document.getElementById('chat-messages').appendChild(errorEl);
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    });
+  }
+  {% endif %}
+
+  // Message helpers
+  function appendMessage(role, content, time) {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    const isArabic = detectArabic(content);
+    div.className = `flex items-start gap-3 ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4`;
+    div.style.direction = isArabic ? 'rtl' : 'ltr';
+    div.innerHTML = `
+      <div class="max-w-[75%] rounded-2xl px-4 py-2.5 relative group ${role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200'}" style="direction: ${isArabic ? 'rtl' : 'ltr'}; text-align: ${isArabic ? 'right' : 'left'}; font-family: ${isArabic ? "'Cairo', sans-serif" : 'inherit'};">
+        <div class="${role === 'user' ? 'whitespace-pre-wrap' : 'assistant-content markdown-body'} text-sm" style="word-break: break-word;">${role === 'user' ? escapeHtml(content) : ''}</div>
+        <span class="text-xs ${role === 'user' ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'} mt-1 block">${time}</span>
+      </div>
+    `;
+    container.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function detectArabic(text) {
+    const arabicRegex = /[\u0600-\u06FF]/g;
+    return arabicRegex.test(text);
+  }
+
+  function appendAIMessage(content, time, msgId) {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    const isArabic = detectArabic(content);
+    div.className = 'flex justify-start mb-4';
+    div.style.direction = isArabic ? 'rtl' : 'ltr';
+    div.innerHTML = `
+      <div class="max-w-[75%] rounded-2xl px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 relative group" style="direction: ${isArabic ? 'rtl' : 'ltr'}; text-align: ${isArabic ? 'right' : 'left'};">
+        <div class="assistant-content markdown-body text-sm" style="word-break: break-word;"></div>
+        <div class="flex justify-between items-center mt-2 gap-2 flex-wrap" style="flex-direction: ${isArabic ? 'row-reverse' : 'row'};">
+          <span class="text-xs text-gray-400 dark:text-gray-500">${time}</span>
+          <div class="flex gap-2">
+            <button id="stop-typing-btn-${msgId || 'temp'}" onclick="stopTypingAnimation(this)" class="text-xs text-yellow-500 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300 transition hidden" title="Show full answer"><i class="fas fa-forward"></i> Show Full</button>
+            ${msgId ? `<button onclick="downloadPDF(this.parentElement.parentElement)" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition" title="Download PDF"><i class="fas fa-file-pdf"></i> PDF</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+
+    const contentDiv = div.querySelector('.assistant-content');
+    const stopBtn = div.querySelector(`#stop-typing-btn-${msgId || 'temp'}`);
+    
+    // Get typing speed from localStorage (default 8ms - faster)
+    const typingSpeed = parseInt(localStorage.getItem('typingSpeed')) || 8;
+    
+    // Smooth typing animation
+    const typingAnimation = typeOutMessage(contentDiv, content, isArabic, typingSpeed, () => {
+      // After typing is done, hide stop button and render full markdown
+      if (stopBtn) stopBtn.classList.add('hidden');
+      
+      contentDiv.innerHTML = marked.parse(content);
+
+      contentDiv.querySelectorAll('pre code').forEach(block => {
+        const langClass = block.className.match(/language-(\w+)/);
+        if (langClass) {
+          block.parentElement.classList.add('line-numbers', 'language-' + langClass[1]);
+        } else {
+          block.parentElement.classList.add('line-numbers');
+          block.classList.add('language-text');
+        }
+      });
+      Prism.highlightAllUnder(contentDiv);
+      enhanceCodeBlocks(contentDiv);
+      forceCodeWhiteInDarkMode();
+
+      renderMathInElement(contentDiv, {
+        delimiters: [
+          {left: "$$", right: "$$", display: true},
+          {left: "$", right: "$", display: false},
+          {left: "\\(", right: "\\)", display: false},
+          {left: "\\[", right: "\\]", display: true}
+        ],
+        throwOnError: false
+      });
+    });
+    
+    // Store references for "Show Full" button
+    if (stopBtn) {
+      stopBtn.classList.remove('hidden');
+      stopBtn.dataset.animationId = typingAnimation.animationId;
+    }
+    if (typingAnimations[typingAnimation.animationId]) {
+      typingAnimations[typingAnimation.animationId].contentDiv = contentDiv;
+      typingAnimations[typingAnimation.animationId].fullContent = content;
+    }
+
+    scrollToBottom();
+  }
+
+  // Global map to track typing animations
+  const typingAnimations = {};
+  let animationCounter = 0;
+
+  function typeOutMessage(element, content, isArabic, typingSpeed = 8, callback) {
+    let index = 0;
+    const animationId = ++animationCounter;
+    let displayContent = '';
+    let htmlContent = '';
+    let isRunning = true;
+
+    typingAnimations[animationId] = { isRunning };
+
+    function typeNextCharacter() {
+      if (!typingAnimations[animationId]?.isRunning || index >= content.length) {
+        if (index >= content.length && callback && typingAnimations[animationId]?.isRunning) {
+          callback();
+        }
+        delete typingAnimations[animationId];
+        return;
+      }
+
+      displayContent += content[index];
+      
+      // Process markdown progressively
+      htmlContent = processMarkdownPartially(displayContent);
+      element.innerHTML = htmlContent;
+      
+      // Apply RTL styling while typing
+      element.style.direction = isArabic ? 'rtl' : 'ltr';
+      element.style.textAlign = isArabic ? 'right' : 'left';
+      
+      scrollToBottom();
+      index++;
+      setTimeout(typeNextCharacter, typingSpeed);
+    }
+
+    typeNextCharacter();
+    return { animationId };
+  }
+
+  function stopTypingAnimation(btn) {
+    const animationId = parseInt(btn.dataset.animationId);
+    if (animationId && typingAnimations[animationId]) {
+      const entry = typingAnimations[animationId];
+      entry.isRunning = false;
+      btn.classList.add('hidden');
+      // Immediately render the full markdown
+      if (entry.contentDiv && entry.fullContent) {
+        renderFullMarkdown(entry.contentDiv, entry.fullContent);
+      }
+    }
+  }
+
+  function renderFullMarkdown(contentDiv, rawContent) {
+    contentDiv.innerHTML = marked.parse(rawContent);
+    contentDiv.querySelectorAll('pre code').forEach(block => {
+      const langClass = block.className.match(/language-(\w+)/);
+      if (langClass) {
+        block.parentElement.classList.add('line-numbers', 'language-' + langClass[1]);
+      } else {
+        block.parentElement.classList.add('line-numbers');
+        block.classList.add('language-text');
+      }
+    });
+    Prism.highlightAllUnder(contentDiv);
+    enhanceCodeBlocks(contentDiv);
+    forceCodeWhiteInDarkMode();
+    renderMathInElement(contentDiv, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\(", right: "\\)", display: false},
+        {left: "\\[", right: "\\]", display: true}
+      ],
+      throwOnError: false
+    });
+  }
+
+  function enhanceCodeBlocks(container) {
+    if (!container) return;
+    container.querySelectorAll('pre code').forEach(codeBlock => {
+      const pre = codeBlock.parentElement;
+
+      // Force white text before early return so already-wrapped blocks also get white
+      if (document.documentElement.classList.contains('dark')) {
+        codeBlock.style.setProperty('color', '#ffffff', 'important');
+        pre.style.setProperty('color', '#ffffff', 'important');
+        codeBlock.querySelectorAll('.token').forEach(function(t) {
+          t.style.setProperty('color', '#ffffff', 'important');
+        });
+      }
+
+      if (pre.closest('.code-block-wrapper')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper';
+      const langClass = codeBlock.className.match(/language-(\w+)/);
+      const lang = langClass ? langClass[1] : 'code';
+      const langIcon = langClass ? getLangIcon(lang) : 'fas fa-code';
+      const header = document.createElement('div');
+      header.className = 'code-block-header';
+      header.innerHTML = '<span class="lang-label"><i class="' + langIcon + '"></i> ' + lang + '</span>';
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-code-btn';
+      copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+      copyBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const text = codeBlock.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        }).catch(() => {
+          copyBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
+          setTimeout(() => {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+          }, 2000);
+        });
+      });
+      header.appendChild(copyBtn);
+      pre.parentElement.insertBefore(wrapper, pre);
+      wrapper.appendChild(header);
+      wrapper.appendChild(pre);
+    });
+    forceCodeWhiteInDarkMode();
+  }
+
+  function getLangIcon(lang) {
+    const icons = {
+      python: 'fab fa-python', py: 'fab fa-python',
+      java: 'fab fa-java',
+      html: 'fab fa-html5', css: 'fab fa-css3-alt',
+      php: 'fab fa-php',
+      ruby: 'fab fa-ruby', rb: 'fab fa-ruby',
+      bash: 'fas fa-terminal', shell: 'fas fa-terminal', sh: 'fas fa-terminal',
+      sql: 'fas fa-database',
+      yaml: 'fas fa-cog', yml: 'fas fa-cog', json: 'fas fa-cog',
+      dockerfile: 'fab fa-docker', docker: 'fab fa-docker',
+      git: 'fab fa-git-alt',
+      react: 'fab fa-react', jsx: 'fab fa-react', tsx: 'fab fa-react',
+      swift: 'fab fa-swift',
+      markdown: 'fas fa-file-alt', md: 'fas fa-file-alt',
+      javascript: 'fas fa-code', js: 'fas fa-code',
+      typescript: 'fas fa-code', ts: 'fas fa-code',
+    };
+    return icons[lang] || 'fas fa-code';
+  }
+
+  function processMarkdownPartially(text) {
+    let result = text;
+    
+    // Process headers (### becomes h3, ## becomes h2, # becomes h1)
+    result = result.replace(/^### (.*?)$/gm, '<h3 style="font-size: 1.17em; font-weight: bold; margin: 0.83em 0; margin-top: 1.2em;">$1</h3>');
+    result = result.replace(/^## (.*?)$/gm, '<h2 style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0; margin-top: 1.5em; border-bottom: 2px solid #6366f140; padding-bottom: 0.2em;">$1</h2>');
+    result = result.replace(/^# (.*?)$/gm, '<h1 style="font-size: 2em; font-weight: bold; margin: 0.67em 0; margin-top: 1.8em; border-bottom: 3px solid #6366f160; padding-bottom: 0.25em;">$1</h1>');
+    
+    // Process unordered lists (- item or * item)
+    result = result.replace(/^\s*[-*] (.*?)$/gm, '<li style="margin-left: 1.5em;">$1</li>');
+    result = result.replace(/((?:<li[^>]*>.*?<\/li>\s*?)+)/g, '<ul style="list-style: disc; margin: 0.5em 0; padding-left: 1.5em;">$1</ul>');
+    
+    // Process ordered lists (1. item)
+    result = result.replace(/^\s*\d+\. (.*?)$/gm, '<li style="margin-left: 1.5em;">$1</li>');
+    result = result.replace(/((?:<li[^>]*>.*?<\/li>\s*?)+)/g, '<ol style="list-style: decimal; margin: 0.5em 0; padding-left: 1.5em;">$1</ol>');
+    
+    // Process blockquotes (> text)
+    result = result.replace(/^> (.*?)$/gm, '<blockquote style="border-left: 4px solid #6366f1; padding: 0.5em 1em; margin: 0.5em 0; font-style: italic; background: rgba(99,102,241,0.06); border-radius: 0 8px 8px 0;">$1</blockquote>');
+    
+    // Process bold (**text**)
+    result = result.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: 700; color: #6366f1;">$1</strong>');
+    
+    // Process italic (*text*)
+    result = result.replace(/\*([^*]+)\*/g, '<em style="font-style: italic;">$1</em>');
+    
+    // Process inline code (`text`)
+    result = result.replace(/`([^`]+)`/g, '<code style="background: rgba(99,102,241,0.08); padding: 2px 6px; border-radius: 4px; font-family: \'JetBrains Mono\', monospace; border: 1px solid rgba(99,102,241,0.15);">$1</code>');
+    
+    // Process links ([text](url))
+    result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #6366f1; text-decoration: underline; cursor: pointer; font-weight: 500;">$1</a>');
+    
+    // Process line breaks (preserve them)
+    result = result.replace(/\n/g, '<br>');
+    
+    return result;
+  }
+
+  function isNearBottom(el, threshold = 100) {
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }
+
+  function scrollToBottom() {
+    const messagesDiv = document.getElementById('chat-messages');
+    if (messagesDiv && isNearBottom(messagesDiv)) {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  }
+
+  document.getElementById('chat-messages')?.addEventListener('scroll', function() {
+    if (!isNearBottom(this)) {
+      this.classList.add('user-scrolled');
+    } else {
+      this.classList.remove('user-scrolled');
+    }
+  });
+
+  function escapeHtml(text) {
+    const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+    return text.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  async function deleteMessage(msgId) {
+    const result = await Swal.fire({
+      title: 'Delete this message?',
+      text: "This cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e53e3e',
+      cancelButtonColor: '#718096',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (result.isConfirmed) {
+      const resp = await fetch(`/chat/message/${msgId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (resp.ok) {
+        const btn = document.querySelector(`button[onclick="deleteMessage(${msgId})"]`);
+        if (btn) {
+          const messageDiv = btn.closest('.flex.items-start');
+          if (messageDiv) messageDiv.remove();
+        }
+        const countSpan = document.getElementById('message-count');
+        if (countSpan) {
+          const current = parseInt(countSpan.innerText) || 0;
+          countSpan.innerText = (current - 1) + ' messages';
+        }
+      } else {
+        Swal.fire('Error', 'Could not delete message.', 'error');
+      }
+    }
+  }
+
+  async function renameChat(chatId) {
+    const { value: newTitle } = await Swal.fire({
+      title: 'Rename Chat',
+      input: 'text',
+      inputValue: document.getElementById('chat-title-display').innerText,
+      inputLabel: 'New name',
+      inputPlaceholder: 'Enter a new name',
+      showCancelButton: true,
+      inputValidator: (value) => !value.trim() ? 'Name cannot be empty!' : null
+    });
+    if (newTitle && newTitle.trim()) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/chat/${chatId}/rename`;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'title';
+      input.value = newTitle.trim();
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
+
+  function downloadPDF(element) {
+    const content = element.querySelector('.assistant-content').cloneNode(true);
+    // basic styling for pdf
+    content.style.padding = '20px';
+    content.style.backgroundColor = 'white';
+    content.style.color = 'black';
+    content.style.fontFamily = 'Arial, sans-serif';
+    
+    var opt = {
+      margin:       0.5,
+      filename:     'AI_Response.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(content).save();
+  }
+</script>
+{% endblock %}

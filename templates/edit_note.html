@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+  <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+    <i class="fas fa-paint-brush text-indigo-600"></i> Edit Note
+  </h2>
+
+  <form id="note-form" method="POST" action="{{ url_for('notes.edit_note', note_id=note.id) }}" onsubmit="return prepareForm()">
+    <!-- Title -->
+    <div class="mb-4">
+      <label class="block text-sm font-semibold mb-1">Note Title</label>
+      <input type="text" name="title" id="note-title" class="w-full px-4 py-2 border border-gray-300 rounded-xl" value="{{ note.title }}" required>
+    </div>
+
+    <!-- Quill Editor Container -->
+    <div id="quill-editor" class="mb-4 bg-white" style="min-height: 400px;"></div>
+
+    <!-- Hidden content field -->
+    <input type="hidden" name="content" id="form-content">
+
+    <div class="flex justify-end">
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-8 rounded-xl shadow transition">
+        <i class="fas fa-save mr-2"></i> Save Note
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  // Note content (escaped properly)
+  var noteContent = {{ note.content | tojson }};
+
+  // Check if Quill is available
+  if (typeof Quill === 'undefined') {
+    Swal.fire('Error', 'The text editor library could not be loaded. Please refresh or check your internet connection.', 'error');
+    throw new Error('Quill not loaded');
+  }
+
+  // Try to detect ImageResize module
+  var hasImageResize = typeof ImageResize !== 'undefined';
+
+  // Modules configuration
+  var modulesConfig = {
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'align': [] }],
+        ['link', 'image'],
+        ['clean']
+      ],
+      handlers: {
+        image: function() {
+          var input = document.createElement('input');
+          input.setAttribute('type', 'file');
+          input.setAttribute('accept', 'image/*');
+          input.click();
+
+          input.onchange = async function() {
+            var file = input.files[0];
+            if (!file) return;
+            var formData = new FormData();
+            formData.append('file', file);
+
+            try {
+              var res = await fetch('/notes/upload-image', {
+                method: 'POST',
+                body: formData
+              });
+              var data = await res.json();
+              if (data.url) {
+                var range = quill.getSelection();
+                quill.insertEmbed(range.index, 'image', data.url);
+              } else {
+                Swal.fire('Error', 'Upload failed', 'error');
+              }
+            } catch (err) {
+              Swal.fire('Error', err.message, 'error');
+            }
+          };
+        }
+      }
+    }
+  };
+
+  // Add imageResize if available
+  if (hasImageResize) {
+    modulesConfig.imageResize = { modules: ['Resize', 'DisplaySize'] };
+  }
+
+  var quill = new Quill('#quill-editor', {
+    theme: 'snow',
+    modules: modulesConfig
+  });
+
+  // Load existing content
+  if (noteContent && typeof noteContent === 'string') {
+    if (/<[a-z][\s\S]*>/i.test(noteContent)) {
+      quill.root.innerHTML = noteContent;
+    } else {
+      // Plain text or legacy JSON
+      quill.setText(noteContent);
+    }
+  } else {
+    quill.root.innerHTML = '';
+  }
+
+  // If image resize module not loaded, show a small tip (optional)
+  if (!hasImageResize) {
+    console.info('Image resize module not loaded – images can still be used but won’t have drag handles.');
+    // You could also show a non‑blocking toast
+  }
+
+  // Prepare form for submission
+  function prepareForm() {
+    document.getElementById('form-content').value = quill.root.innerHTML;
+    return true; // allow form submission
+  }
+</script>
+
+<!-- Special CSS for image resizing when module is missing -->
+<style>
+  .ql-editor img {
+    max-width: 100%;
+    height: auto;
+    cursor: pointer;
+    /* fallback: click to select and use toolbar? */
+  }
+</style>
+{% endblock %}

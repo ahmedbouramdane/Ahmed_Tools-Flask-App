@@ -1,0 +1,1003 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto h-[calc(100vh-8rem)] flex gap-0 lg:gap-1 relative overflow-hidden rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" id="messenger-container">
+  <div id="conv-backdrop" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" style="touch-action: none;"></div>
+
+  <!-- ─── Conversations Sidebar ─── -->
+  <div id="conv-sidebar" class="absolute lg:relative z-40 h-full w-80 max-w-[85vw] flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out">
+    <div id="conv-resize" class="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-indigo-400/50 active:bg-indigo-500/60 transition-colors z-10 hidden lg:block" style="right:-2px;"></div>
+
+    <!-- Header -->
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0 bg-white dark:bg-gray-800">
+      <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+        <i class="fab fa-facebook-messenger text-indigo-600"></i> Chats
+      </h2>
+      <button id="new-group-btn" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="Create group">
+        <i class="fas fa-user-plus"></i>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="px-4 py-2 flex-shrink-0">
+      <div class="relative">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" id="conv-search" placeholder="Search or start new chat" class="w-full pl-9 pr-3 py-2 text-sm border-0 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400">
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="px-4 pb-2 flex-shrink-0 flex gap-1.5 overflow-x-auto scrollbar-none" id="filter-tabs">
+      <button class="filter-tab active px-3 py-1.5 text-xs font-semibold rounded-full bg-indigo-600 text-white transition" data-filter="all">All</button>
+      <button class="filter-tab px-3 py-1.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" data-filter="user">Friends</button>
+      <button class="filter-tab px-3 py-1.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" data-filter="group">Groups</button>
+    </div>
+
+    <!-- Conversation list -->
+    <div class="flex-1 overflow-y-auto overscroll-contain" id="conv-list">
+      <div class="text-center text-gray-400 py-12 text-sm" id="conv-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+    </div>
+  </div>
+
+  <!-- ─── Chat Area ─── -->
+  <div class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900 relative">
+    <!-- Mobile: hamburger always visible when in chat -->
+    <div id="mobile-chat-bar" class="lg:hidden absolute top-0 left-0 z-10 p-2 hidden">
+      <button id="toggle-conv-btn" class="p-2 bg-white dark:bg-gray-800 rounded-full shadow-md text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition">
+        <i class="fas fa-bars text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+      <button id="toggle-conv-empty-btn" class="lg:hidden absolute top-4 left-4 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition z-10" title="Show conversations">
+        <i class="fas fa-bars text-lg"></i>
+      </button>
+      <div class="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-4">
+        <i class="fas fa-comments text-3xl text-indigo-400"></i>
+      </div>
+      <p class="text-lg font-medium">Your Messages</p>
+      <p class="text-sm mt-1">Select a conversation to start chatting</p>
+    </div>
+
+    <!-- Chat Header -->
+    <div id="chat-header" class="hidden flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center gap-2 shadow-sm">
+      <button id="toggle-conv-header-btn" class="lg:hidden text-gray-500 hover:text-indigo-600 transition p-1 -ml-1"><i class="fas fa-bars text-lg"></i></button>
+      <div class="relative flex-shrink-0">
+        <div id="chat-avatar-letter" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-base sm:text-lg">?</div>
+        <img id="chat-avatar-img" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover hidden" src="" alt="">
+        <span id="chat-online-dot" class="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 hidden"></span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h4 id="chat-name" class="font-semibold text-gray-800 dark:text-white truncate text-sm sm:text-base"></h4>
+        <p id="chat-subtitle" class="text-xs text-gray-500 dark:text-gray-400 truncate leading-tight"></p>
+      </div>
+      <div class="flex items-center gap-0.5 flex-shrink-0" id="chat-actions">
+        <button id="group-info-btn" class="p-1.5 sm:p-2 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition hidden" title="Group info">
+          <i class="fas fa-info-circle"></i>
+        </button>
+        <a id="view-profile-btn" href="#" class="p-1.5 sm:p-2 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition hidden" title="View profile">
+          <i class="fas fa-user-circle"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Messages area -->
+    <div id="messages" class="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-1 hidden scroll-smooth overscroll-contain" style="touch-action: pan-y;"></div>
+
+    <!-- Typing indicator -->
+    <div id="typing-indicator" class="hidden px-4 py-1.5 text-xs text-gray-400 italic flex items-center gap-2 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+      <div class="flex gap-0.5">
+        <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0s"></span>
+        <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0.15s"></span>
+        <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0.3s"></span>
+      </div>
+      <span id="typing-text"></span>
+    </div>
+
+    <!-- Input area -->
+    <div id="message-form" class="hidden flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-2 sm:py-3 relative">
+      <div id="emoji-picker-container" class="absolute bottom-full left-2 sm:left-4 mb-2 hidden z-50 shadow-xl rounded-xl">
+        <emoji-picker class="light"></emoji-picker>
+      </div>
+      <form id="send-form" class="flex items-end gap-1.5 sm:gap-2">
+        <button type="button" id="attachment-btn" class="flex-shrink-0 p-2 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition" title="Attach file">
+          <i class="fas fa-plus text-base sm:text-lg"></i>
+        </button>
+        <input type="file" id="chat-file-input" class="hidden" accept="image/*,.pdf,.doc,.docx,.txt">
+        <div class="flex-1 relative">
+          <textarea id="message-input" rows="1" placeholder="Aa" class="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-9 sm:pr-10 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none placeholder-gray-400" style="max-height:100px;"></textarea>
+          <button type="button" id="emoji-btn" class="absolute right-2 bottom-1/2 translate-y-1/2 text-gray-400 hover:text-yellow-500 transition text-base sm:text-lg">😀</button>
+        </div>
+        <button type="submit" id="send-btn" class="flex-shrink-0 p-2 sm:p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+          <i class="fas fa-paper-plane text-sm sm:text-base"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Group Info / Members Modal ─── -->
+<div id="group-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-3 sm:p-4" onclick="if(event.target===this)closeGroupModal()">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+    <div class="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+      <h3 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white" id="group-modal-title">Group Info</h3>
+      <button type="button" onclick="closeGroupModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 overscroll-contain">
+      <!-- Avatar with upload -->
+      <div class="text-center relative">
+        <div class="relative inline-block">
+          <div id="group-modal-avatar" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl sm:text-3xl mx-auto cursor-pointer overflow-hidden" onclick="document.getElementById('group-avatar-upload').click()">
+            <span id="group-avatar-letter-display">G</span>
+            <img id="group-avatar-img-display" class="w-full h-full object-cover hidden" src="" alt="">
+          </div>
+          <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer rounded-full bg-black/40" onclick="document.getElementById('group-avatar-upload').click()">
+            <i class="fas fa-camera text-white text-lg"></i>
+          </div>
+        </div>
+        <input type="file" id="group-avatar-upload" class="hidden" accept="image/*">
+        <div class="flex items-center justify-center gap-2 mt-2">
+          <h4 id="group-modal-name" class="text-base sm:text-lg font-semibold text-gray-800 dark:text-white cursor-pointer hover:text-indigo-600 transition" onclick="renameGroup()"></h4>
+          <button onclick="renameGroup()" class="text-gray-400 hover:text-indigo-600 text-xs p-1"><i class="fas fa-pen"></i></button>
+        </div>
+        <p id="group-modal-count" class="text-sm text-gray-500"></p>
+        <p id="group-modal-desc" class="text-xs text-gray-400 mt-1"></p>
+      </div>
+
+      <!-- Actions -->
+      <div id="group-modal-actions" class="flex flex-wrap justify-center gap-2 hidden">
+        <button id="group-leave-btn" class="px-4 py-2 text-sm border border-red-300 text-red-600 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition">Leave Group</button>
+        <button id="group-delete-btn" class="px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition hidden">Delete Group</button>
+      </div>
+
+      <!-- Invite section -->
+      <div id="invite-section" class="hidden">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Members</label>
+        <div class="flex gap-2">
+          <input type="text" id="invite-search" placeholder="Search users..." class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div id="invite-results" class="mt-2 space-y-1 max-h-32 overflow-y-auto"></div>
+      </div>
+
+      <!-- Members -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Members</label>
+        <div id="members-list" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Create Group Modal ─── -->
+<div id="create-group-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this)closeCreateGroup()">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm" onclick="event.stopPropagation()">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-gray-800 dark:text-white">New Group</h3>
+      <button type="button" onclick="closeCreateGroup()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Group Name</label>
+        <input type="text" id="new-group-name" placeholder="Enter group name..." class="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+        <input type="text" id="new-group-desc" placeholder="What's this group about?" class="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <button id="create-group-submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition shadow-sm">Create Group</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.21.3/index.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+const socket = io();
+let currentConv = null;
+let conversations = [];
+let onlineUserIds = new Set();
+let typingTimeout = null;
+let messageOffset = 0;
+let hasMoreMessages = false;
+let loadingMessages = false;
+let myId = {{ current_user.id }};
+let myGroupRole = null;
+let currentFilter = 'all';
+
+// ─── Socket rooms ─────────────────────────────────────────────────────────
+socket.emit('join', {room: 'user_{{ current_user.id }}'});
+socket.emit('go_online');
+
+fetch('/user_chat/online').then(r => r.json()).then(ids => {
+  onlineUserIds = new Set(ids);
+  updateOnlineDots();
+}).catch(() => {});
+
+// ─── Filter Tabs ──────────────────────────────────────────────────────────
+document.getElementById('filter-tabs').addEventListener('click', function(e) {
+  var tab = e.target.closest('.filter-tab');
+  if (!tab) return;
+  currentFilter = tab.dataset.filter;
+  this.querySelectorAll('.filter-tab').forEach(function(t) {
+    t.classList.remove('active', 'bg-indigo-600', 'text-white');
+    t.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+  });
+  tab.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+  tab.classList.add('bg-indigo-600', 'text-white');
+  renderConversations(document.getElementById('conv-search').value);
+});
+
+// ─── Conversation List ────────────────────────────────────────────────────
+function loadConversations() {
+  fetch('/user_chat/conversations').then(function(r) { return r.json(); }).then(function(data) {
+    conversations = data;
+    renderConversations(document.getElementById('conv-search').value);
+  }).catch(function() {});
+}
+
+function renderConversations(search) {
+  var list = document.getElementById('conv-list');
+  var filtered = conversations;
+
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(function(c) { return c.type === currentFilter; });
+  }
+  if (search) {
+    filtered = filtered.filter(function(c) { return c.name.toLowerCase().includes(search.toLowerCase()); });
+  }
+
+  list.innerHTML = '';
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="text-center text-gray-400 py-12 text-sm">No conversations yet</div>';
+    return;
+  }
+
+  filtered.forEach(function(c) {
+    var isActive = currentConv && currentConv.type === c.type && currentConv.id === c.id;
+    var div = document.createElement('div');
+    div.className = 'conv-item flex items-center gap-3 px-4 py-3 cursor-pointer transition ' + (isActive ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700');
+    div.dataset.convType = c.type;
+    div.dataset.convId = c.id;
+
+    var avatarHtml;
+    if (c.type === 'group') {
+      avatarHtml = '<div class="relative flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">' + c.name[0].toUpperCase() + '</div>';
+    } else {
+      var initial = c.name[0].toUpperCase();
+      avatarHtml = '<div class="relative flex-shrink-0"><div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm">' + initial + '</div><span class="online-dot absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800" style="display:' + (onlineUserIds.has(c.id) ? 'block' : 'none') + '"></span></div>';
+    }
+
+    var timeHtml = c.last_message_time ? '<span class="text-[11px] text-gray-400 flex-shrink-0">' + formatTime(c.last_message_time) + '</span>' : '';
+    var preview = c.last_message
+      ? '<div class="text-xs text-gray-500 dark:text-gray-400 truncate">' + (c.last_message_sender ? '<span class="font-medium">' + escapeHtml(c.last_message_sender) + ':</span> ' : '') + escapeHtml(c.last_message) + '</div>'
+      : '<div class="text-xs text-gray-400">No messages yet</div>';
+    var unreadBadge = c.unread > 0 ? '<span class="ml-auto bg-indigo-600 text-white text-[11px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">' + (c.unread > 99 ? '99+' : c.unread) + '</span>' : '';
+
+    div.innerHTML = avatarHtml + '<div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-1"><span class="font-semibold text-sm text-gray-800 dark:text-white truncate">' + escapeHtml(c.name) + '</span>' + timeHtml + '</div>' + preview + '</div>' + unreadBadge;
+    div.addEventListener('click', function() { selectConversation(c); });
+    list.appendChild(div);
+  });
+}
+
+function formatTime(isoStr) {
+  var d = new Date(isoStr);
+  var now = new Date();
+  var diff = (now - d) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd';
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+document.getElementById('conv-search').addEventListener('input', function() {
+  renderConversations(this.value);
+});
+
+// ─── Mobile sidebar toggle ────────────────────────────────────────────────
+var convSidebar = document.getElementById('conv-sidebar');
+var convBackdrop = document.getElementById('conv-backdrop');
+
+function toggleConvSidebar() {
+  if (window.innerWidth >= 1024) return;
+  var isClosed = convSidebar.classList.contains('-translate-x-full');
+  if (isClosed) {
+    convSidebar.classList.remove('-translate-x-full');
+    convSidebar.classList.add('translate-x-0');
+    convBackdrop.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  } else {
+    convSidebar.classList.add('-translate-x-full');
+    convSidebar.classList.remove('translate-x-0');
+    convBackdrop.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
+function openConvSidebar() {
+  if (window.innerWidth >= 1024) return;
+  convSidebar.classList.remove('-translate-x-full');
+  convSidebar.classList.add('translate-x-0');
+  convBackdrop.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+document.getElementById('toggle-conv-btn')?.addEventListener('click', toggleConvSidebar);
+document.getElementById('toggle-conv-header-btn')?.addEventListener('click', toggleConvSidebar);
+document.getElementById('toggle-conv-empty-btn')?.addEventListener('click', toggleConvSidebar);
+convBackdrop?.addEventListener('click', toggleConvSidebar);
+
+// ─── Select Conversation ──────────────────────────────────────────────────
+function selectConversation(conv) {
+  currentConv = conv;
+  myGroupRole = null;
+  messageOffset = 0;
+  hasMoreMessages = false;
+
+  if (window.innerWidth < 1024) toggleConvSidebar();
+
+  document.getElementById('empty-state').classList.add('hidden');
+  document.getElementById('chat-header').classList.remove('hidden');
+  document.getElementById('chat-header').classList.add('flex');
+  document.getElementById('messages').classList.remove('hidden');
+  document.getElementById('message-form').classList.remove('hidden');
+  document.getElementById('mobile-chat-bar').classList.remove('hidden');
+
+  var avatarLetter = document.getElementById('chat-avatar-letter');
+  var avatarImg = document.getElementById('chat-avatar-img');
+  var onlineDot = document.getElementById('chat-online-dot');
+  var chatName = document.getElementById('chat-name');
+  var chatSub = document.getElementById('chat-subtitle');
+  var profileBtn = document.getElementById('view-profile-btn');
+  var groupInfoBtn = document.getElementById('group-info-btn');
+
+  avatarLetter.classList.remove('hidden');
+  avatarImg.classList.add('hidden');
+  onlineDot.classList.add('hidden');
+  profileBtn.classList.add('hidden');
+  groupInfoBtn.classList.add('hidden');
+
+  if (conv.type === 'group') {
+    avatarLetter.textContent = conv.name[0].toUpperCase();
+    chatName.textContent = conv.name;
+    chatSub.textContent = conv.member_count + ' members';
+    groupInfoBtn.classList.remove('hidden');
+    socket.emit('group_join', { group_id: conv.id });
+  } else {
+    avatarLetter.textContent = conv.name[0].toUpperCase();
+    chatName.textContent = conv.name;
+    chatSub.innerHTML = onlineUserIds.has(conv.id) ? '<span class="text-green-500">●</span> Online' : 'Offline';
+    if (onlineUserIds.has(conv.id)) onlineDot.classList.remove('hidden');
+    profileBtn.classList.remove('hidden');
+    profileBtn.href = '/user/' + conv.id;
+  }
+
+  var messagesDiv = document.getElementById('messages');
+  messagesDiv.innerHTML = '<div class="text-center py-4 text-gray-400"><i class="fas fa-spinner fa-spin"></i></div>';
+  loadMessages(true);
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────
+function loadMessages(initial) {
+  if (loadingMessages || !currentConv) return;
+  loadingMessages = true;
+
+  var url = currentConv.type === 'group'
+    ? '/user_chat/group/' + currentConv.id + '/messages?offset=' + messageOffset + '&limit=30'
+    : '/user_chat/messages/' + currentConv.id + '?offset=' + messageOffset + '&limit=30';
+
+  var messagesDiv = document.getElementById('messages');
+  var loader = document.getElementById('load-more-spinner');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.id = 'load-more-spinner';
+    loader.className = 'text-center py-2 text-gray-400 text-sm';
+    loader.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  }
+
+  if (!initial) messagesDiv.prepend(loader);
+  var oldScrollHeight = messagesDiv.scrollHeight;
+
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    if (loader.parentNode) loader.remove();
+    loadingMessages = false;
+
+    if (initial) messagesDiv.innerHTML = '';
+
+    data.messages.forEach(function(msg) {
+      if (!document.getElementById('msg-' + msg.id)) {
+        if (initial) addMessage(msg);
+        else addMessageToTop(msg);
+      }
+    });
+
+    messageOffset += data.messages.length;
+    hasMoreMessages = data.has_more;
+
+    if (hasMoreMessages) {
+      var loadBtn = document.getElementById('load-more-btn');
+      if (!loadBtn) {
+        loadBtn = document.createElement('div');
+        loadBtn.id = 'load-more-btn';
+        loadBtn.className = 'text-center py-2 cursor-pointer text-indigo-500 hover:text-indigo-700 text-xs font-medium';
+        loadBtn.innerHTML = '<i class="fas fa-chevron-up mr-1"></i> Load older';
+        loadBtn.addEventListener('click', function() { loadMessages(false); });
+        messagesDiv.prepend(loadBtn);
+      }
+    } else {
+      var btn = document.getElementById('load-more-btn');
+      if (btn) btn.remove();
+    }
+
+    if (initial) {
+      scrollToBottom();
+    } else {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight - oldScrollHeight;
+    }
+  }).catch(function() { loadingMessages = false; if (loader.parentNode) loader.remove(); });
+}
+
+function addMessageToTop(msg) {
+  var div = createMessageDiv(msg);
+  var messagesDiv = document.getElementById('messages');
+  var firstMsg = messagesDiv.querySelector('[id^="msg-"]');
+  if (firstMsg) messagesDiv.insertBefore(div, firstMsg);
+  else messagesDiv.appendChild(div);
+}
+
+function createMessageDiv(msg) {
+  var div = document.createElement('div');
+  var isMe = msg.sender_id == myId;
+  var isGroup = currentConv && currentConv.type === 'group';
+  div.id = 'msg-' + msg.id;
+  div.className = 'flex ' + (isMe ? 'justify-end' : 'justify-start') + ' mb-0.5';
+
+  var timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var content = escapeHtml(msg.content || '');
+
+  var attachmentHtml = '';
+  if (msg.attachment_url) {
+    if (msg.attachment_type === 'image') {
+      attachmentHtml = '<img src="' + msg.attachment_url + '" class="max-w-full rounded-lg mb-1 cursor-pointer max-h-60 object-cover" onclick="window.open(\'' + msg.attachment_url + '\')">';
+    } else {
+      attachmentHtml = '<a href="' + msg.attachment_url + '" target="_blank" class="flex items-center gap-2 p-2 bg-black/10 dark:bg-white/10 rounded-lg mb-1 text-xs hover:underline"><i class="fas fa-file"></i> File</a>';
+    }
+  }
+
+  var senderHtml = '';
+  if (isGroup && !isMe) {
+    senderHtml = '<div class="text-[11px] font-semibold text-indigo-500 mb-0.5">' + escapeHtml(msg.sender_name || 'Unknown') + '</div>';
+  }
+
+  var actionsHtml = '';
+  if (isMe) {
+    var safeContent = content.replace(/'/g, "\\'");
+    actionsHtml = '<div class="flex gap-1 mt-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="editMessage(' + msg.id + ",'" + safeContent + "')" + '" class="text-[10px] text-gray-400 hover:text-blue-500 p-0.5"><i class="fas fa-pen"></i></button><button onclick="deleteMessage(' + msg.id + ')" class="text-[10px] text-gray-400 hover:text-red-500 p-0.5"><i class="fas fa-trash"></i></button></div>';
+  }
+
+  div.innerHTML = '<div class="group max-w-[90%] sm:max-w-[70%]">' + senderHtml + '<div class="relative px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl ' + (isMe ? 'bg-indigo-600 text-white rounded-br-md' : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-bl-md') + ' shadow-sm">' + attachmentHtml + (content ? '<div class="text-sm whitespace-pre-wrap break-words">' + content + '</div>' : '') + '<div class="flex items-center justify-end gap-1 mt-0.5"><span class="text-[10px] ' + (isMe ? 'text-indigo-200' : 'text-gray-400') + '">' + timeStr + '</span>' + (isMe ? '<i class="fas fa-check text-[9px] text-indigo-200"></i>' : '') + '</div>' + actionsHtml + '</div></div>';
+  return div;
+}
+
+function addMessage(msg) {
+  document.getElementById('messages').appendChild(createMessageDiv(msg));
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  var el = document.getElementById('messages');
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+// ─── Send ─────────────────────────────────────────────────────────────────
+document.getElementById('send-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var input = document.getElementById('message-input');
+  var content = input.value.trim();
+  if (!content || !currentConv) return;
+
+  if (currentConv.type === 'group') {
+    fetch('/user_chat/group/' + currentConv.id + '/send', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({content: content})
+    }).then(function(r) { return r.json(); }).then(function(msg) { addMessage(msg); }).catch(function() {});
+  } else {
+    socket.emit('send_message', {receiver_id: currentConv.id, content: content});
+    socket.emit('stop_typing', {receiver_id: currentConv.id});
+  }
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+});
+
+var msgInput = document.getElementById('message-input');
+msgInput.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  document.getElementById('send-btn').disabled = !this.value.trim();
+  if (currentConv && currentConv.type === 'user') {
+    socket.emit('typing', {receiver_id: currentConv.id});
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(function() { socket.emit('stop_typing', {receiver_id: currentConv.id}); }, 2000);
+  }
+});
+
+// Enter to send, Shift+Enter for newline
+msgInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('send-form').dispatchEvent(new Event('submit'));
+  }
+});
+
+// ─── Socket: receive ──────────────────────────────────────────────────────
+socket.on('receive_message', function(msg) {
+  updateConversationLastMessage(msg.sender_id == myId ? msg.receiver_id : msg.sender_id, 'user', msg);
+  if (currentConv && currentConv.type === 'user' && (msg.sender_id == currentConv.id || msg.sender_id == myId)) {
+    addMessage(msg);
+  }
+  if (msg.sender_id != myId && (!currentConv || currentConv.type !== 'user' || currentConv.id != msg.sender_id)) {
+    playNotificationSound();
+    if (Notification.permission === 'granted' && document.hidden) {
+      new Notification('Message from ' + (msg.sender_name || 'User'), { body: msg.content || 'Sent a file' });
+    }
+  }
+  updateSidebarBadge();
+  renderConversations(document.getElementById('conv-search').value);
+});
+
+socket.on('group_message', function(msg) {
+  if (currentConv && currentConv.type === 'group' && currentConv.id == msg.group_id) {
+    addMessage(msg);
+  }
+  updateSidebarBadge();
+});
+
+socket.on('message_edited', function(data) {
+  var el = document.getElementById('msg-' + data.id);
+  if (el) {
+    var textEl = el.querySelector('.whitespace-pre-wrap');
+    if (textEl) textEl.textContent = data.content;
+  }
+});
+
+socket.on('message_deleted', function(data) {
+  var el = document.getElementById('msg-' + data.id);
+  if (el) el.remove();
+});
+
+// ─── Typing ───────────────────────────────────────────────────────────────
+socket.on('user_typing', function(data) {
+  if (currentConv && currentConv.type === 'user' && data.sender_id == currentConv.id) {
+    document.getElementById('typing-indicator').classList.remove('hidden');
+    document.getElementById('typing-text').textContent = data.sender_name + ' is typing...';
+  }
+});
+
+socket.on('user_stop_typing', function(data) {
+  if (currentConv && currentConv.type === 'user' && data.sender_id == currentConv.id) {
+    document.getElementById('typing-indicator').classList.add('hidden');
+  }
+});
+
+// ─── Online ───────────────────────────────────────────────────────────────
+socket.on('user_online', function(data) {
+  onlineUserIds.add(data.user_id);
+  updateOnlineDots();
+});
+
+socket.on('user_offline', function(data) {
+  onlineUserIds.delete(data.user_id);
+  updateOnlineDots();
+});
+
+function updateOnlineDots() {
+  document.querySelectorAll('.conv-item').forEach(function(el) {
+    if (el.dataset.convType === 'user') {
+      var uid = parseInt(el.dataset.convId);
+      var dot = el.querySelector('.online-dot');
+      if (dot) dot.style.display = onlineUserIds.has(uid) ? 'block' : 'none';
+    }
+  });
+  if (currentConv && currentConv.type === 'user') {
+    var chatSub = document.getElementById('chat-subtitle');
+    var onlineDot = document.getElementById('chat-online-dot');
+    if (onlineUserIds.has(currentConv.id)) {
+      chatSub.innerHTML = '<span class="text-green-500">●</span> Online';
+      onlineDot.classList.remove('hidden');
+    } else {
+      chatSub.textContent = 'Offline';
+      onlineDot.classList.add('hidden');
+    }
+  }
+}
+
+// ─── Unread badge ─────────────────────────────────────────────────────────
+socket.on('unread_update', function() { updateSidebarBadge(); });
+
+function updateSidebarBadge() {
+  fetch('/user_chat/unread').then(function(r) { return r.json(); }).then(function(data) {
+    var badge = document.getElementById('unread-badge');
+    if (badge) {
+      if (data.total > 0) { badge.classList.remove('hidden'); badge.textContent = data.total > 99 ? '99+' : data.total; }
+      else { badge.classList.add('hidden'); }
+    }
+  }).catch(function() {});
+}
+
+function playNotificationSound() {
+  var prefs = { sound: {{ 'true' if current_user.notification_sound_enabled else 'false' }}, soundUrl: '{{ current_user.notification_sound_url }}' };
+  if (prefs.sound && prefs.soundUrl) { try { new Audio(prefs.soundUrl).play().catch(function(){}); } catch(e) {} }
+}
+
+// ─── Emoji picker ─────────────────────────────────────────────────────────
+var emojiBtn = document.getElementById('emoji-btn');
+var emojiContainer = document.getElementById('emoji-picker-container');
+var picker = document.querySelector('emoji-picker');
+
+if (document.documentElement.classList.contains('dark')) {
+  if (picker) picker.classList.replace('light', 'dark');
+}
+
+if (emojiBtn) emojiBtn.addEventListener('click', function() { emojiContainer.classList.toggle('hidden'); });
+if (picker) picker.addEventListener('emoji-click', function(event) {
+  var cursor = msgInput.selectionStart;
+  var text = msgInput.value;
+  msgInput.value = text.slice(0, cursor) + event.detail.unicode + text.slice(cursor);
+  msgInput.focus();
+  emojiContainer.classList.add('hidden');
+  msgInput.dispatchEvent(new Event('input'));
+});
+document.addEventListener('click', function(e) {
+  if (!emojiContainer.contains(e.target) && e.target !== emojiBtn) {
+    emojiContainer.classList.add('hidden');
+  }
+});
+
+// ─── File upload ──────────────────────────────────────────────────────────
+var fileInput = document.getElementById('chat-file-input');
+document.getElementById('attachment-btn').addEventListener('click', function() { fileInput.click(); });
+
+fileInput.addEventListener('change', async function() {
+  if (!fileInput.files.length || !currentConv) return;
+  var file = fileInput.files[0];
+  var formData = new FormData();
+  formData.append('file', file);
+  try {
+    var resp = await fetch('/user_chat/upload', { method: 'POST', body: formData });
+    var data = await resp.json();
+    if (data.url) {
+      if (currentConv.type === 'group') {
+        fetch('/user_chat/group/' + currentConv.id + '/send', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({content: '', attachment_url: data.url, attachment_type: data.type}) }).then(function(r) { return r.json(); }).then(function(m) { addMessage(m); });
+      } else {
+        socket.emit('send_message', {receiver_id: currentConv.id, content: '', attachment_url: data.url, attachment_type: data.type});
+      }
+    }
+  } catch (e) { alert('Upload failed'); }
+  fileInput.value = '';
+});
+
+// ─── Create Group ─────────────────────────────────────────────────────────
+document.getElementById('new-group-btn').addEventListener('click', function() {
+  document.getElementById('create-group-modal').classList.remove('hidden');
+  document.getElementById('new-group-name').value = '';
+  document.getElementById('new-group-desc').value = '';
+  document.getElementById('new-group-name').focus();
+});
+
+function closeCreateGroup() { document.getElementById('create-group-modal').classList.add('hidden'); }
+document.getElementById('close-create-group')?.addEventListener('click', closeCreateGroup);
+
+document.getElementById('create-group-submit').addEventListener('click', async function() {
+  var name = document.getElementById('new-group-name').value.trim();
+  if (!name) return Swal.fire('Error', 'Group name required', 'error');
+  var desc = document.getElementById('new-group-desc').value.trim();
+  var resp = await fetch('/user_chat/group/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name, description: desc}) });
+  if (resp.ok) {
+    closeCreateGroup();
+    loadConversations();
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Group created!', showConfirmButton: false, timer: 2000 });
+  } else {
+    var err = await resp.json();
+    Swal.fire('Error', err.error, 'error');
+  }
+});
+
+// ─── Group Info Modal ─────────────────────────────────────────────────────
+document.getElementById('group-info-btn').addEventListener('click', async function() {
+  if (!currentConv || currentConv.type !== 'group') return;
+  var resp = await fetch('/user_chat/group/' + currentConv.id);
+  var data = await resp.json();
+  myGroupRole = data.my_role;
+
+  document.getElementById('group-modal-title').textContent = data.group.name;
+  document.getElementById('group-modal-avatar').querySelector('span').textContent = data.group.name[0].toUpperCase();
+  document.getElementById('group-modal-name').textContent = data.group.name;
+  document.getElementById('group-modal-count').textContent = data.group.member_count + ' members | ' + data.my_role;
+  document.getElementById('group-modal-desc').textContent = data.group.description || 'No description';
+
+  var avatarImg = document.getElementById('group-avatar-img-display');
+  var avatarLetter = document.getElementById('group-avatar-letter-display');
+  if (data.group.avatar_url) {
+    avatarImg.src = data.group.avatar_url;
+    avatarImg.classList.remove('hidden');
+    avatarLetter.classList.add('hidden');
+  } else {
+    avatarImg.classList.add('hidden');
+    avatarLetter.classList.remove('hidden');
+    avatarLetter.textContent = data.group.name[0].toUpperCase();
+  }
+
+  var actions = document.getElementById('group-modal-actions');
+  actions.classList.remove('hidden');
+  document.getElementById('group-leave-btn').classList.toggle('hidden', myGroupRole === 'owner');
+  document.getElementById('group-delete-btn').classList.toggle('hidden', myGroupRole !== 'owner');
+  document.getElementById('invite-section').classList.toggle('hidden', myGroupRole === 'member');
+
+  renderMembers(data.members);
+  document.getElementById('group-modal').classList.remove('hidden');
+});
+
+function closeGroupModal() { document.getElementById('group-modal').classList.add('hidden'); }
+document.getElementById('close-group-modal')?.addEventListener('click', closeGroupModal);
+
+// Group avatar upload
+document.getElementById('group-avatar-upload').addEventListener('change', async function() {
+  if (!this.files.length || !currentConv) return;
+  var fd = new FormData();
+  fd.append('file', this.files[0]);
+  var resp = await fetch('/user_chat/group/' + currentConv.id + '/avatar', { method: 'POST', body: fd });
+  var data = await resp.json();
+  if (data.success) {
+    var img = document.getElementById('group-avatar-img-display');
+    img.src = data.avatar_url;
+    img.classList.remove('hidden');
+    document.getElementById('group-avatar-letter-display').classList.add('hidden');
+    // Update sidebar avatar too
+    loadConversations();
+  }
+  this.value = '';
+});
+
+// Rename group
+function renameGroup() {
+  if (!currentConv || !myGroupRole || myGroupRole === 'member') return;
+  Swal.fire({
+    title: 'Rename Group',
+    input: 'text',
+    inputValue: document.getElementById('group-modal-name').textContent,
+    showCancelButton: true, confirmButtonText: 'Save',
+    inputValidator: function(v) { return !v.trim() ? 'Name required' : null; }
+  }).then(async function(result) {
+    if (!result.isConfirmed) return;
+    var resp = await fetch('/user_chat/group/' + currentConv.id + '/rename', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: result.value.trim()})
+    });
+    if (resp.ok) {
+      document.getElementById('group-modal-name').textContent = result.value.trim();
+      document.getElementById('group-modal-title').textContent = result.value.trim();
+      document.getElementById('chat-name').textContent = result.value.trim();
+      loadConversations();
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Group renamed', showConfirmButton: false, timer: 2000 });
+    } else {
+      var err = await resp.json();
+      Swal.fire('Error', err.error, 'error');
+    }
+  });
+}
+
+function renderMembers(members) {
+  var list = document.getElementById('members-list');
+  list.innerHTML = '';
+  members.forEach(function(m) {
+    var div = document.createElement('div');
+    var roleBadge = m.role === 'owner' ? '<span class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-medium">Owner</span>'
+      : m.role === 'admin' ? '<span class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">Admin</span>'
+      : '<span class="text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">Member</span>';
+
+    var controls = '';
+    if (myGroupRole === 'owner' && m.role !== 'owner') {
+      controls = '<div class="flex gap-1 items-center">'
+        + '<select onchange="changeMemberRole(' + m.id + ',this.value)" class="text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-white">'
+        + '<option value="admin"' + (m.role === 'admin' ? ' selected' : '') + '>Admin</option>'
+        + '<option value="member"' + (m.role === 'member' ? ' selected' : '') + '>Member</option>'
+        + '</select>'
+        + '<button onclick="changeOwnership(' + m.id + ')" class="text-[10px] text-amber-500 hover:text-amber-700 p-1" title="Transfer ownership"><i class="fas fa-crown"></i></button>'
+        + '<button onclick="removeGroupMember(' + m.id + ')" class="text-red-400 hover:text-red-600 text-xs p-1"><i class="fas fa-times"></i></button>'
+        + '</div>';
+    } else if (myGroupRole === 'admin' && m.role === 'member') {
+      controls = '<button onclick="removeGroupMember(' + m.id + ')" class="text-red-400 hover:text-red-600 text-xs p-1"><i class="fas fa-times"></i></button>';
+    }
+
+    div.innerHTML = '<div class="flex items-center justify-between py-1.5"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">' + m.username[0].toUpperCase() + '</div><div><div class="text-sm text-gray-800 dark:text-white">' + escapeHtml(m.username) + '</div>' + roleBadge + '</div></div>' + controls + '</div>';
+    list.appendChild(div);
+  });
+}
+
+window.changeMemberRole = async function(userId, role) {
+  var resp = await fetch('/user_chat/group/' + currentConv.id + '/members/' + userId + '/role', {
+    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({role: role})
+  });
+  if (resp.ok) {
+    var r = await fetch('/user_chat/group/' + currentConv.id);
+    var d = await r.json();
+    renderMembers(d.members);
+  }
+};
+
+window.changeOwnership = async function(userId) {
+  var result = await Swal.fire({ title: 'Transfer ownership?', text: 'You will no longer be the owner.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Transfer' });
+  if (!result.isConfirmed) return;
+  var resp = await fetch('/user_chat/group/' + currentConv.id + '/transfer/' + userId, { method: 'POST' });
+  if (resp.ok) {
+    var r = await fetch('/user_chat/group/' + currentConv.id);
+    var d = await r.json();
+    myGroupRole = d.my_role;
+    document.getElementById('group-delete-btn').classList.toggle('hidden', myGroupRole !== 'owner');
+    document.getElementById('group-leave-btn').classList.toggle('hidden', myGroupRole === 'owner');
+    document.getElementById('invite-section').classList.toggle('hidden', myGroupRole === 'member');
+    renderMembers(d.members);
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Ownership transferred', showConfirmButton: false, timer: 2000 });
+  }
+};
+
+window.removeGroupMember = async function(userId) {
+  var result = await Swal.fire({ title: 'Remove member?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e53e3e', confirmButtonText: 'Remove' });
+  if (!result.isConfirmed) return;
+  await fetch('/user_chat/group/' + currentConv.id + '/members/' + userId, { method: 'DELETE' });
+  var r = await fetch('/user_chat/group/' + currentConv.id);
+  var d = await r.json();
+  renderMembers(d.members);
+};
+
+document.getElementById('group-leave-btn').addEventListener('click', async function() {
+  var result = await Swal.fire({ title: 'Leave group?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Leave' });
+  if (!result.isConfirmed) return;
+  var resp = await fetch('/user_chat/group/' + currentConv.id + '/leave', { method: 'POST' });
+  if (resp.ok) {
+    closeGroupModal();
+    currentConv = null;
+    resetChatUI();
+    loadConversations();
+  } else {
+    var err = await resp.json();
+    Swal.fire('Error', err.error, 'error');
+  }
+});
+
+document.getElementById('group-delete-btn').addEventListener('click', async function() {
+  var result = await Swal.fire({ title: 'Delete group?', text: 'All messages will be lost.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e53e3e', confirmButtonText: 'Delete' });
+  if (!result.isConfirmed) return;
+  var resp = await fetch('/user_chat/group/' + currentConv.id, { method: 'DELETE' });
+  if (resp.ok) {
+    closeGroupModal();
+    currentConv = null;
+    resetChatUI();
+    loadConversations();
+  }
+});
+
+// Invite search
+var inviteTimer;
+document.getElementById('invite-search').addEventListener('input', function() {
+  clearTimeout(inviteTimer);
+  var q = this.value.trim();
+  inviteTimer = setTimeout(function() {
+    if (q.length < 1) { document.getElementById('invite-results').innerHTML = ''; return; }
+    fetch('/user_chat/group/' + currentConv.id + '/candidates?q=' + encodeURIComponent(q))
+      .then(function(r) { return r.json(); }).then(function(users) {
+        var container = document.getElementById('invite-results');
+        container.innerHTML = '';
+        users.forEach(function(u) {
+          var div = document.createElement('div');
+          div.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700';
+          div.innerHTML = '<span class="text-sm text-gray-800 dark:text-white">' + escapeHtml(u.username) + '</span><button onclick="inviteUser(' + u.id + ')" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Add</button>';
+          container.appendChild(div);
+        });
+      });
+  }, 300);
+});
+
+window.inviteUser = async function(userId) {
+  var resp = await fetch('/user_chat/group/' + currentConv.id + '/members', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId}) });
+  if (resp.ok) {
+    document.getElementById('invite-search').value = '';
+    document.getElementById('invite-results').innerHTML = '';
+    var r = await fetch('/user_chat/group/' + currentConv.id);
+    var d = await r.json();
+    renderMembers(d.members);
+    document.getElementById('group-modal-count').textContent = d.group.member_count + ' members | ' + d.my_role;
+  } else {
+    var err = await resp.json();
+    Swal.fire('Error', err.error, 'error');
+  }
+};
+
+// ─── Edit / Delete messages ───────────────────────────────────────────────
+function editMessage(msgId, oldContent) {
+  Swal.fire({
+    title: 'Edit Message', input: 'text', inputValue: oldContent,
+    showCancelButton: true, confirmButtonText: 'Save',
+  }).then(function(result) {
+    if (result.isConfirmed && result.value.trim() !== '') {
+      if (currentConv?.type === 'group') {} else {
+        socket.emit('edit_message', { id: msgId, content: result.value.trim() });
+      }
+    }
+  });
+}
+
+function deleteMessage(msgId) {
+  if (!confirm('Delete this message?')) return;
+  if (currentConv?.type === 'group') {} else {
+    socket.emit('delete_message', { id: msgId });
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function resetChatUI() {
+  document.getElementById('empty-state').classList.remove('hidden');
+  document.getElementById('chat-header').classList.add('hidden');
+  document.getElementById('messages').classList.add('hidden');
+  document.getElementById('message-form').classList.add('hidden');
+  document.getElementById('mobile-chat-bar').classList.add('hidden');
+  document.getElementById('messages').innerHTML = '';
+}
+
+function escapeHtml(text) {
+  var map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"};
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+function updateConversationLastMessage(otherId, type, msg) {
+  var conv = null;
+  for (var i = 0; i < conversations.length; i++) {
+    if (conversations[i].type === type && conversations[i].id === otherId) { conv = conversations[i]; break; }
+  }
+  if (conv) {
+    conv.last_message = (msg.content || '').substring(0, 80);
+    conv.last_message_time = msg.created_at;
+    conv.last_message_sender = msg.sender_id == myId ? 'You' : msg.sender_name;
+  }
+}
+
+// ─── Notification permission ──────────────────────────────────────────────
+var notifRequested = false;
+document.addEventListener('click', function() {
+  if (!notifRequested && 'Notification' in window) {
+    if (Notification.permission === 'default') Notification.requestPermission();
+    notifRequested = true;
+  }
+}, { once: true });
+
+// ─── Sidebar resize ───────────────────────────────────────────────────────
+(function() {
+  var handle = document.getElementById('conv-resize');
+  if (!handle) return;
+  var isResizing = false, startX, startWidth;
+  handle.addEventListener('mousedown', function(e) {
+    isResizing = true;
+    startX = e.clientX;
+    startWidth = parseInt(window.getComputedStyle(convSidebar).width, 10);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  function onMove(e) {
+    if (!isResizing) return;
+    var newWidth = startWidth + (e.clientX - startX);
+    if (newWidth >= 240 && newWidth <= 480) { convSidebar.style.width = newWidth + 'px'; }
+  }
+  function onUp() { isResizing = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+})();
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+loadConversations();
+
+setInterval(function() {
+  if (conversations.length > 0) {
+    conversations.sort(function(a, b) { return (b.last_message_time || '').localeCompare(a.last_message_time || ''); });
+    renderConversations(document.getElementById('conv-search').value);
+  }
+}, 5000);
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <a href="{{ url_for('tools.tools_page') }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mb-4">
+      <i class="fas fa-arrow-left"></i> Back to Tools
+    </a>
+    <h2 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+      <i class="fas fa-exchange-alt text-emerald-600"></i> Image Converter
+    </h2>
+    <p class="text-gray-500 dark:text-gray-400 mt-2">Convert images between PNG, JPEG, WebP, and GIF formats.</p>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <div id="upload-area"
+         class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-12 text-center cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+      <i class="fas fa-cloud-upload-alt text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
+      <p class="text-lg font-medium text-gray-600 dark:text-gray-400">Drop an image here or click to browse</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Supports PNG, JPG, WebP, GIF, BMP, TIFF</p>
+      <input type="file" id="file-input" accept="image/*" class="hidden">
+    </div>
+
+    <div id="options" class="hidden mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Output Format</label>
+          <select id="format-select" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG</option>
+            <option value="webp">WebP</option>
+            <option value="gif">GIF</option>
+            <option value="bmp">BMP</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Quality (1-100)</label>
+          <input type="range" id="quality-slider" min="10" max="100" value="90" class="w-full">
+          <span id="quality-display" class="text-xs text-gray-500">90%</span>
+        </div>
+        <div class="flex items-end">
+          <button id="convert-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl shadow transition font-medium">
+            <i class="fas fa-sync-alt mr-1"></i> Convert
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="spinner" class="hidden text-center py-8">
+      <i class="fas fa-spinner fa-spin text-4xl text-emerald-600"></i>
+      <p class="text-gray-500 mt-3">Converting...</p>
+    </div>
+
+    <div id="result" class="hidden mt-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Original</h4>
+          <img id="original-preview" class="w-full rounded-xl border border-gray-200 dark:border-gray-600 max-h-64 object-contain bg-gray-50 dark:bg-gray-900">
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Converted</h4>
+          <img id="result-preview" class="w-full rounded-xl border border-gray-200 dark:border-gray-600 max-h-64 object-contain bg-gray-50 dark:bg-gray-900">
+          <p id="result-info" class="text-xs text-gray-500 mt-1"></p>
+        </div>
+      </div>
+      <div class="mt-6 flex gap-3 justify-end">
+        <button id="download-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl shadow transition font-medium flex items-center gap-2">
+          <i class="fas fa-download"></i> Download
+        </button>
+        <button id="reset-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-6 py-3 rounded-xl transition font-medium">
+          <i class="fas fa-redo"></i> New Image
+        </button>
+      </div>
+    </div>
+
+    <div id="error-msg" class="hidden mt-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm"></div>
+  </div>
+</div>
+
+<script>
+  const uploadArea = document.getElementById('upload-area');
+  const fileInput = document.getElementById('file-input');
+  const options = document.getElementById('options');
+  const spinner = document.getElementById('spinner');
+  const resultDiv = document.getElementById('result');
+  const errorMsg = document.getElementById('error-msg');
+  const originalPreview = document.getElementById('original-preview');
+  const resultPreview = document.getElementById('result-preview');
+  const resultInfo = document.getElementById('result-info');
+  const downloadBtn = document.getElementById('download-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const convertBtn = document.getElementById('convert-btn');
+  const formatSelect = document.getElementById('format-select');
+  const qualitySlider = document.getElementById('quality-slider');
+  const qualityDisplay = document.getElementById('quality-display');
+
+  let currentFile = null;
+  let resultDataUrl = '';
+  let resultFormat = 'png';
+
+  qualitySlider.addEventListener('input', () => { qualityDisplay.textContent = qualitySlider.value + '%'; });
+
+  uploadArea.addEventListener('click', () => fileInput.click());
+  uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-900/20'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-900/20'));
+  uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-900/20'); handleFile(e.dataTransfer.files[0]); });
+
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    currentFile = file;
+    options.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
+    errorMsg.classList.add('hidden');
+    const reader = new FileReader();
+    reader.onload = (e) => { originalPreview.src = e.target.result; };
+    reader.readAsDataURL(file);
+  }
+
+  convertBtn.addEventListener('click', async () => {
+    if (!currentFile) return;
+    spinner.classList.remove('hidden');
+    options.classList.add('hidden');
+    errorMsg.classList.add('hidden');
+
+    const formData = new FormData();
+    formData.append('image', currentFile);
+    formData.append('format', formatSelect.value);
+    formData.append('quality', qualitySlider.value);
+
+    try {
+      const resp = await fetch('{{ url_for("tools.image_convert") }}', { method: 'POST', body: formData });
+      const data = await resp.json();
+      spinner.classList.add('hidden');
+      if (data.success) {
+        resultFormat = data.format;
+        resultDataUrl = data.image;
+        resultPreview.src = data.image;
+        const sizeKB = (data.size / 1024).toFixed(1);
+        resultInfo.textContent = `Format: ${data.format.toUpperCase()} | Size: ${sizeKB} KB`;
+        resultDiv.classList.remove('hidden');
+      } else {
+        showError(data.error || 'Conversion failed');
+        options.classList.remove('hidden');
+      }
+    } catch (err) {
+      spinner.classList.add('hidden');
+      showError('Network error: ' + err.message);
+      options.classList.remove('hidden');
+    }
+  });
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.remove('hidden');
+  }
+
+  downloadBtn.addEventListener('click', () => {
+    if (!resultDataUrl) return;
+    const a = document.createElement('a');
+    a.href = resultDataUrl;
+    a.download = 'converted.' + resultFormat;
+    a.click();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    currentFile = null;
+    resultDiv.classList.add('hidden');
+    options.classList.add('hidden');
+    errorMsg.classList.add('hidden');
+    uploadArea.classList.remove('hidden');
+    fileInput.value = '';
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .stat-card-modern {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+  }
+  .stat-card-modern::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--card-color), transparent);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .stat-card-modern:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+  }
+  .stat-card-modern:hover::before {
+    opacity: 0.06;
+  }
+  .dark .stat-card-modern {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  .stat-icon-modern {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  .stat-content {
+    position: relative;
+    z-index: 1;
+  }
+  .stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.2;
+    display: block;
+    letter-spacing: -0.03em;
+  }
+  .dark .stat-number { color: #f1f5f9; }
+  .stat-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .stat-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+  .dashboard-card {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+  }
+  .dashboard-card:hover {
+    box-shadow: var(--shadow);
+  }
+  .dark .dashboard-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .dark .card-header { border-color: #334155; }
+  .card-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .dark .card-header h3 { color: #f1f5f9; }
+  .card-body {
+    padding: 1.5rem;
+  }
+  .note-item, .event-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.5rem;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+  }
+  .dark .note-item, .dark .event-item { border-color: #334155; }
+  .note-item:last-child, .event-item:last-child { border-bottom: none; }
+  .note-item:hover, .event-item:hover { background: rgba(99, 102, 241, 0.04); }
+  .dark .note-item:hover, .dark .event-item:hover { background: rgba(99, 102, 241, 0.08); }
+  .note-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .note-title, .task-title, .event-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dark .note-title, .dark .task-title, .dark .event-title { color: #e2e8f0; }
+  .note-meta, .task-meta, .event-time {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 0.1rem;
+  }
+  .task-item-modern {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s ease;
+  }
+  .dark .task-item-modern { border-color: #334155; }
+  .task-item-modern:last-child { border-bottom: none; }
+  .task-item-modern:hover { background: rgba(16, 185, 129, 0.04); }
+  .dark .task-item-modern:hover { background: rgba(16, 185, 129, 0.08); }
+  .priority-indicator {
+    width: 4px;
+    height: 32px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .priority-high { background: #ef4444; }
+  .priority-medium { background: #f59e0b; }
+  .priority-low { background: #3b82f6; }
+  .event-date-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1.2;
+  }
+  .event-month {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .event-day {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+  .event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+  .empty-state p {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .dashboard-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .quick-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: white;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
+  }
+  .quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    color: white;
+  }
+  .quick-action-btn i { font-size: 0.95rem; }
+
+  .greeting-gradient {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .dark .greeting-gradient {
+    background: linear-gradient(135deg, #a78bfa, #c084fc, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .welcome-cta {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: white;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
+  }
+  .welcome-cta h3 { font-size: 1.2rem; font-weight: 700; }
+  .welcome-cta p { opacity: 0.9; font-size: 0.9rem; margin-top: 0.2rem; }
+  .welcome-cta .btn-white {
+    background: white;
+    color: #6366f1;
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .welcome-cta .btn-white:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  }
+
+  @media (max-width: 768px) {
+    .welcome-cta { flex-direction: column; text-align: center; }
+    .stat-number { font-size: 1.6rem; }
+    .stat-icon-modern { width: 46px; height: 46px; font-size: 1.2rem; }
+  }
+</style>
+
+<div class="mb-8">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl md:text-4xl font-extrabold greeting-gradient">
+        {% if now is defined %}
+        {% set hour = now.hour %}
+        {% if hour < 12 %}Good Morning{% elif hour < 17 %}Good Afternoon{% else %}Good Evening{% endif %},
+        {% else %}Welcome{% endif %}
+        {{ current_user.username }}!
+      </h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
+        <i class="far fa-calendar-alt"></i>
+        {% if now is defined %}{{ now.strftime('%A, %d %B %Y') }}{% endif %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('notes.notes') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+        <i class="fas fa-plus"></i> New Note
+      </a>
+      <a href="{{ url_for('tasks.tasks') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #10b981, #34d399);">
+        <i class="fas fa-plus"></i> New Task
+      </a>
+    </div>
+  </div>
+</div>
+
+{% set td = tasks_done|default(0) %}{% set tt = tasks_total|default(0) %}{% set completion_pct = (td / tt * 100)|round|int if tt > 0 else 0 %}
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+  <div class="stat-card-modern" style="--card-color: #6366f1;">
+    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+      <i class="fas fa-sticky-note"></i>
+    </div>
+    <div class="stat-content">
+      <span class="stat-number dark:text-white" style="color:#1e293b;">
+        <span class="counter" data-target="{{ notes_count|default(0) }}">0</span>
+      </span>
+      <span class="stat-label">Notes</span>
+    </div>
+  </div>
+  <div class="stat-card-modern" style="--card-color: #10b981;">
+    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #10b981, #34d399);">
+      <i class="fas fa-check-double"></i>
+    </div>
+    <div class="stat-content">
+      <span class="stat-number dark:text-white" style="color:#1e293b;">
+        <span class="counter" data-target="{{ tasks_done }}">0</span>
+        <span style="font-size:1rem;font-weight:600;opacity:0.5;">/{{ tasks_total }}</span>
+      </span>
+      <span class="stat-label">Tasks Done</span>
+      {% if (tasks_total|default(0)) > 0 %}
+      <span class="stat-sub">
+        <span class="counter" data-target="{{ completion_pct|default(0) }}">0</span>% complete
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="stat-card-modern" style="--card-color: #3b82f6;">
+    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+      <i class="fas fa-calendar-alt"></i>
+    </div>
+    <div class="stat-content">
+      <span class="stat-number dark:text-white" style="color:#1e293b;">
+        <span class="counter" data-target="{{ events_total|default(0) }}">0</span>
+      </span>
+      <span class="stat-label">Events</span>
+      {% if upcoming_events|default([]) %}
+      <span class="stat-sub"><span class="counter" data-target="{{ (upcoming_events|default([]))|length }}">0</span> upcoming</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="stat-card-modern" style="--card-color: #ec4899;">
+    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #ec4899, #f472b6);">
+      <i class="fab fa-facebook-messenger"></i>
+    </div>
+    <div class="stat-content">
+      <span class="stat-number dark:text-white" style="color:#1e293b;">
+        <span class="counter" data-target="{{ unread_count|default(0) }}">0</span>
+      </span>
+      <span class="stat-label">Unread Messages</span>
+    </div>
+  </div>
+</div>
+
+{% if (tasks_total|default(0)) > 0 or (events_total|default(0)) > 0 %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-pie" style="color:#6366f1;"></i> Tasks Completion</h3>
+      {% if (tasks_done_week|default(0)) > 0 %}
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:#ecfdf5;color:#059669;">
+        +{{ tasks_done_week|default(0) }} this week
+      </span>
+      {% endif %}
+    </div>
+    <div class="card-body flex flex-col items-center">
+      <div style="position:relative; width:180px; height:180px;">
+        <canvas id="tasksDonutChart" width="180" height="180"></canvas>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+          <span class="text-2xl font-extrabold dark:text-white" style="color:#1e293b;">{{ completion_pct }}%</span>
+          <span class="text-xs font-medium" style="color:var(--text-secondary);">complete</span>
+        </div>
+      </div>
+      <div class="w-full mt-4 space-y-2">
+        <div class="flex items-center justify-between text-sm">
+          <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:#10b981;"></span> Done</span>
+          <span class="font-semibold dark:text-white">{{ tasks_done }}</span>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+          <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:#e5e7eb;"></span> Pending</span>
+          <span class="font-semibold dark:text-white">{{ tasks_pending|default(0) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h3><i class="fas fa-layer-group" style="color:#f59e0b;"></i> Priority Breakdown</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="priorityChart" height="200"></canvas>
+    </div>
+  </div>
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h3><i class="fas fa-wave-square" style="color:#ec4899;"></i> Weekly Activity</h3>
+      {% if (tasks_created_week|default(0)) > 0 %}
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:#fef2f2;color:#dc2626;">
+        {{ tasks_created_week|default(0) }} created
+      </span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <canvas id="activityChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h3><i class="fas fa-sticky-note" style="color:#6366f1;"></i> Recent Notes</h3>
+      <a href="{{ url_for('notes.notes') }}" class="text-xs font-semibold" style="color:#6366f1;">View All</a>
+    </div>
+    <div class="card-body p-0">
+      {% if recent_notes|default([]) %}
+        {% for note in recent_notes|default([]) %}
+          <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="note-item">
+            <div class="note-dot" style="background: {{ note.color or '#6366f1' }}; box-shadow: 0 0 0 3px color-mix(in srgb, {{ note.color or '#6366f1' }} 20%, transparent);"></div>
+            <div class="flex-1 min-w-0">
+              <p class="note-title">{{ note.title }}</p>
+              <p class="note-meta">{{ note.updated_at.strftime('%b %d · %H:%M') }}</p>
+            </div>
+            <i class="fas fa-chevron-right" style="color:var(--text-secondary);opacity:0.3;font-size:0.75rem;"></i>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-sticky-note" style="opacity:0.2;font-size:2.5rem;"></i>
+          <p style="font-size:0.9rem;">No notes yet</p>
+          <a href="{{ url_for('notes.notes') }}" class="btn btn-primary btn-sm mt-2">Create Note</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h3><i class="fas fa-tasks" style="color:#10b981;"></i> Pending Tasks</h3>
+      <a href="{{ url_for('tasks.tasks') }}" class="text-xs font-semibold" style="color:#10b981;">View All</a>
+    </div>
+    <div class="card-body p-0">
+      {% if recent_tasks|default([]) %}
+        {% for task in recent_tasks|default([]) %}
+          <div class="task-item-modern">
+            <div class="priority-indicator priority-{{ task.priority }}"></div>
+            <div class="flex-1 min-w-0">
+              <p class="task-title">{{ task.title }}</p>
+              <p class="task-meta">
+                {% if task.due_date %}
+                  <i class="far fa-clock"></i> {{ task.due_date.strftime('%b %d') }}
+                {% else %}
+                  {{ task.priority|capitalize }} priority
+                {% endif %}
+              </p>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-check-circle" style="color:#10b981;opacity:0.3;font-size:2.5rem;"></i>
+          <p style="font-size:0.9rem;">All tasks completed!</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h3><i class="fas fa-calendar-alt" style="color:#3b82f6;"></i> Upcoming</h3>
+      <a href="{{ url_for('calendar.calendar') }}" class="text-xs font-semibold" style="color:#3b82f6;">View All</a>
+    </div>
+    <div class="card-body p-0">
+      {% if upcoming_events %}
+        {% for ev in upcoming_events %}
+          <div class="event-item">
+            <div class="event-date-badge">
+              <span class="event-month">{{ ev.start.strftime('%b') }}</span>
+              <span class="event-day">{{ ev.start.strftime('%d') }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="event-title">{{ ev.title }}</p>
+              <p class="event-time">
+                <i class="far fa-clock"></i> {{ ev.start.strftime('%I:%M %p') }}
+                {% if ev.location %} · <i class="fas fa-map-marker-alt"></i> {{ ev.location }}{% endif %}
+              </p>
+            </div>
+            <div class="event-dot" style="background: {{ ev.color or '#6366f1' }};"></div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <i class="fas fa-calendar-plus" style="opacity:0.2;font-size:2.5rem;"></i>
+          <p style="font-size:0.9rem;">No upcoming events</p>
+          <a href="{{ url_for('calendar.calendar') }}" class="btn btn-primary btn-sm mt-2">Add Event</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="welcome-cta">
+  <div>
+    <h3><i class="fas fa-rocket"></i> Boost Your Productivity</h3>
+    <p>Stay organized with notes, tasks, calendar, and AI-powered tools — all in one place.</p>
+  </div>
+  <a href="{{ url_for('tools.tools_page') }}" class="btn-white">
+    <i class="fas fa-toolbox"></i> Explore Tools
+  </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  // --- Counter Animation ---
+  const counters = document.querySelectorAll('.counter');
+  if (counters.length) {
+    const animateCounter = (el) => {
+      const target = parseInt(el.dataset.target, 10);
+      if (target === 0) { el.textContent = '0'; return; }
+      const duration = 1200;
+      const start = performance.now();
+      const step = (now) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(eased * target);
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          animateCounter(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    counters.forEach(c => observer.observe(c));
+  }
+
+  // --- Chart Colors (dark-aware) ---
+  const isDark = document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? '#334155' : '#e2e8f0';
+
+  function createGradient(ctx, colors) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    colors.forEach((c, i) => gradient.addColorStop(i / (colors.length - 1), c));
+    return gradient;
+  }
+
+  // 1. Tasks Donut Chart
+  const donutCtx = document.getElementById('tasksDonutChart');
+  if (donutCtx) {
+    new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Done', 'Pending'],
+        datasets: [{
+          data: [{{ tasks_done|default(0) }}, {{ tasks_pending|default(0) }}],
+          backgroundColor: ['#10b981', isDark ? '#475569' : '#e5e7eb'],
+          borderWidth: 0,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        cutout: '78%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1e293b' : '#fff',
+            titleColor: isDark ? '#f1f5f9' : '#1e293b',
+            bodyColor: textColor,
+            borderColor: gridColor,
+            borderWidth: 1,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.parsed} task${ctx.parsed !== 1 ? 's' : ''}`
+            }
+          }
+        },
+        animation: { animateRotate: true, duration: 1000 }
+      }
+    });
+  }
+
+  // 2. Priority Bar Chart
+  const priorityCtx = document.getElementById('priorityChart');
+  if (priorityCtx) {
+    new Chart(priorityCtx, {
+      type: 'bar',
+      data: {
+        labels: ['High', 'Medium', 'Low'],
+        datasets: [{
+          label: 'Tasks',
+          data: [{{ tasks_high|default(0) }}, {{ tasks_medium|default(0) }}, {{ tasks_low|default(0) }}],
+          backgroundColor: [
+            createGradient(priorityCtx.getContext('2d'), ['#ef4444', '#f87171']),
+            createGradient(priorityCtx.getContext('2d'), ['#f59e0b', '#fbbf24']),
+            createGradient(priorityCtx.getContext('2d'), ['#3b82f6', '#60a5fa']),
+          ],
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.55,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1e293b' : '#fff',
+            titleColor: isDark ? '#f1f5f9' : '#1e293b',
+            bodyColor: textColor,
+            borderColor: gridColor,
+            borderWidth: 1,
+            callbacks: {
+              label: ctx => ` ${ctx.parsed} pending task${ctx.parsed !== 1 ? 's' : ''}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { color: textColor, stepSize: 1 },
+            grid: { color: gridColor, drawBorder: false },
+          },
+          x: {
+            ticks: { color: textColor },
+            grid: { display: false },
+          }
+        },
+        animation: { duration: 800 }
+      }
+    });
+  }
+
+  // 3. Weekly Activity Line Chart
+  const activityCtx = document.getElementById('activityChart');
+  if (activityCtx) {
+    const grad = activityCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+    grad.addColorStop(0, isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(236, 72, 153, 0.2)');
+    grad.addColorStop(1, 'rgba(236, 72, 153, 0)');
+
+    new Chart(activityCtx, {
+      type: 'line',
+      data: {
+        labels: {{ activity_labels|default([])|tojson }},
+        datasets: [{
+          label: 'Tasks Created',
+          data: {{ activity_data|default([])|tojson }},
+          fill: true,
+          backgroundColor: grad,
+          borderColor: '#ec4899',
+          borderWidth: 2.5,
+          tension: 0.35,
+          pointRadius: 4,
+          pointBackgroundColor: '#ec4899',
+          pointBorderColor: isDark ? '#1e293b' : '#fff',
+          pointBorderWidth: 2,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#ec4899',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1e293b' : '#fff',
+            titleColor: isDark ? '#f1f5f9' : '#1e293b',
+            bodyColor: textColor,
+            borderColor: gridColor,
+            borderWidth: 1,
+            callbacks: {
+              label: ctx => ` ${ctx.parsed} task${ctx.parsed !== 1 ? 's' : ''} created`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { color: textColor, stepSize: 1 },
+            grid: { color: gridColor, drawBorder: false },
+          },
+          x: {
+            ticks: { color: textColor },
+            grid: { display: false },
+          }
+        },
+        animation: { duration: 1000, easing: 'easeOutQuart' },
+        interaction: { intersect: false, mode: 'index' },
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

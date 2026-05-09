@@ -1,0 +1,1108 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <div class="mb-4 sm:mb-6">
+    <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-2 sm:gap-3">
+      <i class="fas fa-toolbox text-indigo-600"></i> Tools
+    </h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Utility tools for everyday tasks — no page reloads needed</p>
+  </div>
+
+  <!-- Category tabs -->
+  <div class="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-none mb-4" id="category-tabs">
+    <button class="cat-tab active px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-indigo-600 text-white whitespace-nowrap transition" data-cat="image">🖼️ Image</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="pdf">📄 PDF</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="security">🔐 Security</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="web">🔗 Web Dev</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="text">📝 Text</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="ai">🤖 AI</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="dev">💻 Developer</button>
+  </div>
+
+  <!-- Tool grid / workspace -->
+  <div id="tools-content" class="min-h-[400px]"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  TOOL DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+var TOOLS = {
+  image: [
+    { id:'remove-bg', icon:'fas fa-magic', title:'Remove BG', desc:'Remove background from images using AI', color:'indigo' },
+    { id:'compress', icon:'fas fa-compress-alt', title:'Compress', desc:'Reduce image file size without losing quality', color:'emerald' },
+    { id:'resize', icon:'fas fa-expand-arrows-alt', title:'Resize', desc:'Resize images for social media or documents', color:'blue' },
+    { id:'convert', icon:'fas fa-exchange-alt', title:'Convert', desc:'Convert between PNG, JPG, WEBP & more', color:'purple' },
+    { id:'enhance', icon:'fas fa-magic', title:'Enhance', desc:'AI upscaling to improve image quality', color:'rose' },
+    { id:'filters', icon:'fas fa-filter', title:'Filters', desc:'Apply grayscale, sepia, blur & more', color:'amber' },
+    { id:'crop', icon:'fas fa-crop-alt', title:'Crop', desc:'Crop images with custom dimensions', color:'cyan' },
+    { id:'to-pdf', icon:'fas fa-file-pdf', title:'Image to PDF', desc:'Convert images to PDF in one click', color:'red' },
+  ],
+  pdf: [
+    { id:'merge', icon:'fas fa-object-group', title:'Merge PDFs', desc:'Combine multiple PDF files into one', color:'indigo' },
+    { id:'split', icon:'fas fa-object-ungroup', title:'Split PDF', desc:'Split a PDF into separate pages', color:'emerald' },
+    { id:'protect', icon:'fas fa-lock', title:'Protect PDF', desc:'Add password protection to PDFs', color:'blue' },
+    { id:'unlock', icon:'fas fa-unlock', title:'Unlock PDF', desc:'Remove password from PDF files', color:'purple' },
+    { id:'watermark', icon:'fas fa-stamp', title:'Watermark', desc:'Add text watermark to PDF pages', color:'rose' },
+  ],
+  security: [
+    { id:'password-gen', icon:'fas fa-key', title:'Password Generator', desc:'Create strong secure passwords instantly', color:'indigo' },
+    { id:'password-check', icon:'fas fa-shield-alt', title:'Password Checker', desc:'Check password strength and security', color:'emerald' },
+    { id:'base64', icon:'fas fa-code', title:'Base64', desc:'Encode and decode Base64 text', color:'blue' },
+    { id:'hash', icon:'fas fa-hashtag', title:'Hash Generator', desc:'Generate MD5, SHA256, SHA512 hashes', color:'purple' },
+    { id:'uuid', icon:'fas fa-fingerprint', title:'UUID Generator', desc:'Create UUIDs and random tokens', color:'rose' },
+    { id:'encrypt', icon:'fas fa-shield', title:'Encrypt/Decrypt', desc:'Encrypt and decrypt text messages', color:'amber' },
+  ],
+  web: [
+    { id:'qr', icon:'fas fa-qrcode', title:'QR Code', desc:'Generate QR codes for links, text or WiFi', color:'indigo' },
+    { id:'url-shortener', icon:'fas fa-link', title:'URL Shortener', desc:'Shorten long URLs into shareable links', color:'emerald' },
+    { id:'json', icon:'fas fa-brackets-curly', title:'JSON Validator', desc:'Format and validate JSON data', color:'blue' },
+    { id:'timestamp', icon:'fas fa-clock', title:'Timestamp Converter', desc:'Convert timestamps to readable dates', color:'purple' },
+  ],
+  text: [
+    { id:'case', icon:'fas fa-font', title:'Case Converter', desc:'Convert to UPPER, lower, Title Case & more', color:'indigo' },
+    { id:'counter', icon:'fas fa-calculator', title:'Word Counter', desc:'Count words, characters, sentences', color:'emerald' },
+    { id:'dedupe', icon:'fas fa-eraser', title:'Remove Duplicates', desc:'Remove duplicate lines from text', color:'blue' },
+    { id:'reverse', icon:'fas fa-arrow-right-arrow-left', title:'Reverse/Sort', desc:'Reverse text or sort lines alphabetically', color:'purple' },
+    { id:'lorem', icon:'fas fa-paragraph', title:'Lorem Ipsum', desc:'Generate placeholder text for designs', color:'rose' },
+    { id:'clean', icon:'fas fa-broom', title:'Clean Text', desc:'Remove extra spaces, empty lines & symbols', color:'amber' },
+  ],
+  ai: [
+    { id:'summarize', icon:'fas fa-compress-arrows-alt', title:'Summarizer', desc:'Summarize long text automatically', color:'indigo' },
+    { id:'translate', icon:'fas fa-language', title:'Translator', desc:'Translate text between languages with real-time typing', color:'emerald' },
+    { id:'keywords', icon:'fas fa-tags', title:'Keywords', desc:'Extract keykeywords from any paragraph', color:'blue' },
+    { id:'rewrite', icon:'fas fa-feather-alt', title:'Rewriter', desc:'Rewrite sentences with improved clarity', color:'purple' },
+    { id:'caption', icon:'fas fa-camera', title:'Caption Generator', desc:'Generate social media captions', color:'rose' },
+    { id:'grammar', icon:'fas fa-spell-check', title:'Grammar Fix', desc:'Fix grammar and spelling errors', color:'amber' },
+  ],
+  dev: [
+    { id:'sass', icon:'fab fa-sass', title:'Sass Compiler', desc:'Compile Sass/SCSS to CSS with live preview', color:'pink' },
+    { id:'less', icon:'fab fa-less', title:'Less Compiler', desc:'Compile Less to CSS with live preview', color:'blue' },
+    { id:'pug', icon:'fab fa-pied-piper-alt', title:'Pug Compiler', desc:'Compile Pug/Jade templates to HTML', color:'purple' },
+    { id:'coffeescript', icon:'fas fa-coffee', title:'CoffeeScript', desc:'Compile CoffeeScript to JavaScript', color:'amber' },
+    { id:'playground', icon:'fas fa-laptop-code', title:'JS Playground', desc:'Write HTML/CSS/JS with live preview', color:'emerald' },
+    { id:'formatter', icon:'fas fa-indent', title:'Code Formatter', desc:'Format & beautify your code', color:'indigo' },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+var currentCat = 'image';
+var currentTool = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CATEGORY TABS
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.getElementById('category-tabs').addEventListener('click', function(e) {
+  var tab = e.target.closest('.cat-tab');
+  if (!tab) return;
+  currentCat = tab.dataset.cat;
+  currentTool = null;
+  this.querySelectorAll('.cat-tab').forEach(function(t) {
+    t.classList.remove('active', 'bg-indigo-600', 'text-white');
+    t.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+  });
+  tab.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+  tab.classList.add('bg-indigo-600', 'text-white');
+  renderToolGrid();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RENDER TOOL GRID
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderToolGrid() {
+  var tools = TOOLS[currentCat] || [];
+  var container = document.getElementById('tools-content');
+  container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">' +
+    tools.map(function(t) {
+      return '<div class="tool-card bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 cursor-pointer hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-700 transition-all duration-200 flex flex-col" data-tool="' + t.id + '">' +
+        '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-' + t.color + '-100 dark:bg-' + t.color + '-900/30 flex items-center justify-center mb-3"><i class="' + t.icon + ' text-xl sm:text-2xl text-' + t.color + '-600 dark:text-' + t.color + '-400"></i></div>' +
+        '<h3 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white mb-1">' + t.title + '</h3>' +
+        '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-1">' + t.desc + '</p>' +
+      '</div>';
+    }).join('') + '</div>';
+
+  container.querySelectorAll('.tool-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var id = this.dataset.tool;
+      var tool = TOOLS[currentCat].find(function(t) { return t.id === id; });
+      if (tool) openTool(tool);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  OPEN TOOL
+// ═══════════════════════════════════════════════════════════════════════════
+
+function openTool(tool) {
+  currentTool = tool;
+  var container = document.getElementById('tools-content');
+  container.innerHTML = '<div class="mb-4 flex items-center gap-3">' +
+    '<button onclick="renderToolGrid()" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"><i class="fas fa-arrow-left"></i></button>' +
+    '<div><h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">' + tool.icon.replace('fa-', '<i class="fas fa-').replace('" title','"></i> ') + tool.title + '</h3>' +
+    '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">' + tool.desc + '</p></div></div><div id="tool-workspace" class="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6"></div>';
+
+  var fnName = 'tool_' + currentCat + '_' + tool.id.replace(/-/g, '_');
+  if (typeof window[fnName] === 'function') {
+    window[fnName]();
+  } else {
+    document.getElementById('tool-workspace').innerHTML = '<p class="text-gray-400 text-center py-8">Tool interface coming soon</p>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function downloadData(filename, dataUrl) {
+  var a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function showToast(msg, icon) {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({ toast:true, position:'top-end', icon:icon||'success', title:msg, showConfirmButton:false, timer:2000 });
+  }
+}
+
+function copyResult(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+    el.select(); el.setSelectionRange(0, 99999);
+  }
+  navigator.clipboard.writeText(el.value || el.textContent);
+  showToast('Copied!', 'success');
+}
+
+// ─── Dynamic CodeMirror loader ────────────────────────────────────────────
+
+var _cmLoaded = false;
+var _cmLoading = false;
+var _cmQueue = [];
+
+function loadCodeMirror(callback) {
+  if (window.CodeMirror) { callback(); return; }
+  _cmQueue.push(callback);
+  if (_cmLoading) return;
+  _cmLoading = true;
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css';
+  document.head.appendChild(link);
+  var darkTheme = document.createElement('link');
+  darkTheme.rel = 'stylesheet';
+  darkTheme.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css';
+  darkTheme.id = 'cm-dark-theme';
+  document.head.appendChild(darkTheme);
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js';
+  s.onload = function() {
+    _cmLoaded = true;
+    _cmLoading = false;
+    _cmQueue.forEach(function(fn) { fn(); });
+    _cmQueue = [];
+  };
+  document.body.appendChild(s);
+}
+
+function loadCodeMirrorMode(mode, callback) {
+  var modes = {
+    sass: 'sass/sass.min.js',
+    css: 'css/css.min.js',
+    javascript: 'javascript/javascript.min.js',
+    html: 'htmlmixed/htmlmixed.min.js',
+    xml: 'xml/xml.min.js',
+    coffeescript: 'coffeescript/coffeescript.min.js',
+  };
+  var suffix = modes[mode];
+  if (!suffix || window['CodeMirror_' + mode]) { callback(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/' + suffix;
+  s.onload = function() { window['CodeMirror_' + mode] = true; callback(); };
+  document.body.appendChild(s);
+}
+
+function createCodeEditor(textareaId, mode) {
+  var ta = document.getElementById(textareaId);
+  if (!ta) return null;
+  var editor = CodeMirror.fromTextArea(ta, {
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    tabSize: 2,
+    indentUnit: 2,
+    indentWithTabs: false,
+    theme: document.documentElement.classList.contains('dark') ? 'material-darker' : 'default',
+    viewportMargin: Infinity,
+    extraKeys: {
+      'Ctrl-S': function(ed) { ed.execCommand('insertSoftTab'); }
+    }
+  });
+  // Watch for theme changes
+  var observer = new MutationObserver(function() {
+    editor.setOption('theme', document.documentElement.classList.contains('dark') ? 'material-darker' : 'default');
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return editor;
+}
+
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var r = new FileReader();
+    r.onload = function() { resolve(r.result); };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🖼️ IMAGE TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function imageUploadWorkspace(operation, extraFields, onSubmit) {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:border-indigo-400 transition" id="drop-zone"><i class="fas fa-cloud-upload-alt text-3xl sm:text-4xl text-gray-300 mb-3"></i><p class="text-sm sm:text-base text-gray-500">Drop an image here or click to upload</p><input type="file" id="tool-file-input" accept="image/*" class="hidden"></div>' +
+    (extraFields || '') +
+    '<div id="tool-preview" class="hidden space-y-3"><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1"><p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Original</p><img id="orig-preview" class="w-full rounded-xl border border-gray-200 dark:border-gray-600 max-h-64 object-contain bg-gray-50"></div><div class="flex-1"><p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Result</p><img id="result-preview" class="w-full rounded-xl border border-gray-200 dark:border-gray-600 max-h-64 object-contain bg-gray-50 hidden"><div id="result-spinner" class="flex items-center justify-center h-32 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></div></div></div><div class="flex gap-2 flex-wrap"><button id="download-btn" class="hidden px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition"><i class="fas fa-download"></i> Download</button><span id="size-info" class="text-xs text-gray-400 self-center"></span></div></div></div>';
+
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('tool-file-input');
+  dropZone.addEventListener('click', function() { fileInput.click(); });
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('border-indigo-500'); });
+  dropZone.addEventListener('dragleave', function() { this.classList.remove('border-indigo-500'); });
+  dropZone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('border-indigo-500'); if (e.dataTransfer.files.length) fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); });
+
+  fileInput.addEventListener('change', function() {
+    if (!this.files.length) return;
+    var file = this.files[0];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('orig-preview').src = e.target.result;
+      document.getElementById('tool-preview').classList.remove('hidden');
+      document.getElementById('result-spinner').classList.remove('hidden');
+      document.getElementById('result-preview').classList.add('hidden');
+      document.getElementById('download-btn').classList.add('hidden');
+      document.getElementById('size-info').textContent = '';
+
+      var fd = new FormData();
+      fd.append('file', file);
+      if (onSubmit) onSubmit(fd);
+
+      fetch('/tools/api/image/' + operation, { method:'POST', body:fd })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          document.getElementById('result-spinner').classList.add('hidden');
+          if (data.error) { document.getElementById('result-preview').classList.remove('hidden'); document.getElementById('result-preview').src = ''; alert(data.error); return; }
+          var imgUrl = data.image || data.file;
+          if (imgUrl) {
+            document.getElementById('result-preview').classList.remove('hidden');
+            document.getElementById('result-preview').src = imgUrl;
+            document.getElementById('download-btn').classList.remove('hidden');
+            document.getElementById('download-btn').onclick = function() { downloadData('output.' + (operation === 'to_pdf' ? 'pdf' : 'png'), imgUrl); };
+            if (data.size) document.getElementById('size-info').textContent = (data.size / 1024).toFixed(1) + ' KB';
+          }
+        })
+        .catch(function(err) { document.getElementById('result-spinner').classList.add('hidden'); alert('Error: ' + err.message); });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+window.tool_image_remove_bg = function() { imageUploadWorkspace('remove_bg'); };
+window.tool_image_compress = function() {
+  imageUploadWorkspace('compress', '<div class="flex items-center gap-3"><label class="text-sm text-gray-600 dark:text-gray-400">Quality:</label><input type="range" id="quality-range" min="10" max="100" value="60" class="flex-1"><span id="quality-val" class="text-sm font-medium text-gray-700 dark:text-gray-300">60%</span></div>', function(fd) {
+    var q = document.getElementById('quality-range');
+    if (q) fd.append('quality', q.value);
+  });
+  var qr = document.getElementById('quality-range');
+  if (qr) qr.addEventListener('input', function() { document.getElementById('quality-val').textContent = this.value + '%'; });
+};
+window.tool_image_resize = function() {
+  imageUploadWorkspace('resize', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Width (px)</label><input type="number" id="resize-w" value="800" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Height (px)</label><input type="number" id="resize-h" value="600" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div><label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><input type="checkbox" id="keep-ratio" checked> Keep aspect ratio</label>', function(fd) {
+    fd.append('width', document.getElementById('resize-w').value);
+    fd.append('height', document.getElementById('resize-h').value);
+    fd.append('keep_ratio', document.getElementById('keep-ratio').checked ? 'true' : 'false');
+  });
+};
+window.tool_image_convert = function() {
+  imageUploadWorkspace('convert', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Format</label><select id="convert-format" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="gif">GIF</option><option value="bmp">BMP</option></select></div>', function(fd) {
+    fd.append('format', document.getElementById('convert-format').value);
+  });
+};
+window.tool_image_enhance = function() {
+  imageUploadWorkspace('enhance', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Scale</label><select id="enhance-scale" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="2">2x (Recommended)</option><option value="3">3x</option><option value="4">4x</option></select></div>', function(fd) {
+    fd.append('scale', document.getElementById('enhance-scale').value);
+  });
+};
+window.tool_image_filters = function() {
+  imageUploadWorkspace('filters', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Filter</label><select id="filter-select" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="grayscale">Grayscale</option><option value="sepia">Sepia</option><option value="blur">Blur</option><option value="sharpen">Sharpen</option><option value="edge">Edge Detect</option><option value="emboss">Emboss</option><option value="smooth">Smooth</option><option value="contrast">Contrast</option><option value="brightness">Brightness</option></select></div>', function(fd) {
+    fd.append('filter', document.getElementById('filter-select').value);
+  });
+};
+window.tool_image_crop = function() {
+  imageUploadWorkspace('crop', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Left</label><input type="number" id="crop-left" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Top</label><input type="number" id="crop-top" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Right</label><input type="number" id="crop-right" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Bottom</label><input type="number" id="crop-bottom" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div>', function(fd) {
+    fd.append('left', document.getElementById('crop-left').value);
+    fd.append('top', document.getElementById('crop-top').value);
+    fd.append('right', document.getElementById('crop-right').value);
+    fd.append('bottom', document.getElementById('crop-bottom').value);
+  });
+};
+window.tool_image_to_pdf = function() { imageUploadWorkspace('to_pdf'); };
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  📄 PDF TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_pdf_merge = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:border-indigo-400 transition" id="pdf-drop-zone"><i class="fas fa-file-pdf text-3xl sm:text-4xl text-gray-300 mb-3"></i><p class="text-sm sm:text-base text-gray-500">Upload multiple PDFs to merge (select 2+)</p><input type="file" id="pdf-file-input" accept=".pdf" multiple class="hidden"></div><div id="pdf-file-list" class="space-y-1 text-sm text-gray-600 dark:text-gray-400"></div><button id="pdf-merge-btn" class="hidden px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-object-group"></i> Merge PDFs</button><div id="pdf-result" class="hidden"></div></div>';
+
+  var dropZone = document.getElementById('pdf-drop-zone');
+  var fileInput = document.getElementById('pdf-file-input');
+  dropZone.addEventListener('click', function() { fileInput.click(); });
+  fileInput.addEventListener('change', function() {
+    var list = document.getElementById('pdf-file-list');
+    list.innerHTML = '';
+    Array.from(this.files).forEach(function(f) { list.innerHTML += '<div class="flex items-center gap-2"><i class="fas fa-file-pdf text-red-400"></i> ' + escapeHtml(f.name) + '</div>'; });
+    document.getElementById('pdf-merge-btn').classList.remove('hidden');
+  });
+
+  document.getElementById('pdf-merge-btn').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Merging...';
+    var fd = new FormData();
+    Array.from(fileInput.files).forEach(function(f) { fd.append('files', f); });
+    fetch('/tools/api/pdf/merge', { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-object-group"></i> Merge PDFs';
+        if (data.success) {
+          document.getElementById('pdf-result').innerHTML = '<div class="flex items-center gap-3 mt-3"><button onclick="downloadData(\'merged.pdf\',\'' + data.file + '\')" class="px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition"><i class="fas fa-download"></i> Download Merged PDF</button><span class="text-xs text-gray-400">' + (data.size/1024).toFixed(1) + ' KB</span></div>';
+          document.getElementById('pdf-result').classList.remove('hidden');
+        } else { alert(data.error); }
+      }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-object-group"></i> Merge PDFs'; alert('Error merging PDFs'); });
+  });
+};
+
+window.tool_pdf_split = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:border-indigo-400 transition" id="split-drop"><i class="fas fa-file-pdf text-3xl text-gray-300 mb-3"></i><p class="text-sm text-gray-500">Upload a PDF to split into separate pages</p><input type="file" id="split-input" accept=".pdf" class="hidden"></div><div id="split-result" class="hidden"><div id="split-spinner" class="text-center py-4 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Splitting...</div><div id="split-pages" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div></div></div>';
+
+  document.getElementById('split-drop').addEventListener('click', function() { document.getElementById('split-input').click(); });
+  document.getElementById('split-input').addEventListener('change', function() {
+    if (!this.files.length) return;
+    document.getElementById('split-result').classList.remove('hidden');
+    var fd = new FormData(); fd.append('file', this.files[0]);
+    fetch('/tools/api/pdf/split', { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('split-spinner').classList.add('hidden');
+        if (data.success) {
+          var container = document.getElementById('split-pages');
+          container.innerHTML = data.pages.map(function(p) {
+            return '<div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-center"><div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Page ' + p.page + '</div><button onclick="downloadData(\'page_' + p.page + '.pdf\',\'data:application/pdf;base64,' + p.data + '\')" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"><i class="fas fa-download"></i> Download</button></div>';
+          }).join('');
+        }
+      });
+  });
+};
+
+window.tool_pdf_protect = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 transition" id="protect-drop"><i class="fas fa-file-pdf text-3xl text-gray-300 mb-3"></i><p class="text-sm text-gray-500">Upload PDF to protect</p><input type="file" id="protect-input" accept=".pdf" class="hidden"></div><div class="flex items-center gap-3"><label class="text-sm font-medium text-gray-600 dark:text-gray-400">Password:</label><input type="text" id="protect-password" placeholder="Enter password" class="flex-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><button id="protect-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition hidden"><i class="fas fa-lock"></i> Protect PDF</button><div id="protect-result" class="hidden"></div></div>';
+
+  document.getElementById('protect-drop').addEventListener('click', function() { document.getElementById('protect-input').click(); });
+  document.getElementById('protect-input').addEventListener('change', function() { document.getElementById('protect-btn').classList.remove('hidden'); });
+  document.getElementById('protect-btn').addEventListener('click', function() {
+    var pwd = document.getElementById('protect-password').value;
+    if (!pwd) return alert('Enter a password');
+    var fd = new FormData();
+    fd.append('file', document.getElementById('protect-input').files[0]);
+    fd.append('password', pwd);
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/tools/api/pdf/protect', { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock"></i> Protect PDF';
+        if (data.success) {
+          document.getElementById('protect-result').innerHTML = '<div class="flex items-center gap-3 mt-3"><button onclick="downloadData(\'protected.pdf\',\'' + data.file + '\')" class="px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition"><i class="fas fa-download"></i> Download Protected PDF</button><span class="text-xs text-gray-400">' + (data.size/1024).toFixed(1) + ' KB</span></div>';
+          document.getElementById('protect-result').classList.remove('hidden');
+        } else { alert(data.error); }
+      });
+  });
+};
+
+window.tool_pdf_unlock = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 transition" id="unlock-drop"><i class="fas fa-file-pdf text-3xl text-gray-300 mb-3"></i><p class="text-sm text-gray-500">Upload password-protected PDF</p><input type="file" id="unlock-input" accept=".pdf" class="hidden"></div><div class="flex items-center gap-3"><label class="text-sm font-medium text-gray-600 dark:text-gray-400">Password:</label><input type="text" id="unlock-password" placeholder="PDF password" class="flex-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><button id="unlock-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition hidden"><i class="fas fa-unlock"></i> Unlock PDF</button><div id="unlock-result" class="hidden"></div></div>';
+
+  document.getElementById('unlock-drop').addEventListener('click', function() { document.getElementById('unlock-input').click(); });
+  document.getElementById('unlock-input').addEventListener('change', function() { document.getElementById('unlock-btn').classList.remove('hidden'); });
+  document.getElementById('unlock-btn').addEventListener('click', function() {
+    var fd = new FormData();
+    fd.append('file', document.getElementById('unlock-input').files[0]);
+    fd.append('password', document.getElementById('unlock-password').value);
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/tools/api/pdf/unlock', { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-unlock"></i> Unlock PDF';
+        if (data.success) {
+          document.getElementById('unlock-result').innerHTML = '<div class="flex items-center gap-3 mt-3"><button onclick="downloadData(\'unlocked.pdf\',\'' + data.file + '\')" class="px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition"><i class="fas fa-download"></i> Download Unlocked PDF</button></div>';
+          document.getElementById('unlock-result').classList.remove('hidden');
+        } else { alert(data.error); }
+      });
+  });
+};
+
+window.tool_pdf_watermark = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 transition" id="wm-drop"><i class="fas fa-file-pdf text-3xl text-gray-300 mb-3"></i><p class="text-sm text-gray-500">Upload PDF to watermark</p><input type="file" id="wm-input" accept=".pdf" class="hidden"></div><div class="flex items-center gap-3"><label class="text-sm font-medium text-gray-600 dark:text-gray-400">Watermark text:</label><input type="text" id="wm-text" placeholder="CONFIDENTIAL" class="flex-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><button id="wm-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition hidden"><i class="fas fa-stamp"></i> Add Watermark</button><div id="wm-result" class="hidden"></div></div>';
+
+  document.getElementById('wm-drop').addEventListener('click', function() { document.getElementById('wm-input').click(); });
+  document.getElementById('wm-input').addEventListener('change', function() { document.getElementById('wm-btn').classList.remove('hidden'); });
+  document.getElementById('wm-btn').addEventListener('click', function() {
+    var fd = new FormData();
+    fd.append('file', document.getElementById('wm-input').files[0]);
+    fd.append('text', document.getElementById('wm-text').value);
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/tools/api/pdf/watermark', { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-stamp"></i> Add Watermark';
+        if (data.success) {
+          document.getElementById('wm-result').innerHTML = '<div class="flex items-center gap-3 mt-3"><button onclick="downloadData(\'watermarked.pdf\',\'' + data.file + '\')" class="px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition"><i class="fas fa-download"></i> Download</button></div>';
+          document.getElementById('wm-result').classList.remove('hidden');
+        } else { alert(data.error); }
+      });
+  });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🔐 SECURITY TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_security_password_gen = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Length</label><input type="number" id="pg-len" value="16" min="4" max="128" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Count</label><input type="number" id="pg-count" value="3" min="1" max="20" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div><div class="flex flex-wrap gap-3 text-sm"><label class="flex items-center gap-1.5"><input type="checkbox" id="pg-upper" checked> A-Z</label><label class="flex items-center gap-1.5"><input type="checkbox" id="pg-lower" checked> a-z</label><label class="flex items-center gap-1.5"><input type="checkbox" id="pg-digits" checked> 0-9</label><label class="flex items-center gap-1.5"><input type="checkbox" id="pg-symbols" checked> !@#</label></div><button id="pg-gen" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-key"></i> Generate</button><div id="pg-result" class="space-y-2"></div></div>';
+
+  document.getElementById('pg-gen').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/tools/api/security/password', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        length: parseInt(document.getElementById('pg-len').value),
+        count: parseInt(document.getElementById('pg-count').value),
+        use_upper: document.getElementById('pg-upper').checked,
+        use_lower: document.getElementById('pg-lower').checked,
+        use_digits: document.getElementById('pg-digits').checked,
+        use_symbols: document.getElementById('pg-symbols').checked
+      })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Generate';
+      if (data.success) {
+        var c = document.getElementById('pg-result');
+        c.innerHTML = data.passwords.map(function(p) {
+          return '<div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-mono"><span class="flex-1 break-all">' + escapeHtml(p) + '</span><button onclick="navigator.clipboard.writeText(\'' + p + '\');showToast(\'Copied\')" class="text-indigo-500 hover:text-indigo-700 p-1"><i class="fas fa-copy"></i></button></div>';
+        }).join('');
+      }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Generate'; });
+  });
+};
+
+window.tool_security_password_check = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div><input type="text" id="pc-input" placeholder="Type a password to check..." class="w-full px-4 py-3 text-lg border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-mono"></div><div id="pc-result" class="hidden"><div class="h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"><div id="pc-bar" class="h-full rounded-full transition-all duration-500" style="width:0%"></div></div><p id="pc-level" class="text-sm font-medium mt-1"></p><div class="grid grid-cols-3 gap-2 text-xs mt-3"><div class="p-2 rounded-lg" id="pc-len">✗ Length 8+</div><div class="p-2 rounded-lg" id="pc-mixed">✗ Mixed case</div><div class="p-2 rounded-lg" id="pc-complex">✗ Numbers + symbols</div></div></div></div>';
+
+  document.getElementById('pc-input').addEventListener('input', function() {
+    var pwd = this.value;
+    if (!pwd) { document.getElementById('pc-result').classList.add('hidden'); return; }
+    fetch('/tools/api/security/check-password', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pwd})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      var r = document.getElementById('pc-result'); r.classList.remove('hidden');
+      var pct = (data.score / data.max) * 100;
+      var bar = document.getElementById('pc-bar');
+      bar.style.width = pct + '%';
+      bar.className = 'h-full rounded-full transition-all duration-500 ' + (pct <= 33 ? 'bg-red-500' : pct <= 66 ? 'bg-yellow-500' : 'bg-green-500');
+      document.getElementById('pc-level').textContent = data.level + ' (' + data.score + '/' + data.max + ')';
+      document.getElementById('pc-level').className = 'text-sm font-medium mt-1 ' + (pct <= 33 ? 'text-red-500' : pct <= 66 ? 'text-yellow-600' : 'text-green-600');
+      document.getElementById('pc-len').className = 'p-2 rounded-lg ' + (data.length >= 8 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+      document.getElementById('pc-len').innerHTML = (data.length >= 8 ? '✓' : '✗') + ' Length 8+ (' + data.length + ')';
+      document.getElementById('pc-mixed').className = 'p-2 rounded-lg ' + (data.score >= 3 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+      document.getElementById('pc-mixed').innerHTML = (data.score >= 3 ? '✓' : '✗') + ' Mixed case';
+      document.getElementById('pc-complex').className = 'p-2 rounded-lg ' + (data.score >= 4 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+      document.getElementById('pc-complex').innerHTML = (data.score >= 4 ? '✓' : '✗') + ' Numbers + symbols';
+    });
+  });
+};
+
+window.tool_security_base64 = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div class="flex gap-2"><button id="b64-encode" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition">Encode</button><button id="b64-decode" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Decode</button></div><textarea id="b64-input" rows="3" placeholder="Enter text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><textarea id="b64-output" rows="3" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById(\'b64-output\').value);showToast(\'Copied\')" class="text-sm text-indigo-500 hover:text-indigo-700"><i class="fas fa-copy"></i> Copy</button></div>';
+
+  function process(mode) {
+    var input = document.getElementById('b64-input').value;
+    try {
+      document.getElementById('b64-output').value = mode === 'encode' ? btoa(input) : atob(input);
+    } catch(e) { document.getElementById('b64-output').value = 'Error: ' + e.message; }
+  }
+
+  document.getElementById('b64-encode').addEventListener('click', function() { process('encode'); });
+  document.getElementById('b64-decode').addEventListener('click', function() { process('decode'); });
+};
+
+window.tool_security_hash = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Algorithm</label><select id="hash-algo" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="md5">MD5</option><option value="sha1">SHA-1</option><option value="sha256" selected>SHA-256</option><option value="sha512">SHA-512</option></select></div><textarea id="hash-input" rows="3" placeholder="Enter text to hash..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button id="hash-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-hashtag"></i> Generate Hash</button><div id="hash-result" class="hidden p-3 bg-gray-50 dark:bg-gray-700 rounded-xl break-all text-sm font-mono"></div></div>';
+
+  document.getElementById('hash-btn').addEventListener('click', function() {
+    var text = document.getElementById('hash-input').value;
+    if (!text) return;
+    fetch('/tools/api/security/hash', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: text, algorithm: document.getElementById('hash-algo').value})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.success) {
+        var r = document.getElementById('hash-result');
+        r.textContent = data.result;
+        r.classList.remove('hidden');
+      }
+    });
+  });
+};
+
+window.tool_security_uuid = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div class="flex gap-2 flex-wrap"><button id="uuid-v4" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition">UUID v4</button><button id="uuid-v1" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">UUID v1 (random)</button><button id="uuid-nano" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Short Token</button></div><div class="space-y-2" id="uuid-list"></div><button onclick="document.getElementById(\'uuid-list\').innerHTML=\'\'" class="text-sm text-gray-400 hover:text-gray-600">Clear</button></div>';
+
+  function genUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  function genToken(len) {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var result = '';
+    for (var i = 0; i < len; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    return result;
+  }
+
+  function addUuid(val) {
+    var list = document.getElementById('uuid-list');
+    var div = document.createElement('div');
+    div.className = 'flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-mono';
+    div.innerHTML = '<span class="flex-1 break-all">' + val + '</span><button onclick="navigator.clipboard.writeText(\'' + val + '\');showToast(\'Copied\')" class="text-indigo-500 hover:text-indigo-700 p-1"><i class="fas fa-copy"></i></button>';
+    list.prepend(div);
+  }
+
+  document.getElementById('uuid-v4').addEventListener('click', function() { addUuid(genUuid()); });
+  document.getElementById('uuid-v1').addEventListener('click', function() { addUuid(genUuid().replace(/4/g, '1')); });
+  document.getElementById('uuid-nano').addEventListener('click', function() { addUuid(genToken(16)); });
+};
+
+window.tool_security_encrypt = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div class="flex gap-2"><button id="enc-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition">Encrypt (Base64)</button><button id="dec-btn" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Decrypt</button></div><textarea id="enc-input" rows="3" placeholder="Enter text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><textarea id="enc-output" rows="3" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  document.getElementById('enc-btn').addEventListener('click', function() {
+    fetch('/tools/api/security/encrypt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: document.getElementById('enc-input').value}) })
+      .then(function(r) { return r.json(); }).then(function(d) { if (d.success) document.getElementById('enc-output').value = d.result; });
+  });
+  document.getElementById('dec-btn').addEventListener('click', function() {
+    fetch('/tools/api/security/decrypt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: document.getElementById('enc-input').value}) })
+      .then(function(r) { return r.json(); }).then(function(d) { if (d.success) document.getElementById('enc-output').value = d.result; else alert(d.error); });
+  });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🔗 WEB DEV TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_web_qr = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Text / URL</label><input type="text" id="qr-text" placeholder="https://example.com" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"></div><div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Dot Color</label><input type="color" id="qr-fill" value="#000000" class="w-full h-10 rounded-xl border cursor-pointer mt-1"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Bg Color</label><input type="color" id="qr-bg" value="#FFFFFF" class="w-full h-10 rounded-xl border cursor-pointer mt-1"></div></div><button id="qr-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-qrcode"></i> Generate QR</button><div id="qr-result" class="hidden text-center"><img id="qr-img" class="mx-auto rounded-xl border max-w-[200px]"><button onclick="downloadData(\'qrcode.png\',document.getElementById(\'qr-img\').src)" class="mt-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition"><i class="fas fa-download"></i> Download</button></div></div>';
+
+  document.getElementById('qr-btn').addEventListener('click', function() {
+    var text = document.getElementById('qr-text').value;
+    if (!text) return alert('Enter text or URL');
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/tools/api/qr', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text:text, fill_color:document.getElementById('qr-fill').value, back_color:document.getElementById('qr-bg').value})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-qrcode"></i> Generate QR';
+      if (data.success) {
+        document.getElementById('qr-img').src = data.image;
+        document.getElementById('qr-result').classList.remove('hidden');
+      }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-qrcode"></i> Generate QR'; });
+  });
+};
+
+window.tool_web_url_shortener = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Long URL</label><input type="url" id="url-input" placeholder="https://example.com/very/long/url" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"></div><button id="url-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-compress"></i> Shorten URL</button><div id="url-result" class="hidden p-3 bg-green-50 dark:bg-gray-700 rounded-xl flex items-center gap-2"><span id="short-url" class="flex-1 text-sm font-medium text-green-700 dark:text-green-300"></span><button onclick="navigator.clipboard.writeText(document.getElementById(\'short-url\').textContent);showToast(\'Copied\')" class="text-indigo-500 hover:text-indigo-700"><i class="fas fa-copy"></i></button></div></div>';
+
+  document.getElementById('url-btn').addEventListener('click', function() {
+    var url = document.getElementById('url-input').value;
+    if (!url) return alert('Enter a URL');
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/tools/api/url/shorten', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url: url})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-compress"></i> Shorten URL';
+      if (data.success) {
+        document.getElementById('short-url').textContent = data.short_url;
+        document.getElementById('url-result').classList.remove('hidden');
+      } else { alert(data.error); }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-compress"></i> Shorten URL'; alert('Failed'); });
+  });
+};
+
+window.tool_web_json = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="json-input" rows="6" placeholder=\'Paste JSON here...\' class="w-full px-4 py-3 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button id="json-btn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-check"></i> Validate & Format</button><div id="json-result" class="hidden p-3 rounded-xl text-sm font-mono whitespace-pre-wrap overflow-x-auto"></div></div>';
+
+  document.getElementById('json-btn').addEventListener('click', function() {
+    var text = document.getElementById('json-input').value;
+    if (!text) return;
+    fetch('/tools/api/json/validate', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: text})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      var r = document.getElementById('json-result');
+      r.classList.remove('hidden');
+      if (data.valid) {
+        r.className = 'p-3 rounded-xl text-sm font-mono whitespace-pre-wrap overflow-x-auto bg-green-50 dark:bg-gray-700 text-green-800 dark:text-green-200';
+        r.textContent = data.formatted;
+      } else {
+        r.className = 'p-3 rounded-xl text-sm font-mono bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300';
+        r.textContent = 'Invalid JSON: ' + data.error;
+      }
+    });
+  });
+};
+
+window.tool_web_timestamp = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-lg"><div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Timestamp</label><input type="number" id="ts-input" value="' + Math.floor(Date.now()/1000) + '" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Result</label><input type="text" id="ts-output" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white mt-1"></div></div><button id="ts-to-date" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition">→ To Date</button><button id="ts-to-ts" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition ml-2">← To Timestamp</button><div class="flex gap-3 flex-wrap mt-2"><button onclick="document.getElementById(\'ts-input\').value=Math.floor(Date.now()/1000);convertTsToDate()" class="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">Now</button></div></div>';
+
+  function convertTsToDate() {
+    var ts = parseInt(document.getElementById('ts-input').value);
+    document.getElementById('ts-output').value = new Date(ts * 1000).toLocaleString();
+  }
+
+  function convertDateToTs() {
+    var d = new Date(document.getElementById('ts-input').value);
+    if (!isNaN(d.getTime())) document.getElementById('ts-output').value = Math.floor(d.getTime() / 1000);
+  }
+
+  document.getElementById('ts-to-date').addEventListener('click', convertTsToDate);
+  document.getElementById('ts-to-ts').addEventListener('click', convertDateToTs);
+  convertTsToDate();
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  📝 TEXT TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_text_case = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="case-input" rows="5" placeholder="Enter text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="flex flex-wrap gap-2"><button onclick="transformCase(\'upper\')" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">UPPER CASE</button><button onclick="transformCase(\'lower\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">lower case</button><button onclick="transformCase(\'title\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Title Case</button><button onclick="transformCase(\'camel\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">camelCase</button><button onclick="transformCase(\'toggle\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">tOGGLE cASE</button><button onclick="transformCase(\'sentence\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Sentence case</button></div><textarea id="case-output" rows="5" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  window.transformCase = function(mode) {
+    var input = document.getElementById('case-input').value;
+    var output = '';
+    switch (mode) {
+      case 'upper': output = input.toUpperCase(); break;
+      case 'lower': output = input.toLowerCase(); break;
+      case 'title': output = input.replace(/\w\S*/g, function(w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); }); break;
+      case 'camel': output = input.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, function(m, c) { return c.toUpperCase(); }); break;
+      case 'toggle': output = input.split('').map(function(c) { return c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase(); }).join(''); break;
+      case 'sentence': output = input.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, function(c) { return c.toUpperCase(); }); break;
+    }
+    document.getElementById('case-output').value = output;
+  };
+};
+
+window.tool_text_counter = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="counter-input" rows="6" placeholder="Type or paste text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><div class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-indigo-600" id="c-words">0</div><div class="text-xs text-gray-500">Words</div></div><div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-emerald-600" id="c-chars">0</div><div class="text-xs text-gray-500">Characters</div></div><div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-amber-600" id="c-sentences">0</div><div class="text-xs text-gray-500">Sentences</div></div><div class="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-rose-600" id="c-lines">0</div><div class="text-xs text-gray-500">Lines</div></div></div></div>';
+
+  document.getElementById('counter-input').addEventListener('input', function() {
+    var t = this.value;
+    document.getElementById('c-words').textContent = t.trim() ? t.trim().split(/\s+/).length : 0;
+    document.getElementById('c-chars').textContent = t.length;
+    document.getElementById('c-sentences').textContent = t.split(/[.!?]+/).filter(function(s) { return s.trim(); }).length;
+    document.getElementById('c-lines').textContent = t.split('\n').filter(function(l) { return l.trim(); }).length;
+  });
+};
+
+window.tool_text_dedupe = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="dedupe-input" rows="6" placeholder="Paste text with duplicate lines..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button onclick="removeDuplicates()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-eraser"></i> Remove Duplicates</button><textarea id="dedupe-output" rows="6" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  window.removeDuplicates = function() {
+    var lines = document.getElementById('dedupe-input').value.split('\n');
+    var seen = {};
+    document.getElementById('dedupe-output').value = lines.filter(function(l) {
+      var trimmed = l.trim();
+      if (!trimmed || seen[trimmed]) return false;
+      seen[trimmed] = true;
+      return true;
+    }).join('\n');
+  };
+};
+
+window.tool_text_reverse = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="rev-input" rows="5" placeholder="Enter text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="flex flex-wrap gap-2"><button onclick="revText()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition">Reverse Text</button><button onclick="sortLines()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Sort Lines A→Z</button><button onclick="sortLinesRev()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Sort Lines Z→A</button></div><textarea id="rev-output" rows="5" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  window.revText = function() {
+    document.getElementById('rev-output').value = document.getElementById('rev-input').value.split('').reverse().join('');
+  };
+  window.sortLines = function() {
+    document.getElementById('rev-output').value = document.getElementById('rev-input').value.split('\n').sort(function(a,b) { return a.localeCompare(b); }).join('\n');
+  };
+  window.sortLinesRev = function() {
+    document.getElementById('rev-output').value = document.getElementById('rev-input').value.split('\n').sort(function(a,b) { return b.localeCompare(a); }).join('\n');
+  };
+};
+
+window.tool_text_lorem = function() {
+  var ws = document.getElementById('tool-workspace');
+  var lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><div class="flex items-center gap-3"><label class="text-sm font-medium text-gray-600 dark:text-gray-400">Paragraphs:</label><input type="number" id="lorem-count" value="3" min="1" max="20" class="w-20 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><button onclick="genLorem()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-paragraph"></i> Generate</button><textarea id="lorem-output" rows="8" readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById(\'lorem-output\').value);showToast(\'Copied\')" class="text-sm text-indigo-500 hover:text-indigo-700"><i class="fas fa-copy"></i> Copy</button></div>';
+
+  window.genLorem = function() {
+    var count = parseInt(document.getElementById('lorem-count').value) || 3;
+    document.getElementById('lorem-output').value = Array(count).fill(lorem).join('\n\n');
+  };
+  genLorem();
+};
+
+window.tool_text_clean = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="clean-input" rows="6" placeholder="Paste messy text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="flex flex-wrap gap-2"><button onclick="cleanExtraSpaces()" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">Extra Spaces</button><button onclick="cleanEmptyLines()" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Empty Lines</button><button onclick="cleanSpecialChars()" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Special Chars</button><button onclick="cleanAll()" class="px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition">Clean All</button></div><textarea id="clean-output" rows="6" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  function getClean() { return document.getElementById('clean-input').value; }
+  function setClean(v) { document.getElementById('clean-output').value = v; }
+  window.cleanExtraSpaces = function() { setClean(getClean().replace(/  +/g, ' ').trim()); };
+  window.cleanEmptyLines = function() { setClean(getClean().split('\n').filter(function(l) { return l.trim(); }).join('\n')); };
+  window.cleanSpecialChars = function() { setClean(getClean().replace(/[^\w\s.,!?;:'"()-]/g, '')); };
+  window.cleanAll = function() { setClean(getClean().replace(/  +/g, ' ').split('\n').filter(function(l) { return l.trim(); }).join('\n').replace(/[^\w\s.,!?;:'"()-]/g, '').trim()); };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🤖 AI TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function aiToolWorkspace(operation, placeholder, extraFields) {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl">' + (extraFields || '') + '<textarea id="ai-input" rows="6" placeholder="' + placeholder + '" class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button class="ai-btn px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-magic"></i> Process</button><div id="ai-result" class="hidden p-4 bg-gray-50 dark:bg-gray-700 rounded-xl text-sm whitespace-pre-wrap"></div></div>';
+
+  ws.querySelector('.ai-btn').addEventListener('click', function() {
+    var text = document.getElementById('ai-input').value;
+    if (!text) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    var body = {text: text};
+    var langSel = document.getElementById('ai-lang');
+    if (langSel) body.language = langSel.value;
+
+    fetch('/tools/api/ai/' + operation, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i> Process';
+      var r = document.getElementById('ai-result');
+      if (data.success) { r.textContent = data.result; r.classList.remove('hidden'); }
+      else { alert(data.error); }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i> Process'; alert('Error'); });
+  });
+}
+
+window.tool_ai_summarize = function() { aiToolWorkspace('summarize', 'Paste long text to summarize...'); };
+window.tool_ai_keywords = function() { aiToolWorkspace('keywords', 'Paste text to extract keywords from...'); };
+window.tool_ai_rewrite = function() { aiToolWorkspace('rewrite', 'Paste text to rewrite...'); };
+window.tool_ai_caption = function() { aiToolWorkspace('caption', 'Describe what you need captions for...'); };
+window.tool_ai_grammar = function() { aiToolWorkspace('grammar', 'Paste text with grammar errors...'); };
+window.tool_ai_translate = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-4xl">' +
+    '<div class="grid grid-cols-1 md:grid-cols-5 gap-3">' +
+      '<div class="md:col-span-2"><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Source Language</label><div class="flex gap-2 mt-1"><select id="tl-source" class="flex-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"><option value="auto">🔍 Auto Detect</option><option value="English">English</option><option value="Arabic">العربية</option><option value="French">Français</option><option value="Spanish">Español</option><option value="German">Deutsch</option><option value="Chinese">中文</option><option value="Japanese">日本語</option><option value="Russian">Русский</option><option value="Portuguese">Português</option><option value="Hindi">हिन्दी</option><option value="Italian">Italiano</option><option value="Korean">한국어</option><option value="Turkish">Türkçe</option><option value="Dutch">Nederlands</option><option value="Polish">Polski</option></select><button id="tl-swap" class="px-3 py-2 text-sm border rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Swap languages"><i class="fas fa-exchange-alt"></i></button></div></div>' +
+      '<div class="md:col-span-2"><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Target Language</label><select id="tl-target" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="English">English</option><option value="Arabic" selected>العربية</option><option value="French">Français</option><option value="Spanish">Español</option><option value="German">Deutsch</option><option value="Chinese">中文</option><option value="Japanese">日本語</option><option value="Russian">Русский</option><option value="Portuguese">Português</option><option value="Hindi">हिन्दी</option><option value="Italian">Italiano</option><option value="Korean">한국어</option><option value="Turkish">Türkçe</option><option value="Dutch">Nederlands</option><option value="Polish">Polski</option></select></div>' +
+      '<div class="md:col-span-1"><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Style</label><select id="tl-style" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="standard">Standard</option><option value="formal">Formal</option><option value="casual">Casual</option></select></div>' +
+    '</div>' +
+    '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Input</label><textarea id="tl-input" rows="6" placeholder="Type or paste text to translate..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><span class="text-xs text-gray-400" id="tl-chars">0 characters</span></div>' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Translation</label><div class="relative"><textarea id="tl-output" rows="6" readonly placeholder="Translation will appear here..." class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div id="tl-spinner" class="absolute top-2 right-2 hidden"><i class="fas fa-spinner fa-spin text-indigo-500"></i></div></div><div class="flex gap-2 mt-2"><button onclick="copyResult(\'tl-output\')" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"><i class="fas fa-copy"></i> Copy</button><button onclick="document.getElementById(\'tl-output\').value=\'\'" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"><i class="fas fa-times"></i> Clear</button></div></div>' +
+    '</div>' +
+  '</div>';
+
+  var translateTimer;
+  function doTranslate() {
+    var text = document.getElementById('tl-input').value.trim();
+    if (!text) { document.getElementById('tl-output').value = ''; document.getElementById('tl-spinner').classList.add('hidden'); return; }
+    document.getElementById('tl-chars').textContent = text.length + ' characters';
+    document.getElementById('tl-spinner').classList.remove('hidden');
+    var style = document.getElementById('tl-style').value;
+    var stylePrompt = style === 'formal' ? ' Use formal language.' : style === 'casual' ? ' Use casual, conversational language.' : '';
+    var sourceLang = document.getElementById('tl-source').value;
+    var targetLang = document.getElementById('tl-target').value;
+    var sourceInfo = sourceLang === 'auto' ? '(auto-detected)' : 'from ' + sourceLang;
+    var prompt = 'Translate the following text ' + sourceInfo + ' to ' + targetLang + '. Only return the translation.' + stylePrompt + '\n\n' + text;
+    fetch('/tools/api/ai/translate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: text, language: targetLang, source: sourceLang, style: style})
+    }).then(function(r){ return r.json(); }).then(function(data){
+      document.getElementById('tl-spinner').classList.add('hidden');
+      if (data.success) { document.getElementById('tl-output').value = data.result; }
+    }).catch(function(){ document.getElementById('tl-spinner').classList.add('hidden'); });
+  }
+
+  document.getElementById('tl-input').addEventListener('input', function() {
+    clearTimeout(translateTimer);
+    translateTimer = setTimeout(doTranslate, 400);
+  });
+  document.getElementById('tl-source').addEventListener('change', doTranslate);
+  document.getElementById('tl-target').addEventListener('change', doTranslate);
+  document.getElementById('tl-style').addEventListener('change', doTranslate);
+  document.getElementById('tl-swap').addEventListener('click', function() {
+    var src = document.getElementById('tl-source');
+    var tgt = document.getElementById('tl-target');
+    if (src.value === 'auto') return;
+    var tmp = src.value; src.value = tgt.value; tgt.value = tmp;
+    var input = document.getElementById('tl-input');
+    var output = document.getElementById('tl-output');
+    if (output.value) { input.value = output.value; output.value = ''; }
+    doTranslate();
+  });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  💻 DEVELOPER TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function devToolWorkspace(lang, label, inputPlaceholder, outputLabel, compileFn) {
+  var ws = document.getElementById('tool-workspace');
+  var langLabel = label || lang;
+  ws.innerHTML = '<div class="space-y-4">' +
+    '<div class="flex items-center gap-3 flex-wrap">' +
+      '<span class="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-lg">' + langLabel + '</span>' +
+      '<button id="dev-compile-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition"><i class="fas fa-play"></i> Compile</button>' +
+      '<button id="dev-clear-btn" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-trash"></i> Clear</button>' +
+    '</div>' +
+    '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">' + (inputPlaceholder || 'Input') + '</label><textarea id="dev-input" rows="12" placeholder="' + (inputPlaceholder || 'Enter code...') + '" class="w-full px-4 py-3 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">' + (outputLabel || 'Output') + '</label><pre id="dev-output" class="w-full h-[308px] overflow-auto px-4 py-3 text-sm font-mono border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white whitespace-pre-wrap break-all"><span class="text-gray-400">Compiled output will appear here...</span></pre><div class="flex gap-2 mt-2"><button onclick="copyResult(\'dev-output\')" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"><i class="fas fa-copy"></i> Copy</button></div></div>' +
+    '</div>' +
+  '</div>';
+
+  document.getElementById('dev-compile-btn').addEventListener('click', function() {
+    var code = document.getElementById('dev-input').value;
+    if (!code.trim()) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Compiling...';
+    compileFn(code, function(result, err) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-play"></i> Compile';
+      var out = document.getElementById('dev-output');
+      if (err) { out.innerHTML = '<span class="text-red-500">Error: ' + escapeHtml(err) + '</span>'; return; }
+      out.textContent = result;
+      // Syntax highlight output using Prism
+      if (typeof Prism !== 'undefined') {
+        var langClass = (lang === 'sass' || lang === 'less') ? 'language-css' : lang === 'pug' ? 'language-html' : 'language-javascript';
+        out.innerHTML = Prism.highlight(result, Prism.languages[langClass.replace('language-', '')] || Prism.languages.javascript, langClass.replace('language-', ''));
+      }
+    });
+  });
+  document.getElementById('dev-clear-btn').addEventListener('click', function() {
+    document.getElementById('dev-input').value = '';
+    document.getElementById('dev-output').innerHTML = '<span class="text-gray-400">Compiled output will appear here...</span>';
+  });
+}
+
+window.tool_dev_sass = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('sass', 'Sass / SCSS', '// Write your Sass/SCSS code here...', 'Compiled CSS', function(code, done) {
+      fetch('/tools/api/dev/compile', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({language:'sass', code: code})
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
+      }).catch(function(e){ done(null, e.message); });
+    });
+    loadCodeMirrorMode('sass', function() {
+      var editor = createCodeEditor('dev-input', 'sass');
+      if (editor) { editor.setValue('// SCSS Example\n$primary: #6366f1;\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  \n  .header {\n    background: $primary;\n    color: white;\n    padding: 1rem;\n  }\n}'); }
+    });
+  });
+};
+
+window.tool_dev_less = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('less', 'Less', '// Write your Less code here...', 'Compiled CSS', function(code, done) {
+      fetch('/tools/api/dev/compile', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({language:'less', code: code})
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
+      }).catch(function(e){ done(null, e.message); });
+    });
+    loadCodeMirrorMode('css', function() {
+      var editor = createCodeEditor('dev-input', 'css');
+      if (editor) { editor.setValue('// Less Example\n@primary: #6366f1;\n@secondary: #10b981;\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  \n  .header {\n    background: @primary;\n    color: white;\n    padding: 1rem;\n    \n    nav {\n      ul {\n        list-style: none;\n        li {\n          display: inline;\n          margin: 0 0.5rem;\n        }\n      }\n    }\n  }\n}'); }
+    });
+  });
+};
+
+window.tool_dev_pug = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('pug', 'Pug / Jade', '// Write your Pug code here...', 'Compiled HTML', function(code, done) {
+      fetch('/tools/api/dev/compile', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({language:'pug', code: code})
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
+      }).catch(function(e){ done(null, e.message); });
+    });
+    loadCodeMirrorMode('html', function() {
+      var editor = createCodeEditor('dev-input', 'html');
+      if (editor) { editor.setValue('// Pug Example\ndoctype html\nhtml\n  head\n    title My Page\n    link(rel="stylesheet", href="style.css")\n  body\n    .container\n      h1 Welcome to Pug\n      p This is a paragraph\n      ul\n        li Item 1\n        li Item 2\n        li Item 3\n      footer\n        p &copy; 2024'); }
+    });
+  });
+};
+
+window.tool_dev_coffeescript = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('coffeescript', 'CoffeeScript', '# Write your CoffeeScript code here...', 'Compiled JavaScript', function(code, done) {
+      fetch('/tools/api/dev/compile', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({language:'coffeescript', code: code})
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
+      }).catch(function(e){ done(null, e.message); });
+    });
+    loadCodeMirrorMode('coffeescript', function() {
+      var editor = createCodeEditor('dev-input', 'coffeescript');
+      if (editor) { editor.setValue('# CoffeeScript Example\nsquare = (x) -> x * x\n\nnumbers = [1, 2, 3, 4, 5]\nsquares = numbers.map square\n\nconsole.log squares\n\n# Class example\nclass Animal\n  constructor: (@name) ->\n  \n  speak: ->\n    console.log \"#{@name} makes a noise\"\n\nclass Dog extends Animal\n  speak: ->\n    console.log \"#{@name} barks\"\n\ndog = new Dog \"Rex\"\ndog.speak()'); }
+    });
+  });
+};
+
+window.tool_dev_playground = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' +
+    '<div class="flex items-center gap-3 flex-wrap">' +
+      '<span class="text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-lg">HTML / CSS / JS</span>' +
+      '<button id="pg-run" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition"><i class="fas fa-play"></i> Run</button>' +
+      '<button id="pg-reset" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-undo"></i> Reset</button>' +
+    '</div>' +
+    '<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">' +
+      '<div><p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">HTML</p><textarea id="pg-html" rows="6" placeholder="<!-- HTML -->" class="w-full px-3 py-2 text-xs font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+      '<div><p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">CSS</p><textarea id="pg-css" rows="6" placeholder="/* CSS */" class="w-full px-3 py-2 text-xs font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+      '<div><p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">JavaScript</p><textarea id="pg-js" rows="6" placeholder="// JavaScript" class="w-full px-3 py-2 text-xs font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+    '</div>' +
+    '<div class="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden"><div class="bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2"><i class="fas fa-eye"></i> Live Preview</div><iframe id="pg-preview" class="w-full h-64 bg-white"></iframe></div>' +
+  '</div>';
+
+  function runPlayground() {
+    var html = document.getElementById('pg-html').value;
+    var css = document.getElementById('pg-css').value;
+    var js = document.getElementById('pg-js').value;
+    var iframe = document.getElementById('pg-preview');
+    var doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head><style>' + css + '</style></head><body>' + html + '<script>' + js + '<\/script></body></html>');
+    doc.close();
+  }
+
+  document.getElementById('pg-run').addEventListener('click', runPlayground);
+  document.getElementById('pg-reset').addEventListener('click', function() {
+    document.getElementById('pg-html').value = '<h1>Hello World</h1>\n<p>This is a live preview.</p>';
+    document.getElementById('pg-css').value = 'body { font-family: sans-serif; padding: 2rem; }\nh1 { color: #6366f1; }';
+    document.getElementById('pg-js').value = 'console.log("Hello from playground!");';
+    runPlayground();
+  });
+  document.getElementById('pg-reset').click();
+};
+
+window.tool_dev_formatter = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-3xl">' +
+    '<div class="flex items-center gap-2 flex-wrap">' +
+      '<select id="fmt-lang" class="px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"><option value="json">JSON</option><option value="javascript">JavaScript</option><option value="html">HTML</option><option value="css">CSS</option><option value="python">Python (basic)</option></select>' +
+      '<button id="fmt-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition"><i class="fas fa-indent"></i> Format</button>' +
+      '<button onclick="copyResult(\'fmt-input\')" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-copy"></i> Copy</button>' +
+    '</div>' +
+    '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Input</label><textarea id="fmt-input" rows="12" placeholder="Paste messy code..." class="w-full px-4 py-3 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Formatted</label><textarea id="fmt-output" rows="12" readonly placeholder="Formatted output..." class="w-full px-4 py-3 text-sm font-mono border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+    '</div>' +
+  '</div>';
+
+  document.getElementById('fmt-btn').addEventListener('click', function() {
+    var input = document.getElementById('fmt-input').value;
+    if (!input.trim()) return;
+    var lang = document.getElementById('fmt-lang').value;
+    var result = '';
+    try {
+      if (lang === 'json') {
+        result = JSON.stringify(JSON.parse(input), null, 2);
+      } else if (lang === 'javascript' || lang === 'css') {
+        // Basic indentation-based formatter
+        var lines = input.split('\n');
+        var indent = 0;
+        result = lines.map(function(l) {
+          var trimmed = l.trim();
+          if (!trimmed) return '';
+          var dedent = /^[}\]\)]/.test(trimmed) ? 1 : 0;
+          indent = Math.max(0, indent - dedent);
+          var out = '  '.repeat(indent) + trimmed;
+          if (/[\[{\(]$/.test(trimmed)) indent++;
+          return out;
+        }).join('\n');
+      } else if (lang === 'html') {
+        // Basic HTML indentation
+        var tags = input.replace(/>\s*</g, '>\n<').split('\n');
+        var indent = 0;
+        result = tags.map(function(l) {
+          var trimmed = l.trim();
+          if (!trimmed) return '';
+          var dedent = trimmed.startsWith('</') ? 1 : 0;
+          indent = Math.max(0, indent - dedent);
+          var out = '  '.repeat(indent) + trimmed;
+          if (/<[^/][^>]*>[^<]*$/.test(trimmed) && !trimmed.endsWith('/>') && !trimmed.startsWith('</')) indent++;
+          return out;
+        }).join('\n');
+      } else if (lang === 'python') {
+        result = input.split('\n').map(function(l) { return l.trimEnd(); }).join('\n');
+      }
+      document.getElementById('fmt-output').value = result || input;
+    } catch(e) {
+      document.getElementById('fmt-output').value = 'Error: ' + e.message;
+    }
+  });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════════
+
+renderToolGrid();
+</script>
+{% endblock %}

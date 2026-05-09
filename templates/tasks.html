@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+      <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
+        <i class="fas fa-tasks text-indigo-600"></i> Task Manager
+      </h2>
+      {% if tasks %}
+      <div class="flex items-center gap-3 mt-4 sm:mt-0">
+        <span class="text-sm font-medium text-gray-600">
+          {{ tasks | selectattr('completed', 'equalto', true) | list | length }} / {{ tasks | length }} done
+        </span>
+        <div class="w-40 bg-gray-200 rounded-full h-2.5">
+          <div class="bg-indigo-600 h-2.5 rounded-full"
+               style="width: {{ (tasks | selectattr('completed', 'equalto', true) | list | length / tasks | length * 100) | int }}%"></div>
+        </div>
+        <span class="text-sm font-semibold text-indigo-600">
+          {{ (tasks | selectattr('completed', 'equalto', true) | list | length / tasks | length * 100) | int }}%
+        </span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Add Task Form -->
+    <form method="POST" action="{{ url_for('tasks.add_task') }}" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <input type="text" name="title" placeholder="Task title" required
+             class="md:col-span-2 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+      <input type="text" name="description" placeholder="Description"
+             class="px-4 py-2 border border-gray-300 rounded-xl">
+      <select name="priority" class="px-4 py-2 border border-gray-300 rounded-xl">
+        <option value="low">🟢 Low</option>
+        <option value="medium" selected>🟡 Medium</option>
+        <option value="high">🔴 High</option>
+      </select>
+      <input type="date" name="due_date" class="px-4 py-2 border border-gray-300 rounded-xl">
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition">
+        <i class="fas fa-plus mr-1"></i> Add
+      </button>
+    </form>
+  </div>
+
+  {% if tasks %}
+  <!-- Filters and search -->
+  <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+    <div class="flex gap-2 bg-white rounded-xl shadow-sm border border-gray-100 p-1">
+      <button class="filter-btn active px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white" data-filter="all">
+        All
+      </button>
+      <button class="filter-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100" data-filter="active">
+        Active
+      </button>
+      <button class="filter-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100" data-filter="completed">
+        Completed
+      </button>
+    </div>
+    <div class="flex-1 relative">
+      <input type="text" id="search-input" placeholder="Search tasks..."
+             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+      <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+    </div>
+  </div>
+
+  <!-- Task List -->
+  <div class="space-y-3" id="task-list">
+    {% for task in tasks %}
+    <div class="task-item bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4 transition hover:shadow-md
+                {% if task.completed %}opacity-70 bg-gray-50 completed-task{% endif %}"
+         data-status="{% if task.completed %}completed{% else %}active{% endif %}"
+         data-title="{{ task.title | lower }}"
+         data-desc="{{ (task.description or '') | lower }}">
+      <!-- Custom Checkbox -->
+      <label class="flex-shrink-0 relative cursor-pointer">
+        <input type="checkbox" {% if task.completed %}checked{% endif %}
+               onchange="window.location='{{ url_for('tasks.toggle_task', task_id=task.id) }}'"
+               class="sr-only peer">
+        <div class="w-6 h-6 border-2 border-gray-300 rounded-lg peer-checked:bg-indigo-600 peer-checked:border-indigo-600 flex items-center justify-center transition">
+          <i class="fas fa-check text-white text-xs opacity-0 peer-checked:opacity-100"></i>
+        </div>
+      </label>
+
+      <!-- Main Content -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-baseline gap-2 flex-wrap">
+          <span class="font-semibold text-gray-800 {% if task.completed %}line-through{% endif %}">{{ task.title }}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                       {% if task.priority == 'high' %}bg-red-100 text-red-700
+                       {% elif task.priority == 'medium' %}bg-yellow-100 text-yellow-700
+                       {% else %}bg-blue-100 text-blue-700{% endif %}">
+            {{ task.priority }}
+          </span>
+        </div>
+        {% if task.description %}
+        <p class="text-sm text-gray-500 mt-1 truncate">{{ task.description }}</p>
+        {% endif %}
+        {% if task.due_date %}
+        <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+          <i class="far fa-calendar-alt"></i>
+          {{ task.due_date.strftime('%d %b %Y') }}
+          {% set due_date = task.due_date.date() if task.due_date else None %}
+          {% if due_date and not task.completed %}
+            {% if due_date == today %}
+              <span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-medium">Today</span>
+            {% elif due_date == today + timedelta(1) %}
+              <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-medium">Tomorrow</span>
+            {% elif due_date < today %}
+              <span class="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full font-medium">Overdue</span>
+            {% elif (due_date - today).days <= 3 %}
+              <span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-medium">Due soon</span>
+            {% else %}
+              <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{{ (due_date - today).days }} days left</span>
+            {% endif %}
+          {% endif %}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Delete (with SweetAlert) -->
+      <a href="#" onclick="confirmTaskDelete('{{ url_for('tasks.delete_task', task_id=task.id) }}'); return false;"
+         class="flex-shrink-0 text-gray-400 hover:text-red-500 transition">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty state -->
+  <div class="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100">
+    <i class="fas fa-check-circle text-5xl text-gray-300 mb-4"></i>
+    <p class="text-gray-500 text-lg">No tasks yet. Add your first task above.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+// Delete confirmation
+function confirmTaskDelete(url) {
+  Swal.fire({
+    title: 'Delete this task?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e53e3e',
+    cancelButtonColor: '#718096',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      window.location.href = url;
+    }
+  });
+}
+
+// Filter functionality
+const filterButtons = document.querySelectorAll('.filter-btn');
+const taskItems = document.querySelectorAll('.task-item');
+const searchInput = document.getElementById('search-input');
+
+function applyFilters() {
+  const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+  const searchTerm = searchInput.value.toLowerCase();
+
+  taskItems.forEach(item => {
+    const status = item.dataset.status;
+    const title = item.dataset.title || '';
+    const desc = item.dataset.desc || '';
+
+    // Filter by status
+    const statusMatch = activeFilter === 'all' || status === activeFilter;
+    // Search
+    const searchMatch = title.includes(searchTerm) || desc.includes(searchTerm);
+
+    if (statusMatch && searchMatch) {
+      item.classList.remove('hidden');
+    } else {
+      item.classList.add('hidden');
+    }
+  });
+}
+
+filterButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterButtons.forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
+    btn.classList.add('active', 'bg-indigo-600', 'text-white');
+    applyFilters();
+  });
+});
+
+searchInput.addEventListener('input', applyFilters);
+</script>
+{% endblock %}

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ahmed BOURAMDANE · Organiser</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS with dark mode config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Wait for Tailwind to load, then apply config
+    setTimeout(() => {
+      if (typeof tailwind !== 'undefined') {
+        tailwind.config = {
+          darkMode: 'class',
+          theme: {
+            extend: {
+              fontFamily: {
+                'cairo': ['Cairo', 'sans-serif'],
+                'jetbrains': ['JetBrains Mono', 'monospace'],
+                'inter': ['Inter', 'sans-serif'],
+              }
+            }
+          }
+        }
+      }
+    }, 100);
+  </script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Glightbox (calendar attachments) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+  <!-- Marked.js (Markdown parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Prism.js (code highlighting) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+  <!-- KaTeX (LaTeX rendering) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- html2pdf.js (PDF generation) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Quill (notes editor) -->
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
+
+  <!-- Custom styles -->
+  <style>
+    .fc .fc-timegrid-now-indicator-line { border-color: #e53e3e; }
+    .fc .fc-timegrid-now-indicator-arrow { border-color: #e53e3e; color: #e53e3e; }
+    .ql-editor { min-height: 400px; font-size: 1rem; font-family: inherit; }
+    .ql-editor img { max-width: 100%; height: auto; cursor: pointer; }
+
+    /* FullCalendar dark mode */
+    .dark .fc { background: #1f2937; color: #e5e7eb; }
+    .dark .fc .fc-toolbar-title { color: #f9fafb; }
+    .dark .fc .fc-button { background: #4b5563; border-color: #4b5563; color: #fff; }
+    .dark .fc .fc-button:hover { background: #6b7280; }
+    .dark .fc .fc-daygrid-day-number, .dark .fc .fc-col-header-cell-cushion { color: #d1d5db; }
+    .dark .fc .fc-daygrid-event { background: #4f46e5; border: none; }
+
+    /* SweetAlert2 dark mode */
+    .dark .swal2-popup { background: #1f2937; color: #e5e7eb; }
+    .dark .swal2-title, .dark .swal2-content { color: #e5e7eb; }
+    .dark .swal2-input { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+
+    /* Quill dark mode */
+    .dark .ql-editor { background: #1f2937; color: #e5e7eb; }
+    .dark .ql-toolbar { background: #111827; border-color: #374151; }
+    .dark .ql-toolbar button { color: #d1d5db; }
+
+    /* Smooth transitions */
+    body, .sidebar, .main-content, .bg-white, .bg-gray-50 {
+      transition: background-color 0.2s, color 0.2s;
+    }
+    
+    /* RTL Support for Arabic & RTL Languages */
+    html[dir="rtl"] {
+      direction: rtl;
+      text-align: right;
+    }
+    
+    html[dir="rtl"] body {
+      direction: rtl;
+    }
+    
+    /* Arabic Font Support */
+    .font-arabic, [lang="ar"] {
+      font-family: 'Cairo', 'Arabic Typesetting', sans-serif;
+      font-weight: 500;
+      direction: rtl;
+      text-align: right;
+    }
+
+    /* Animated dots for AI thinking */
+    .thinking-dots {
+      display: flex; gap: 4px; align-items: center;
+      padding: 12px 16px; background: #f1f5f9;
+      border-radius: 16px; width: fit-content; margin: 8px 0;
+    }
+    .dark .thinking-dots { background: #374151; }
+    .thinking-dots span {
+      width: 8px; height: 8px; background: #6366f1;
+      border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Markdown tables & code */
+    .markdown-body table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      margin: 1em 0; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .dark .markdown-body table { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .markdown-body th, .markdown-body td {
+      padding: 12px 16px; border-bottom: 1px solid #e5e7eb;
+    }
+    .dark .markdown-body th, .dark .markdown-body td { border-color: #4b5563; }
+    .markdown-body th { background: #f8fafc; font-weight: 600; text-align: left; }
+    .dark .markdown-body th { background: #1f2937; color: #e5e7eb; }
+    .markdown-body tbody tr:last-child td { border-bottom: none; }
+    .markdown-body tbody tr:hover { background: #f1f5f9; }
+    .dark .markdown-body tbody tr:hover { background: #374151; }
+    .markdown-body pre {
+      background: #1e293b; border-radius: 12px; padding: 16px;
+      overflow-x: auto; margin: 1em 0;
+    }
+    .markdown-body pre code { background: none !important; font-size: 0.85rem; line-height: 1.6; }
+    
+    /* Enhanced markdown styling */
+    .markdown-body h1 {
+      font-size: 2em; margin: 0.67em 0; font-weight: bold;
+      border-bottom: 3px solid #4f46e5; padding-bottom: 0.3em;
+    }
+    .markdown-body h2 {
+      font-size: 1.5em; margin: 0.75em 0; font-weight: bold;
+      border-bottom: 2px solid #9333ea; padding-bottom: 0.3em;
+    }
+    .markdown-body h3 {
+      font-size: 1.17em; margin: 0.83em 0; font-weight: bold;
+      color: #6366f1;
+    }
+    .markdown-body ul, .markdown-body ol {
+      margin: 0.5em 0; padding-left: 2em;
+    }
+    .markdown-body li {
+      margin: 0.5em 0; line-height: 1.6;
+    }
+    .markdown-body blockquote {
+      border-left: 4px solid #4f46e5; padding-left: 1em;
+      margin: 1em 0; color: #6b7280; font-style: italic;
+      background: #f9f5ff; padding: 1em;
+      border-radius: 8px;
+    }
+    .dark .markdown-body blockquote {
+      background: #3f366f; color: #d1d5db;
+    }
+
+    /* Global Sidebar collapse & resize */
+    .sidebar {
+      width: 280px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-x: hidden;
+      white-space: nowrap;
+    }
+    .main-content {
+      margin-left: 280px;
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar.collapsed {
+      width: 72px !important;
+    }
+    /* Hide text labels when collapsed */
+    .brand-text, .sidebar a span, .nav-bottom-text {
+      display: inline-block;
+      max-width: 200px;
+      overflow: hidden;
+      transition: max-width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+      opacity: 1;
+      vertical-align: middle;
+    }
+    .sidebar.collapsed .brand-text,
+    .sidebar.collapsed a span,
+    .sidebar.collapsed .nav-bottom-text {
+      max-width: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    /* Center icons when collapsed */
+    .sidebar.collapsed nav a {
+      justify-content: center;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .sidebar.collapsed nav a i {
+      margin: 0;
+    }
+    .sidebar.collapsed .brand {
+      justify-content: center;
+      padding-left: 0;
+    }
+    .sidebar.collapsed > div:first-child {
+      justify-content: center;
+    }
+    .sidebar.collapsed #global-sidebar-toggle i {
+      transform: rotate(180deg);
+    }
+    .sidebar:not(.collapsed) #sidebar-expand-btn {
+      display: none;
+    }
+    /* Show expand arrow when collapsed - via the toggle btn direction */
+    .sidebar-resize-handle {
+      position: absolute;
+      top: 0; right: -4px;
+      width: 8px; height: 100%;
+      cursor: col-resize;
+      z-index: 1000;
+    }
+  </style>
+
+  <!-- Theme Initialization Script -->
+  <script>
+    (function() {
+      var storedTheme = localStorage.getItem('theme');
+      var serverTheme = '{{ current_user.theme if current_user.is_authenticated else "auto" }}' || 'auto';
+      var userTheme = storedTheme || serverTheme;
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var applyDark = false;
+      if (userTheme === 'dark') applyDark = true;
+      else if (userTheme === 'auto') applyDark = prefersDark;
+      if (applyDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      if (!storedTheme) {
+        localStorage.setItem('theme', serverTheme);
+      }
+    })();
+  </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
+
+  <!-- Mobile backdrop -->
+  <div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar fixed top-0 left-0 h-full bg-gray-900 text-white z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl" style="width: 280px;">
+    <!-- Resize handle -->
+    <div class="sidebar-resize-handle"></div>
+    <!-- Floating expand button (shown only when collapsed on desktop) -->
+    <button id="sidebar-expand-btn" class="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg z-[60] items-center justify-center transition" title="Expand sidebar">
+      <i class="fas fa-angle-double-right text-xs"></i>
+    </button>
+
+    <div class="p-6 border-b border-gray-800 flex items-center justify-between">
+      <h1 id="sidebar-brand" class="text-2xl font-bold flex items-center gap-3 brand cursor-pointer">
+        <i class="fas fa-crown text-indigo-400"></i>
+        <span class="brand-text">{{ current_user.username if current_user.is_authenticated and current_user.email_verified else 'Ahmed' }}</span>
+      </h1>
+      <button id="global-sidebar-toggle" class="text-gray-400 hover:text-white transition focus:outline-none" title="Toggle sidebar">
+        <i class="fas fa-angle-double-left"></i>
+      </button>
+    </div>
+
+    {% if current_user.is_authenticated and current_user.email_verified %}
+    <nav class="mt-6 flex-1 space-y-1 px-3">
+      <a href="{{ url_for('dashboard.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'dashboard.dashboard' }}">
+        <i class="fas fa-tachometer-alt w-5"></i> <span>Dashboard</span>
+      </a>
+      <a href="{{ url_for('notes.notes') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint in ['notes.notes', 'notes.edit_note'] }}">
+        <i class="fas fa-sticky-note w-5"></i> <span>Notes</span>
+      </a>
+      <a href="{{ url_for('tasks.tasks') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'tasks.tasks' }}">
+        <i class="fas fa-tasks w-5"></i> <span>Tasks</span>
+      </a>
+      <a href="{{ url_for('calendar.calendar') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'calendar.calendar' }}">
+        <i class="fas fa-calendar-alt w-5"></i> <span>Calendar</span>
+      </a>
+      <a href="{{ url_for('chat.chat_list') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint in ['chat.chat_list', 'chat.chat_view'] }}">
+        <i class="fas fa-robot w-5"></i> <span>AI Chat</span>
+      </a>
+      <a href="{{ url_for('user_chat.user_chat') }}" id="user-chat-link" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'user_chat.user_chat' }}">
+        <i class="fab fa-facebook-messenger w-5"></i> <span>Messages</span>
+        <span id="unread-badge" class="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 hidden">0</span>
+      </a>
+      <a href="{{ url_for('tools.tools_page') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint and request.endpoint.startswith('tools.') }}">
+        <i class="fas fa-toolbox w-5"></i> <span>Tools</span>
+      </a>
+      <a href="{{ url_for('profile.profile') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'profile.profile' }}">
+        <i class="fas fa-user-circle w-5"></i> <span>Profile</span>
+      </a>
+      <a href="{{ url_for('settings.settings') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'settings.settings' }}">
+        <i class="fas fa-cog w-5"></i> <span>Settings</span>
+      </a>
+    </nav>
+    {% endif %}
+
+    <div class="p-4 border-t border-gray-800 mt-auto">
+      {% if current_user.is_authenticated %}
+      <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-red-600 hover:text-white transition">
+        <i class="fas fa-sign-out-alt w-5"></i> <span class="nav-bottom-text">Logout</span>
+      </a>
+      {% else %}
+      <a href="{{ url_for('auth.login') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition">
+        <i class="fas fa-sign-in-alt w-5"></i> <span>Login</span>
+      </a>
+      <a href="{{ url_for('auth.register') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition">
+        <i class="fas fa-user-plus w-5"></i> <span>Register</span>
+      </a>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="lg:ml-72 min-h-screen main-content" id="main-content">
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 lg:hidden p-4 flex items-center justify-between">
+      <button id="menu-toggle" class="text-gray-700 dark:text-gray-300 text-2xl focus:outline-none">
+        <i class="fas fa-bars"></i>
+      </button>
+      <span class="font-bold text-lg dark:text-white">Ahmed BOURAMDANE</span>
+      <span></span>
+    </header>
+
+    <main class="p-6 lg:p-10">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <script>
+              Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: '{{ "success" if category == "success" else "error" if category == "danger" else "info" }}',
+                title: '{{ message|escape }}',
+                showConfirmButton: false,
+                timer: 3500
+              });
+            </script>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Sidebar toggle -->
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const menuBtn = document.getElementById('menu-toggle');
+    function openSidebar() {
+      sidebar.classList.remove('-translate-x-full');
+      backdrop.classList.remove('hidden');
+    }
+    function closeSidebar() {
+      sidebar.classList.add('-translate-x-full');
+      backdrop.classList.add('hidden');
+    }
+    menuBtn?.addEventListener('click', openSidebar);
+    backdrop?.addEventListener('click', closeSidebar);
+
+    // Global sidebar collapse toggle
+    const globalToggle = document.getElementById('global-sidebar-toggle');
+    const sidebarExpandBtn = document.getElementById('sidebar-expand-btn');
+    const sidebarBrand = document.getElementById('sidebar-brand');
+    const mainContent = document.getElementById('main-content');
+    let collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    const savedWidth = localStorage.getItem('sidebarWidth') || '280px';
+    sidebar.style.width = savedWidth;
+    
+    function applyMargin() {
+      if (window.innerWidth < 1024) {
+        mainContent.style.marginLeft = '0px';
+      } else {
+        mainContent.style.marginLeft = collapsed ? '80px' : sidebar.style.width;
+      }
+    }
+
+    function toggleSidebar() {
+      collapsed = !collapsed;
+      if (collapsed) {
+        sidebar.classList.add('collapsed');
+        localStorage.setItem('sidebarCollapsed', 'true');
+      } else {
+        sidebar.classList.remove('collapsed');
+        localStorage.setItem('sidebarCollapsed', 'false');
+      }
+      applyMargin();
+    }
+
+    if (collapsed) {
+      sidebar.classList.add('collapsed');
+    }
+    applyMargin();
+    window.addEventListener('resize', applyMargin);
+
+    globalToggle?.addEventListener('click', toggleSidebar);
+    sidebarExpandBtn?.addEventListener('click', toggleSidebar);
+    sidebarBrand?.addEventListener('click', toggleSidebar);
+
+    // Drag-to-resize global sidebar
+    const resizeHandle = document.querySelector('.sidebar-resize-handle');
+    let isResizing = false;
+    let startX, startWidth;
+    resizeHandle?.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+    function onMouseMove(e) {
+      if (!isResizing) return;
+      const newWidth = startWidth + (e.clientX - startX);
+      if (newWidth >= 64 && newWidth <= 400) {
+        sidebar.style.width = newWidth + 'px';
+        applyMargin();
+      }
+    }
+    function onMouseUp() {
+      isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      // Save width to localStorage
+      localStorage.setItem('sidebarWidth', sidebar.style.width);
+    }
+  </script>
+
+  <!-- Unread badge polling -->
+  {% if current_user.is_authenticated and current_user.unread_badge_enabled %}
+  <script>
+  (function pollUnread() {
+    fetch('/user_chat/unread')
+      .then(r => r.json())
+      .then(data => {
+        const badge = document.getElementById('unread-badge');
+        if (badge) {
+          if (data.total > 0) {
+            badge.classList.remove('hidden');
+            badge.textContent = data.total > 99 ? '99+' : data.total;
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      })
+      .catch(() => {});
+    setTimeout(pollUnread, 10000);
+  })();
+  </script>
+  {% endif %}
+
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+
+
+  {% block scripts %}{% endblock %}
+
+<!-- Footer -->
+<footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-10">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="text-center text-gray-600 dark:text-gray-400">
+      <p>&copy; 2026 Ahmed BOURAMDANE. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block content %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<div class="max-w-7xl mx-auto h-[calc(100vh-8rem)] flex gap-4">
+  <!-- Left panel: group list -->
+  <div class="w-72 flex-shrink-0 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fas fa-users text-indigo-600 mr-2"></i> Groups</h3>
+      <button id="create-group-btn" class="text-green-600 hover:bg-green-50 dark:hover:bg-gray-700 p-2 rounded-lg transition" title="Create group">
+        <i class="fas fa-plus"></i>
+      </button>
+    </div>
+    <div id="group-list" class="flex-1 overflow-y-auto space-y-2">
+      <p class="text-gray-400 text-sm text-center py-8">No groups yet.</p>
+    </div>
+  </div>
+
+  <!-- Right panel: chat area -->
+  <div class="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col overflow-hidden">
+    <!-- Empty state -->
+    <div id="group-empty" class="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
+      <div class="text-center">
+        <i class="fas fa-users text-6xl mb-4"></i>
+        <p class="text-xl">Select a group or create a new one.</p>
+      </div>
+    </div>
+
+    <!-- Active group chat -->
+    <div id="group-chat-active" class="hidden flex flex-col h-full">
+      <!-- Header -->
+      <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-lg" id="group-avatar-letter">G</div>
+          <div>
+            <h4 id="group-name-display" class="font-semibold text-gray-800 dark:text-white">Group Name</h4>
+            <p id="group-member-count" class="text-xs text-gray-500 dark:text-gray-400">0 members</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="group-members-btn" class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-2 rounded-lg transition" title="Manage members">
+            <i class="fas fa-user-cog"></i>
+          </button>
+          <button id="group-leave-btn" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg transition" title="Leave group">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+          <button id="group-delete-btn" class="text-red-500 hover:text-red-700 p-2 rounded-lg transition hidden" title="Delete group">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900" id="group-messages"></div>
+
+      <!-- Input -->
+      <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+        <form id="group-chat-form" class="flex gap-2">
+          <input type="text" id="group-message-input" placeholder="Type a message..." required autofocus
+                 class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl shadow transition">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Members modal -->
+<div id="members-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-gray-800 dark:text-white">Manage Members</h3>
+      <button type="button" id="close-members-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <div class="p-6 overflow-y-auto flex-1 space-y-4">
+      <!-- Invite search -->
+      <div id="invite-section" class="hidden">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Member</label>
+        <div class="flex gap-2">
+          <input type="text" id="invite-search" placeholder="Search users..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div id="invite-results" class="mt-2 space-y-1 max-h-32 overflow-y-auto"></div>
+      </div>
+      <!-- Current members -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Members</label>
+        <div id="members-list" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const socket = io();
+  let currentGroupId = null;
+  let myGroupRole = null;
+  let groups = {};
+
+  // ─── Load groups ──────────────────────────────────────────────────────────
+  function loadGroups() {
+    fetch('/api/groups').then(r => r.json()).then(data => {
+      const list = document.getElementById('group-list');
+      list.innerHTML = '';
+      data.forEach(g => {
+        groups[g.id] = g;
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl cursor-pointer transition flex items-center gap-3 group-item ${currentGroupId == g.id ? 'bg-indigo-100 dark:bg-indigo-900/50' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`;
+        div.dataset.groupId = g.id;
+        div.innerHTML = `
+          <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">${g.name[0].toUpperCase()}</div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-800 dark:text-white text-sm truncate">${g.name}</div>
+            <div class="text-xs text-gray-400 truncate">${g.last_message || 'No messages yet'}</div>
+          </div>
+          <div class="text-xs text-gray-400">${g.member_count}</div>
+        `;
+        div.addEventListener('click', () => selectGroup(g.id));
+        list.appendChild(div);
+      });
+    }).catch(() => {});
+  }
+
+  // ─── Select group ─────────────────────────────────────────────────────────
+  function selectGroup(groupId) {
+    currentGroupId = groupId;
+    document.getElementById('group-empty').classList.add('hidden');
+    document.getElementById('group-chat-active').classList.remove('hidden');
+    document.querySelectorAll('.group-item').forEach(el => {
+      el.classList.toggle('bg-indigo-100 dark:bg-indigo-900/50', el.dataset.groupId == groupId);
+      el.classList.toggle('hover:bg-gray-100 dark:hover:bg-gray-700', el.dataset.groupId != groupId);
+    });
+
+    socket.emit('group_join', { group_id: groupId });
+
+    fetch(`/api/groups/${groupId}`).then(r => r.json()).then(data => {
+      myGroupRole = data.my_role;
+      const g = data.group;
+      document.getElementById('group-avatar-letter').textContent = g.name[0].toUpperCase();
+      document.getElementById('group-name-display').textContent = g.name;
+      document.getElementById('group-member-count').textContent = g.member_count + ' members';
+      document.getElementById('group-delete-btn').classList.toggle('hidden', myGroupRole != 'owner');
+
+      // Render messages
+      const container = document.getElementById('group-messages');
+      container.innerHTML = '';
+      data.messages.forEach(m => addGroupMessage(m, false));
+
+      // Update members modal
+      updateMembersModal(data.members);
+    }).catch(() => {});
+  }
+
+  // ─── Send message ─────────────────────────────────────────────────────────
+  document.getElementById('group-chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('group-message-input');
+    const msg = input.value.trim();
+    if (!msg || !currentGroupId) return;
+    input.value = '';
+    try {
+      const resp = await fetch(`/api/groups/${currentGroupId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: msg })
+      });
+      const data = await resp.json();
+      addGroupMessage(data, true);
+    } catch (err) {
+      console.error('Send error', err);
+    }
+  });
+
+  // ─── Add message to UI ────────────────────────────────────────────────────
+  function addGroupMessage(msg, isOwn) {
+    const container = document.getElementById('group-messages');
+    const div = document.createElement('div');
+    const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3`;
+    div.innerHTML = `
+      <div class="max-w-[70%] ${isOwn ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200'} rounded-2xl px-4 py-2.5 border ${isOwn ? '' : 'border-gray-200 dark:border-gray-600'}">
+        ${!isOwn ? `<div class="text-xs font-semibold ${isOwn ? 'text-indigo-200' : 'text-indigo-500'} mb-1">${msg.sender_name}</div>` : ''}
+        <div class="text-sm whitespace-pre-wrap">${escapeHtml(msg.content)}</div>
+        <div class="text-xs ${isOwn ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'} mt-1">${time}</div>
+      </div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};
+    return text.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  // ─── Socket: real-time messages ──────────────────────────────────────────
+  socket.on('group_message', (msg) => {
+    if (msg.group_id == currentGroupId) {
+      addGroupMessage(msg, msg.sender_id == {{ current_user.id }});
+    }
+  });
+
+  // ─── Create group ─────────────────────────────────────────────────────────
+  document.getElementById('create-group-btn').addEventListener('click', async () => {
+    const { value: name } = await Swal.fire({
+      title: 'Create Group',
+      input: 'text',
+      inputLabel: 'Group Name',
+      inputPlaceholder: 'Enter group name...',
+      showCancelButton: true,
+      inputValidator: v => !v.trim() ? 'Name required' : null
+    });
+    if (!name) return;
+    const resp = await fetch('/api/groups/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim() })
+    });
+    if (resp.ok) {
+      loadGroups();
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Group created!', showConfirmButton: false, timer: 2000 });
+    }
+  });
+
+  // ─── Members modal ───────────────────────────────────────────────────────
+  function updateMembersModal(members) {
+    const list = document.getElementById('members-list');
+    list.innerHTML = '';
+    const canManage = myGroupRole == 'owner' || myGroupRole == 'admin';
+    document.getElementById('invite-section').classList.toggle('hidden', !canManage);
+
+    members.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700';
+      let roleBadge = m.role == 'owner' ? '<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Owner</span>' :
+                       m.role == 'admin' ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Admin</span>' :
+                       '<span class="text-xs bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">Member</span>';
+      div.innerHTML = `
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">${m.username[0].toUpperCase()}</div>
+          <div>
+            <div class="text-sm font-medium text-gray-800 dark:text-white">${m.username}</div>
+            ${roleBadge}
+          </div>
+        </div>
+        ${canManage && m.role != 'owner' ? `
+          <div class="flex gap-1">
+            ${myGroupRole == 'owner' ? `
+              <select onchange="changeRole(${m.id}, this.value)" class="text-xs border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+                <option value="member" ${m.role == 'member' ? 'selected' : ''}>Member</option>
+                <option value="admin" ${m.role == 'admin' ? 'selected' : ''}>Admin</option>
+              </select>
+            ` : ''}
+            <button onclick="removeMember(${m.id})" class="text-red-500 hover:text-red-700 p-1" title="Remove"><i class="fas fa-times text-xs"></i></button>
+          </div>
+        ` : ''}
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  window.changeRole = async (userId, role) => {
+    await fetch(`/api/groups/${currentGroupId}/members/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role })
+    });
+  };
+
+  window.removeMember = async (userId) => {
+    const result = await Swal.fire({ title: 'Remove member?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e53e3e', confirmButtonText: 'Remove' });
+    if (!result.isConfirmed) return;
+    const resp = await fetch(`/api/groups/${currentGroupId}/members/${userId}`, { method: 'DELETE' });
+    if (resp.ok) {
+      fetch(`/api/groups/${currentGroupId}`).then(r => r.json()).then(d => updateMembersModal(d.members));
+    }
+  };
+
+  document.getElementById('group-members-btn').addEventListener('click', () => {
+    document.getElementById('members-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('close-members-modal').addEventListener('click', () => {
+    document.getElementById('members-modal').classList.add('hidden');
+  });
+
+  // Invite search
+  let inviteTimer;
+  document.getElementById('invite-search').addEventListener('input', function() {
+    clearTimeout(inviteTimer);
+    const q = this.value.trim();
+    inviteTimer = setTimeout(() => {
+      if (q.length < 1) { document.getElementById('invite-results').innerHTML = ''; return; }
+      fetch(`/api/groups/${currentGroupId}/candidates?q=${encodeURIComponent(q)}`)
+        .then(r => r.json()).then(users => {
+          const container = document.getElementById('invite-results');
+          container.innerHTML = '';
+          users.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700';
+            div.innerHTML = `
+              <span class="text-sm text-gray-800 dark:text-white">${u.username}</span>
+              <button onclick="inviteUser(${u.id})" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Add</button>
+            `;
+            container.appendChild(div);
+          });
+        });
+    }, 300);
+  });
+
+  window.inviteUser = async (userId) => {
+    const resp = await fetch(`/api/groups/${currentGroupId}/members`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId })
+    });
+    if (resp.ok) {
+      document.getElementById('invite-search').value = '';
+      document.getElementById('invite-results').innerHTML = '';
+      fetch(`/api/groups/${currentGroupId}`).then(r => r.json()).then(d => updateMembersModal(d.members));
+    } else {
+      const err = await resp.json();
+      Swal.fire('Error', err.error, 'error');
+    }
+  };
+
+  // ─── Delete group (owner only) ──────────────────────────────────────────
+  document.getElementById('group-delete-btn').addEventListener('click', async () => {
+    if (!currentGroupId) return;
+    const result = await Swal.fire({
+      title: 'Delete this group?',
+      text: 'All messages will be lost. This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e53e3e',
+      confirmButtonText: 'Delete'
+    });
+    if (!result.isConfirmed) return;
+    const resp = await fetch(`/api/groups/${currentGroupId}`, { method: 'DELETE' });
+    if (resp.ok) {
+      currentGroupId = null;
+      document.getElementById('group-empty').classList.remove('hidden');
+      document.getElementById('group-chat-active').classList.add('hidden');
+      loadGroups();
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Group deleted', showConfirmButton: false, timer: 2000 });
+    }
+  });
+
+  // ─── Leave group ─────────────────────────────────────────────────────────
+  document.getElementById('group-leave-btn').addEventListener('click', async () => {
+    if (!currentGroupId) return;
+    const result = await Swal.fire({ title: 'Leave group?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e53e3e', confirmButtonText: 'Leave' });
+    if (!result.isConfirmed) return;
+    const resp = await fetch(`/api/groups/${currentGroupId}/leave`, { method: 'POST' });
+    if (resp.ok) {
+      currentGroupId = null;
+      document.getElementById('group-empty').classList.remove('hidden');
+      document.getElementById('group-chat-active').classList.add('hidden');
+      loadGroups();
+    } else {
+      const err = await resp.json();
+      Swal.fire('Error', err.error, 'error');
+    }
+  });
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+  loadGroups();
+</script>
+{% endblock %}
