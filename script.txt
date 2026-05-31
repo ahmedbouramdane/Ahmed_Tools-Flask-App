@@ -1,0 +1,714 @@
+let's develop design editor 
+You are a senior developer experience (DX) engineer.
+
+Your task is to design and implement a browser-based Code Playground
+inside an existing web application.
+
+IMPORTANT:
+Do NOT define backend architecture or routing.
+Focus ONLY on editor functionality, developer experience,
+and interactive coding capabilities.
+
+The playground must combine:
+
+- CodePen live preview
+- VS Code editor experience
+- Online IDE usability
+
+--------------------------------------------------
+CORE OBJECTIVE
+--------------------------------------------------
+
+Create a professional in-browser coding environment allowing users to:
+
+- write code
+- preview instantly
+- manage files
+- test ideas quickly
+- feel like using a real IDE
+
+--------------------------------------------------
+MAIN FUNCTIONAL MODULES
+--------------------------------------------------
+
+1. EDITOR ENGINE
+
+Use a professional code editor engine.
+
+Preferred:
+- Monaco Editor (VS Code engine)
+
+Editor must support:
+
+✓ syntax highlighting
+✓ multi-language support
+✓ autocomplete
+✓ IntelliSense
+✓ bracket matching
+✓ code folding
+✓ multi-cursor editing
+✓ minimap
+✓ line numbers
+✓ error highlighting
+✓ auto formatting
+✓ search & replace
+
+Supported languages initially:
+- HTML
+- CSS
+- JavaScript
+- Python (optional execution)
+- JSON
+- Markdown
+
+--------------------------------------------------
+
+2. PANEL LAYOUT SYSTEM
+
+Create IDE layout similar to VS Code.
+
+Layout regions:
+
+LEFT PANEL:
+- file explorer
+- snippets
+- assets
+
+CENTER:
+- editor tabs
+- split editors
+- multi-file editing
+
+BOTTOM PANEL:
+- console
+- problems
+- logs
+- terminal simulation
+
+RIGHT PANEL:
+- settings
+- live preview options
+- properties
+
+Panels must be:
+- resizable
+- collapsible
+- draggable
+
+--------------------------------------------------
+
+3. FILE SYSTEM SIMULATION
+
+Implement virtual project filesystem.
+
+Capabilities:
+
+- create file
+- rename file
+- delete file
+- folders
+- open multiple files
+- tab navigation
+- unsaved indicators
+
+Files stored as in-memory objects:
+
+project = {
+  files: {},
+  openTabs: [],
+  activeFile: ""
+}
+
+No real disk needed initially.
+
+--------------------------------------------------
+
+4. LIVE PREVIEW ENGINE
+
+Core feature (CodePen style).
+
+When user edits code:
+
+- automatically rebuild preview
+- render output instantly
+
+HTML + CSS + JS combined dynamically.
+
+Preview modes:
+- desktop
+- tablet
+- mobile
+- fullscreen
+
+Options:
+- auto refresh
+- manual refresh
+- debounce updates
+
+Sandbox preview inside iframe.
+
+--------------------------------------------------
+
+5. CONSOLE SYSTEM
+
+Provide developer console:
+
+Features:
+- console.log output
+- runtime errors
+- warnings
+- clear console
+- timestamps
+
+Capture iframe console messages
+and display in playground console panel.
+
+--------------------------------------------------
+
+6. TERMINAL SIMULATION
+
+Create pseudo terminal:
+
+Capabilities:
+- command history
+- fake shell responses
+- run predefined commands
+- simulate build output
+
+Optional real backend execution later.
+
+--------------------------------------------------
+
+7. CODE INTELLIGENCE
+
+Editor should provide:
+
+- autocomplete suggestions
+- snippet expansion
+- hover documentation
+- quick fixes
+- linting feedback
+
+Integrate:
+- ESLint
+- Prettier
+
+Formatting shortcuts:
+Shift + Alt + F
+
+--------------------------------------------------
+
+8. PROJECT SAVE SYSTEM
+
+Allow users to:
+
+- save playground
+- duplicate project
+- autosave drafts
+- load previous work
+
+Project stored as JSON snapshot.
+
+--------------------------------------------------
+
+9. SHARE SYSTEM
+
+Generate shareable playground links.
+
+Modes:
+- editable link
+- read-only link
+- embed preview
+
+--------------------------------------------------
+
+10. THEMES & APPEARANCE
+
+Support:
+
+- VS Code Dark
+- Light
+- Custom themes
+
+Allow font selection:
+- Fira Code
+- JetBrains Mono
+
+Enable:
+- ligatures
+- font size control
+
+--------------------------------------------------
+
+11. KEYBOARD SHORTCUT ENGINE
+
+Implement common IDE shortcuts:
+
+Ctrl+S → save
+Ctrl+P → file search
+Ctrl+/ → comment line
+Ctrl+F → find
+Ctrl+Shift+F → global search
+Alt+Click → multi cursor
+
+Shortcut system must be extensible.
+
+--------------------------------------------------
+
+12. EXTENSION SYSTEM (VERY IMPORTANT)
+
+Design playground as extensible platform.
+
+Future extensions:
+
+- AI code assistant
+- formatter plugins
+- language servers
+- Git integration
+- package installer
+- database viewer
+
+Plugins must register themselves dynamically.
+
+--------------------------------------------------
+
+13. PERFORMANCE REQUIREMENTS
+
+- lazy load languages
+- avoid full editor reload
+- debounce preview rebuild
+- isolate preview iframe
+- background workers for parsing
+
+--------------------------------------------------
+
+14. SAFETY / SANDBOXING
+
+Preview execution must be isolated.
+
+Requirements:
+
+- iframe sandbox
+- block unsafe APIs
+- prevent parent access
+- restrict external scripts if needed
+
+--------------------------------------------------
+
+15. USER EXPERIENCE GOALS
+
+The playground must feel like:
+
+✓ VS Code in browser
+✓ CodePen speed
+✓ Replit simplicity
+
+Fast startup.
+Zero friction.
+Instant feedback.
+
+--------------------------------------------------
+
+DELIVERABLE
+
+Implement progressively:
+
+1. Editor engine
+2. File system
+3. Live preview
+4. Console
+5. Layout system
+6. Advanced IDE features
+
+Build like a real developer platform.
+
+
+==================================
+The same for code playground 
+You are a senior Staff Engineer specialized in browser IDEs and developer platforms.
+
+Your mission is to build a production-grade browser Code Playground
+integrated into an existing Flask website.
+
+IMPORTANT RULES:
+
+- DO NOT design backend routing.
+- DO NOT create server architecture decisions.
+- Focus ONLY on frontend systems, execution engines, and developer experience.
+- Assume backend APIs already exist.
+
+Build a hybrid system combining:
+
+- CodePen live preview
+- VS Code editor experience
+- Replit-style usability
+
+--------------------------------------------------
+TECH STACK (MANDATORY)
+--------------------------------------------------
+
+EDITOR ENGINE
+Use:
+Monaco Editor
+
+Reason:
+- Same engine used by Visual Studio Code
+- Best IntelliSense support
+- Language service compatibility
+
+Install:
+monaco-editor + monaco-languageclient (optional)
+
+--------------------------------------------------
+
+UI FRAMEWORK
+
+Use:
+- TailwindCSS → layout + styling
+- Vanilla JS modules OR Vite bundler
+- No heavy frameworks required
+
+UI must be modular components:
+Panel
+Tabs
+Explorer
+Console
+Preview
+StatusBar
+
+--------------------------------------------------
+
+STATE MANAGEMENT
+
+Create a centralized state manager.
+
+Implement:
+
+editorState = {
+  project: {},
+  files: {},
+  activeFile: "",
+  openTabs: [],
+  layout: {},
+  previewSettings: {},
+  consoleLogs: [],
+  theme: "dark"
+}
+
+RULE:
+All UI components read/write ONLY through state manager.
+
+No direct DOM coupling.
+
+--------------------------------------------------
+
+LAYOUT SYSTEM (VS CODE STYLE)
+
+Use CSS Grid layout.
+
+Regions:
+
+LEFT SIDEBAR
+- File Explorer
+- Snippets
+- Assets
+
+CENTER
+- Monaco Editor Tabs
+- Split editor support
+
+BOTTOM PANEL
+- Console
+- Problems
+- Terminal
+
+RIGHT PANEL
+- Preview settings
+- Editor settings
+
+TOP BAR
+- Run
+- Save
+- Share
+- Settings
+
+BOTTOM STATUS BAR
+- language
+- cursor position
+- encoding
+- autosave status
+
+Panels must support:
+- resizing
+- collapsing
+- drag resizing
+
+--------------------------------------------------
+
+VIRTUAL FILE SYSTEM
+
+Create browser-only filesystem.
+
+Technology:
+IndexedDB + in-memory cache.
+
+Structure:
+
+project/
+  index.html
+  style.css
+  script.js
+
+Capabilities:
+
+✓ create/delete files
+✓ folders
+✓ rename
+✓ open tabs
+✓ unsaved markers
+✓ autosave
+
+Sync state periodically.
+
+--------------------------------------------------
+
+LIVE PREVIEW ENGINE
+
+Use iframe sandbox renderer.
+
+Workflow:
+
+1. Collect project files
+2. Inject HTML template
+3. Inline CSS + JS
+4. Render inside sandbox iframe
+
+Sandbox config:
+- block parent access
+- isolate JS execution
+- prevent global leakage
+
+Update preview using debounce (500ms).
+
+--------------------------------------------------
+
+CONSOLE CAPTURE SYSTEM
+
+Inject script into iframe:
+
+Override:
+console.log
+console.error
+console.warn
+
+Send messages via:
+window.postMessage()
+
+Display logs in Console panel.
+
+Include:
+- timestamps
+- log level colors
+- clickable stack traces
+
+--------------------------------------------------
+
+CODE INTELLIGENCE
+
+Use Monaco language services.
+
+Add:
+
+- HTML language support
+- CSS IntelliSense
+- JavaScript IntelliSense
+- JSON validation
+
+Integrate:
+
+Prettier → formatting
+ESLint → diagnostics
+
+Formatting shortcut:
+Shift+Alt+F
+
+--------------------------------------------------
+
+THEME SYSTEM
+
+Implement themes:
+
+- VS Code Dark+
+- Light
+- High Contrast
+
+Allow runtime switching.
+
+Fonts:
+Fira Code
+JetBrains Mono
+
+Enable font ligatures.
+
+--------------------------------------------------
+
+KEYBOARD SHORTCUT ENGINE
+
+Implement global shortcut manager.
+
+Required shortcuts:
+
+Ctrl+S → save
+Ctrl+P → file search
+Ctrl+F → find
+Ctrl+/ → comment
+Ctrl+Shift+P → command palette
+Ctrl+B → toggle sidebar
+
+Shortcut system must allow plugin registration.
+
+--------------------------------------------------
+
+COMMAND PALETTE (VERY IMPORTANT)
+
+Create VS Code-style command palette.
+
+Trigger:
+Ctrl + Shift + P
+
+Capabilities:
+- open file
+- change theme
+- run preview
+- format code
+- toggle panels
+
+Implement fuzzy search.
+
+--------------------------------------------------
+
+TERMINAL SIMULATION
+
+Create pseudo-terminal UI.
+
+Technology:
+xterm.js
+
+Capabilities:
+- command history
+- fake execution
+- colored output
+- simulated build logs
+
+Later extensible to real backend execution.
+
+--------------------------------------------------
+
+EXTENSION SYSTEM
+
+Design playground as plugin platform.
+
+Extensions register using:
+
+registerExtension({
+  name,
+  activate(editorState),
+  commands,
+  panels
+})
+
+Future extensions:
+
+- AI assistant
+- Git integration
+- NPM installer
+- Python runner
+- Database viewer
+
+Core editor must remain independent.
+
+--------------------------------------------------
+
+LANGUAGE EXECUTION OPTIONS
+
+HTML/CSS/JS:
+Run directly in iframe.
+
+Python:
+Use Pyodide (WebAssembly Python runtime).
+
+Optional:
+Node execution using WebContainers.
+
+--------------------------------------------------
+
+PERFORMANCE STRATEGY
+
+MANDATORY:
+
+- Lazy load Monaco languages
+- Web Workers for parsing
+- Debounced preview rebuild
+- Virtual DOM updates
+- Avoid full editor reload
+
+Target startup < 2 seconds.
+
+--------------------------------------------------
+
+SECURITY REQUIREMENTS
+
+Preview must NEVER access parent window.
+
+Use iframe sandbox:
+
+sandbox="
+allow-scripts
+allow-downloads
+"
+
+Block:
+top navigation
+cookies
+localStorage leakage
+
+--------------------------------------------------
+
+USER EXPERIENCE GOALS
+
+Editor must feel:
+
+FAST
+PROFESSIONAL
+REAL IDE QUALITY
+
+Zero reload workflow.
+Instant feedback loop.
+
+--------------------------------------------------
+
+IMPLEMENTATION ORDER
+
+Phase 1:
+Layout + Monaco Editor
+
+Phase 2:
+File system + tabs
+
+Phase 3:
+Live preview
+
+Phase 4:
+Console + messaging
+
+Phase 5:
+Command palette
+
+Phase 6:
+Extensions system
+
+Build incrementally like a real browser IDE platform.
+
+
+
+and please organise the project. don't use a single file for all tools but vreate folders and organise it in function and OOP and all options to be perfect project 

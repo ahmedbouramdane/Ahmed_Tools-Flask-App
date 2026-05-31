@@ -15,6 +15,7 @@
     <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="security">🔐 Security</button>
     <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="web">🔗 Web Dev</button>
     <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="text">📝 Text</button>
+    <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="math">🧮 Math</button>
     <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="ai">🤖 AI</button>
     <button class="cat-tab px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition" data-cat="dev">💻 Developer</button>
   </div>
@@ -30,59 +31,66 @@
 
 var TOOLS = {
   image: [
-    { id:'remove-bg', icon:'fas fa-magic', title:'Remove BG', desc:'Remove background from images using AI', color:'indigo' },
-    { id:'compress', icon:'fas fa-compress-alt', title:'Compress', desc:'Reduce image file size without losing quality', color:'emerald' },
-    { id:'resize', icon:'fas fa-expand-arrows-alt', title:'Resize', desc:'Resize images for social media or documents', color:'blue' },
-    { id:'convert', icon:'fas fa-exchange-alt', title:'Convert', desc:'Convert between PNG, JPG, WEBP & more', color:'purple' },
-    { id:'enhance', icon:'fas fa-magic', title:'Enhance', desc:'AI upscaling to improve image quality', color:'rose' },
-    { id:'filters', icon:'fas fa-filter', title:'Filters', desc:'Apply grayscale, sepia, blur & more', color:'amber' },
-    { id:'crop', icon:'fas fa-crop-alt', title:'Crop', desc:'Crop images with custom dimensions', color:'cyan' },
-    { id:'to-pdf', icon:'fas fa-file-pdf', title:'Image to PDF', desc:'Convert images to PDF in one click', color:'red' },
+    { id:'canva', icon:'fas fa-paint-brush', title:'Design Editor', desc:'Drag-drop design editor like Canva — add text, shapes, images & export', color:'pink' },
+    { id:'remove-bg', icon:'fas fa-magic', title:'Remove BG', desc:'AI background removal — perfect for product photos & portraits', color:'indigo' },
+    { id:'compress', icon:'fas fa-compress-alt', title:'Compress', desc:'Compress PNG, JPG & WebP up to 80% smaller, quality preserved', color:'emerald' },
+    { id:'resize', icon:'fas fa-expand-arrows-alt', title:'Resize', desc:'Resize to exact dimensions with live preview & aspect ratio lock', color:'blue' },
+    { id:'convert', icon:'fas fa-exchange-alt', title:'Convert', desc:'Convert between PNG, JPEG, WebP, GIF & BMP in one click', color:'purple' },
+    { id:'enhance', icon:'fas fa-magic', title:'AI Enhance', desc:'Upscale images 2x-4x with AI super-resolution for sharper results', color:'rose' },
+    { id:'filters', icon:'fas fa-filter', title:'Filters', desc:'Apply grayscale, sepia, blur, sharpen & edge detect with live preview', color:'amber' },
+    { id:'crop', icon:'fas fa-crop-alt', title:'Crop', desc:'Crop with custom coordinates — left, top, right, bottom controls', color:'cyan' },
+    { id:'to-pdf', icon:'fas fa-file-pdf', title:'To PDF', desc:'Combine multiple images into a single PDF document instantly', color:'red' },
   ],
   pdf: [
-    { id:'merge', icon:'fas fa-object-group', title:'Merge PDFs', desc:'Combine multiple PDF files into one', color:'indigo' },
-    { id:'split', icon:'fas fa-object-ungroup', title:'Split PDF', desc:'Split a PDF into separate pages', color:'emerald' },
-    { id:'protect', icon:'fas fa-lock', title:'Protect PDF', desc:'Add password protection to PDFs', color:'blue' },
-    { id:'unlock', icon:'fas fa-unlock', title:'Unlock PDF', desc:'Remove password from PDF files', color:'purple' },
-    { id:'watermark', icon:'fas fa-stamp', title:'Watermark', desc:'Add text watermark to PDF pages', color:'rose' },
+    { id:'merge', icon:'fas fa-object-group', title:'Merge', desc:'Merge two or more PDF files into one unified document', color:'indigo' },
+    { id:'split', icon:'fas fa-object-ungroup', title:'Split', desc:'Split a PDF into individual pages — extract specific pages', color:'emerald' },
+    { id:'protect', icon:'fas fa-lock', title:'Protect', desc:'Password-protect PDF files with AES encryption', color:'blue' },
+    { id:'unlock', icon:'fas fa-unlock', title:'Unlock', desc:'Remove password protection from PDF files with known password', color:'purple' },
+    { id:'watermark', icon:'fas fa-stamp', title:'Watermark', desc:'Add custom text watermarks (CONFIDENTIAL, DRAFT) to every page', color:'rose' },
   ],
   security: [
-    { id:'password-gen', icon:'fas fa-key', title:'Password Generator', desc:'Create strong secure passwords instantly', color:'indigo' },
-    { id:'password-check', icon:'fas fa-shield-alt', title:'Password Checker', desc:'Check password strength and security', color:'emerald' },
-    { id:'base64', icon:'fas fa-code', title:'Base64', desc:'Encode and decode Base64 text', color:'blue' },
-    { id:'hash', icon:'fas fa-hashtag', title:'Hash Generator', desc:'Generate MD5, SHA256, SHA512 hashes', color:'purple' },
-    { id:'uuid', icon:'fas fa-fingerprint', title:'UUID Generator', desc:'Create UUIDs and random tokens', color:'rose' },
-    { id:'encrypt', icon:'fas fa-shield', title:'Encrypt/Decrypt', desc:'Encrypt and decrypt text messages', color:'amber' },
+    { id:'password-gen', icon:'fas fa-key', title:'Password Gen', desc:'Generate cryptographically strong passwords with custom options', color:'indigo' },
+    { id:'password-check', icon:'fas fa-shield-alt', title:'Check', desc:'Analyze password strength with real-time scoring & tips', color:'emerald' },
+    { id:'base64', icon:'fas fa-code', title:'Base64', desc:'Encode text to Base64 or decode back to readable text', color:'blue' },
+    { id:'hash', icon:'fas fa-hashtag', title:'Hash', desc:'Generate MD5, SHA-1, SHA-256 & SHA-512 hashes for any text', color:'purple' },
+    { id:'uuid', icon:'fas fa-fingerprint', title:'UUID', desc:'Create UUID v4, UUID v1 & cryptographically random tokens', color:'rose' },
+    { id:'encrypt', icon:'fas fa-shield', title:'Encrypt', desc:'Encrypt and decrypt text messages using Base64 encoding', color:'amber' },
   ],
   web: [
-    { id:'qr', icon:'fas fa-qrcode', title:'QR Code', desc:'Generate QR codes for links, text or WiFi', color:'indigo' },
-    { id:'url-shortener', icon:'fas fa-link', title:'URL Shortener', desc:'Shorten long URLs into shareable links', color:'emerald' },
-    { id:'json', icon:'fas fa-brackets-curly', title:'JSON Validator', desc:'Format and validate JSON data', color:'blue' },
-    { id:'timestamp', icon:'fas fa-clock', title:'Timestamp Converter', desc:'Convert timestamps to readable dates', color:'purple' },
+    { id:'qr', icon:'fas fa-qrcode', title:'QR Code', desc:'Generate QR codes for URLs, text, WiFi & more with custom colors', color:'indigo' },
+    { id:'url-shortener', icon:'fas fa-link', title:'URL Shorten', desc:'Shorten long URLs into clean, shareable links via is.gd', color:'emerald' },
+    { id:'json', icon:'fas fa-brackets-curly', title:'JSON', desc:'Validate, format & prettify JSON with syntax error detection', color:'blue' },
+    { id:'timestamp', icon:'fas fa-clock', title:'Timestamp', desc:'Convert Unix timestamps to human-readable dates and vice versa', color:'purple' },
   ],
   text: [
-    { id:'case', icon:'fas fa-font', title:'Case Converter', desc:'Convert to UPPER, lower, Title Case & more', color:'indigo' },
-    { id:'counter', icon:'fas fa-calculator', title:'Word Counter', desc:'Count words, characters, sentences', color:'emerald' },
-    { id:'dedupe', icon:'fas fa-eraser', title:'Remove Duplicates', desc:'Remove duplicate lines from text', color:'blue' },
-    { id:'reverse', icon:'fas fa-arrow-right-arrow-left', title:'Reverse/Sort', desc:'Reverse text or sort lines alphabetically', color:'purple' },
-    { id:'lorem', icon:'fas fa-paragraph', title:'Lorem Ipsum', desc:'Generate placeholder text for designs', color:'rose' },
-    { id:'clean', icon:'fas fa-broom', title:'Clean Text', desc:'Remove extra spaces, empty lines & symbols', color:'amber' },
+    { id:'case', icon:'fas fa-font', title:'Case', desc:'Transform between UPPER, lower, Title, camelCase & more', color:'indigo' },
+    { id:'counter', icon:'fas fa-calculator', title:'Word Count', desc:'Count words, characters, sentences & lines in real-time', color:'emerald' },
+    { id:'dedupe', icon:'fas fa-eraser', title:'Dedupe', desc:'Remove duplicate lines while preserving original order', color:'blue' },
+    { id:'reverse', icon:'fas fa-arrow-right-arrow-left', title:'Reverse', desc:'Reverse text or sort lines alphabetically A-Z or Z-A', color:'purple' },
+    { id:'lorem', icon:'fas fa-paragraph', title:'Lorem', desc:'Generate placeholder text paragraphs for designs & mockups', color:'rose' },
+    { id:'clean', icon:'fas fa-broom', title:'Clean', desc:'Remove extra spaces, empty lines & special characters', color:'amber' },
+  ],
+  math: [
+    { id:'latex', icon:'fas fa-square-root-alt', title:'LaTeX', desc:'Write LaTeX with live KaTeX preview, symbol toolbar & PDF export', color:'indigo' },
+    { id:'calculator', icon:'fas fa-calculator', title:'Calculator', desc:'Casio-style scientific calculator with trig, log, memory & graphing', color:'emerald' },
   ],
   ai: [
-    { id:'summarize', icon:'fas fa-compress-arrows-alt', title:'Summarizer', desc:'Summarize long text automatically', color:'indigo' },
-    { id:'translate', icon:'fas fa-language', title:'Translator', desc:'Translate text between languages with real-time typing', color:'emerald' },
-    { id:'keywords', icon:'fas fa-tags', title:'Keywords', desc:'Extract keykeywords from any paragraph', color:'blue' },
-    { id:'rewrite', icon:'fas fa-feather-alt', title:'Rewriter', desc:'Rewrite sentences with improved clarity', color:'purple' },
-    { id:'caption', icon:'fas fa-camera', title:'Caption Generator', desc:'Generate social media captions', color:'rose' },
-    { id:'grammar', icon:'fas fa-spell-check', title:'Grammar Fix', desc:'Fix grammar and spelling errors', color:'amber' },
+    { id:'summarize', icon:'fas fa-compress-arrows-alt', title:'Summarize', desc:'Condense long articles & reports into 3-5 concise sentences', color:'indigo' },
+    { id:'translate', icon:'fas fa-language', title:'Translate', desc:'Translate between 15 languages with real-time style options', color:'emerald' },
+    { id:'keywords', icon:'fas fa-tags', title:'Keywords', desc:'Extract the most important keywords and phrases from any text', color:'blue' },
+    { id:'rewrite', icon:'fas fa-feather-alt', title:'Rewrite', desc:'Rewrite sentences with improved clarity, tone & professionalism', color:'purple' },
+    { id:'caption', icon:'fas fa-camera', title:'Caption', desc:'Generate engaging social media captions for Instagram & more', color:'rose' },
+    { id:'grammar', icon:'fas fa-spell-check', title:'Grammar', desc:'Fix grammar, spelling & punctuation errors instantly', color:'amber' },
   ],
   dev: [
-    { id:'sass', icon:'fab fa-sass', title:'Sass Compiler', desc:'Compile Sass/SCSS to CSS with live preview', color:'pink' },
-    { id:'less', icon:'fab fa-less', title:'Less Compiler', desc:'Compile Less to CSS with live preview', color:'blue' },
-    { id:'pug', icon:'fab fa-pied-piper-alt', title:'Pug Compiler', desc:'Compile Pug/Jade templates to HTML', color:'purple' },
-    { id:'coffeescript', icon:'fas fa-coffee', title:'CoffeeScript', desc:'Compile CoffeeScript to JavaScript', color:'amber' },
-    { id:'playground', icon:'fas fa-laptop-code', title:'JS Playground', desc:'Write HTML/CSS/JS with live preview', color:'emerald' },
-    { id:'formatter', icon:'fas fa-indent', title:'Code Formatter', desc:'Format & beautify your code', color:'indigo' },
+    { id:'playground', icon:'fas fa-laptop-code', title:'Playground', desc:'Interactive HTML/CSS/JS sandbox with real-time preview, split editor, terminal & ZIP export', color:'emerald' },
+    { id:'sass', icon:'fab fa-sass', title:'Sass', desc:'Compile Sass/SCSS to CSS — supports variables, nesting & mixins', color:'pink' },
+    { id:'less', icon:'fab fa-less', title:'Less', desc:'Compile Less to CSS — supports variables, mixins & functions', color:'blue' },
+    { id:'pug', icon:'fab fa-pied-piper-alt', title:'Pug', desc:'Compile Pug/Jade templates to clean HTML with live preview', color:'purple' },
+    { id:'coffeescript', icon:'fas fa-coffee', title:'CoffeeScript', desc:'Compile CoffeeScript to JS — classes, arrows & more', color:'amber' },
+    { id:'typescript', icon:'fas fa-file-code', title:'TypeScript', desc:'Compile TypeScript to JS — interfaces, generics & types', color:'blue' },
+    { id:'jsx', icon:'fab fa-react', title:'JSX', desc:'Compile JSX/React to JS with Babel and live preview', color:'cyan' },
+    { id:'formatter', icon:'fas fa-indent', title:'Formatter', desc:'Beautify JSON, JavaScript, HTML, CSS & Python code instantly', color:'indigo' },
   ]
 };
 
@@ -116,14 +124,20 @@ document.getElementById('category-tabs').addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function renderToolGrid() {
+  // Cleanup any running tool
+  if (window._cleanupCanva) { window._cleanupCanva(); }
+  if (window._cleanupCalc) { window._cleanupCalc(); }
+  if (window._cleanupPlayground) { window._cleanupPlayground(); }
+
   var tools = TOOLS[currentCat] || [];
   var container = document.getElementById('tools-content');
-  container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">' +
+  container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">' +
     tools.map(function(t) {
-      return '<div class="tool-card bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 cursor-pointer hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-700 transition-all duration-200 flex flex-col" data-tool="' + t.id + '">' +
-        '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-' + t.color + '-100 dark:bg-' + t.color + '-900/30 flex items-center justify-center mb-3"><i class="' + t.icon + ' text-xl sm:text-2xl text-' + t.color + '-600 dark:text-' + t.color + '-400"></i></div>' +
-        '<h3 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white mb-1">' + t.title + '</h3>' +
-        '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-1">' + t.desc + '</p>' +
+      return '<div class="tool-card bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4 sm:p-5 cursor-pointer hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-600 hover:-translate-y-0.5 transition-all duration-200" data-tool="' + t.id + '">' +
+        '<div class="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">' +
+        '<div class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl bg-' + t.color + '-100 dark:bg-' + t.color + '-900/30 flex items-center justify-center"><i class="' + t.icon + ' text-base sm:text-lg text-' + t.color + '-600 dark:text-' + t.color + '-400"></i></div>' +
+        '<h3 class="text-sm sm:text-base font-bold text-gray-800 dark:text-white">' + t.title + '</h3></div>' +
+        '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">' + t.desc + '</p>' +
       '</div>';
     }).join('') + '</div>';
 
@@ -142,10 +156,13 @@ function renderToolGrid() {
 
 function openTool(tool) {
   currentTool = tool;
+  if (window._cleanupCanva) { window._cleanupCanva(); }
+  if (window._cleanupCalc) { window._cleanupCalc(); }
+  if (window._cleanupPlayground) { window._cleanupPlayground(); }
   var container = document.getElementById('tools-content');
   container.innerHTML = '<div class="mb-4 flex items-center gap-3">' +
     '<button onclick="renderToolGrid()" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"><i class="fas fa-arrow-left"></i></button>' +
-    '<div><h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">' + tool.icon.replace('fa-', '<i class="fas fa-').replace('" title','"></i> ') + tool.title + '</h3>' +
+    '<div><h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white"><i class="' + tool.icon + ' mr-2"></i>' + tool.title + '</h3>' +
     '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">' + tool.desc + '</p></div></div><div id="tool-workspace" class="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6"></div>';
 
   var fnName = 'tool_' + currentCat + '_' + tool.id.replace(/-/g, '_');
@@ -162,6 +179,28 @@ function openTool(tool) {
 
 function escapeHtml(t) {
   return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadScript(url) {
+  return new Promise(function(resolve, reject) {
+    // Check if already loaded via the script's src
+    var scripts = document.querySelectorAll('script[src="' + url.replace(/"/g, '\\"') + '"]');
+    if (scripts.length) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = function() { reject(new Error('Failed to load ' + url)); };
+    document.body.appendChild(s);
+  });
+}
+
+function compileFallback(code, lang, done) {
+  fetch('/tools/api/dev/compile', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({language: lang, code: code})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
+  }).catch(function(e){ done(null, e.message); });
 }
 
 function downloadData(filename, dataUrl) {
@@ -189,35 +228,82 @@ function copyResult(elId) {
   showToast('Copied!', 'success');
 }
 
+function toggleToolFullscreen(el) {
+  if (!el) el = document.getElementById('tool-workspace');
+  if (!el) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    el.requestFullscreen?.().catch(function(){});
+  }
+}
+
 // ─── Dynamic CodeMirror loader ────────────────────────────────────────────
 
 var _cmLoaded = false;
 var _cmLoading = false;
 var _cmQueue = [];
 
+var _cmAddonsLoaded = false;
+var _cmEditor = null;
+
 function loadCodeMirror(callback) {
-  if (window.CodeMirror) { callback(); return; }
+  if (window.CodeMirror && _cmAddonsLoaded) { callback(); return; }
   _cmQueue.push(callback);
   if (_cmLoading) return;
   _cmLoading = true;
-  var link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css';
-  document.head.appendChild(link);
-  var darkTheme = document.createElement('link');
-  darkTheme.rel = 'stylesheet';
-  darkTheme.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css';
-  darkTheme.id = 'cm-dark-theme';
-  document.head.appendChild(darkTheme);
-  var s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js';
-  s.onload = function() {
-    _cmLoaded = true;
-    _cmLoading = false;
-    _cmQueue.forEach(function(fn) { fn(); });
-    _cmQueue = [];
-  };
-  document.body.appendChild(s);
+
+  var cssUrls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css',
+  ];
+  cssUrls.forEach(function(url) {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = url;
+    if (url.indexOf('material-darker') > -1) l.id = 'cm-dark-theme';
+    document.head.appendChild(l);
+  });
+
+  var scriptUrls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/html-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/css-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/xml-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/comment-fold.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js',
+  ];
+  var loaded = 0;
+  var total = scriptUrls.length;
+  function checkDone() {
+    loaded++;
+    if (loaded >= total) {
+      _cmAddonsLoaded = true;
+      _cmLoaded = true;
+      _cmLoading = false;
+      _cmQueue.forEach(function(fn) { fn(); });
+      _cmQueue = [];
+    }
+  }
+  scriptUrls.forEach(function(url) {
+    var s = document.createElement('script');
+    s.src = url;
+    s.async = false;
+    s.onload = checkDone;
+    s.onerror = checkDone;
+    document.body.appendChild(s);
+  });
 }
 
 function loadCodeMirrorMode(mode, callback) {
@@ -225,6 +311,7 @@ function loadCodeMirrorMode(mode, callback) {
     sass: 'sass/sass.min.js',
     css: 'css/css.min.js',
     javascript: 'javascript/javascript.min.js',
+    typescript: 'javascript/javascript.min.js',
     html: 'htmlmixed/htmlmixed.min.js',
     xml: 'xml/xml.min.js',
     coffeescript: 'coffeescript/coffeescript.min.js',
@@ -240,7 +327,11 @@ function loadCodeMirrorMode(mode, callback) {
 function createCodeEditor(textareaId, mode) {
   var ta = document.getElementById(textareaId);
   if (!ta) return null;
+  // Map friendly mode names to CodeMirror MIME types
+  var modeMap = { typescript: 'text/typescript', jsx: 'text/jsx', coffeescript: 'text/x-coffeescript' };
+  var cmMode = modeMap[mode] || mode;
   var editor = CodeMirror.fromTextArea(ta, {
+    mode: cmMode,
     lineNumbers: true,
     matchBrackets: true,
     autoCloseBrackets: true,
@@ -249,10 +340,28 @@ function createCodeEditor(textareaId, mode) {
     indentWithTabs: false,
     theme: document.documentElement.classList.contains('dark') ? 'material-darker' : 'default',
     viewportMargin: Infinity,
+    styleActiveLine: true,
+    foldGutter: true,
+    gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+    hintOptions: {
+      completeSingle: false,
+      closeOnUnfocus: true,
+      alignWithWord: true
+    },
     extraKeys: {
+      'Ctrl-Space': 'autocomplete',
       'Ctrl-S': function(ed) { ed.execCommand('insertSoftTab'); }
     }
   });
+
+  editor.on('inputRead', function(ed, change) {
+    if (change.text && change.text.length === 1 && /[\w.$]$/.test(change.text[0])) {
+      ed.showHint();
+    }
+  });
+
+  _cmEditor = editor;
+
   // Watch for theme changes
   var observer = new MutationObserver(function() {
     editor.setOption('theme', document.documentElement.classList.contains('dark') ? 'material-darker' : 'default');
@@ -274,11 +383,39 @@ function fileToBase64(file) {
 //  🖼️ IMAGE TOOLS
 // ═══════════════════════════════════════════════════════════════════════════
 
+var _imageCurrentFile = null;
+
 function imageUploadWorkspace(operation, extraFields, onSubmit) {
   var ws = document.getElementById('tool-workspace');
-  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:border-indigo-400 transition" id="drop-zone"><i class="fas fa-cloud-upload-alt text-3xl sm:text-4xl text-gray-300 mb-3"></i><p class="text-sm sm:text-base text-gray-500">Drop an image here or click to upload</p><input type="file" id="tool-file-input" accept="image/*" class="hidden"></div>' +
+  ws.innerHTML = '<div class="space-y-4"><div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition" id="drop-zone"><i class="fas fa-cloud-upload-alt text-3xl sm:text-4xl text-gray-300 mb-3"></i><p class="text-sm sm:text-base text-gray-500">Drop an image here or click to upload</p><input type="file" id="tool-file-input" accept="image/*" class="hidden"></div>' +
     (extraFields || '') +
-    '<div id="tool-preview" class="hidden space-y-3"><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1"><p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Original</p><img id="orig-preview" class="w-full rounded-xl border border-gray-200 dark:border-gray-600 max-h-64 object-contain bg-gray-50"></div><div class="flex-1"><p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Result</p><img id="result-preview" class="w-full rounded-xl border border-gray-200 dark:border-gray-600 max-h-64 object-contain bg-gray-50 hidden"><div id="result-spinner" class="flex items-center justify-center h-32 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></div></div></div><div class="flex gap-2 flex-wrap"><button id="download-btn" class="hidden px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition"><i class="fas fa-download"></i> Download</button><span id="size-info" class="text-xs text-gray-400 self-center"></span></div></div></div>';
+    '<div id="tool-preview" class="hidden"><div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div><p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1"><i class="fas fa-image text-indigo-500"></i> Original</p><div class="relative bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden"><img id="orig-preview" class="w-full max-h-72 object-contain mx-auto"><div class="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded" id="orig-size"></div></div></div><div><p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1"><i class="fas fa-wand-magic text-emerald-500"></i> Result</p><div class="relative bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden"><img id="result-preview" class="w-full max-h-72 object-contain mx-auto"><div id="result-spinner" class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/60 hidden"><i class="fas fa-spinner fa-spin text-2xl text-indigo-500"></i></div><div class="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded" id="result-size"></div></div></div></div><div class="flex gap-2 flex-wrap items-center"><button id="download-btn" class="hidden px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition shadow-sm"><i class="fas fa-download"></i> Download</button><button id="compare-btn" class="hidden px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-arrows-alt-h"></i> Compare</button><span id="size-info" class="text-xs text-gray-400"></span></div></div></div>';
+
+  function processImage() {
+    if (!_imageCurrentFile) return;
+    document.getElementById('result-spinner').classList.remove('hidden');
+    var fd = new FormData();
+    fd.append('file', _imageCurrentFile);
+    if (onSubmit) onSubmit(fd);
+    fetch('/tools/api/image/' + operation, { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('result-spinner').classList.add('hidden');
+        if (data.error) { return; }
+        var imgUrl = data.image || data.file;
+        if (imgUrl) {
+          document.getElementById('result-preview').src = imgUrl;
+          document.getElementById('download-btn').classList.remove('hidden');
+          document.getElementById('download-btn').onclick = function() { downloadData('output.' + (operation === 'to_pdf' ? 'pdf' : 'png'), imgUrl); };
+          if (data.size) {
+            document.getElementById('size-info').textContent = (data.size / 1024).toFixed(1) + ' KB';
+            document.getElementById('result-size').textContent = (data.size / 1024).toFixed(1) + ' KB';
+          }
+          document.getElementById('compare-btn').classList.remove('hidden');
+        }
+      })
+      .catch(function() { document.getElementById('result-spinner').classList.add('hidden'); });
+  }
 
   var dropZone = document.getElementById('drop-zone');
   var fileInput = document.getElementById('tool-file-input');
@@ -287,82 +424,161 @@ function imageUploadWorkspace(operation, extraFields, onSubmit) {
   dropZone.addEventListener('dragleave', function() { this.classList.remove('border-indigo-500'); });
   dropZone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('border-indigo-500'); if (e.dataTransfer.files.length) fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); });
 
+  // Compare toggle
+  setTimeout(function() {
+    var compareBtn = document.getElementById('compare-btn');
+    if (compareBtn) {
+      compareBtn.addEventListener('click', function() {
+        var orig = document.getElementById('orig-preview');
+        var result = document.getElementById('result-preview');
+        if (orig.style.display === 'none') {
+          orig.style.display = '';
+          result.style.display = '';
+          compareBtn.innerHTML = '<i class="fas fa-arrows-alt-h"></i> Compare';
+        } else {
+          orig.style.display = 'none';
+          result.style.display = '';
+          compareBtn.innerHTML = '<i class="fas fa-arrows-alt-h"></i> Show Original';
+        }
+      });
+    }
+  }, 0);
+
   fileInput.addEventListener('change', function() {
     if (!this.files.length) return;
-    var file = this.files[0];
+    _imageCurrentFile = this.files[0];
+    document.getElementById('orig-size').textContent = (_imageCurrentFile.size / 1024).toFixed(1) + ' KB';
     var reader = new FileReader();
     reader.onload = function(e) {
       document.getElementById('orig-preview').src = e.target.result;
       document.getElementById('tool-preview').classList.remove('hidden');
       document.getElementById('result-spinner').classList.remove('hidden');
-      document.getElementById('result-preview').classList.add('hidden');
-      document.getElementById('download-btn').classList.add('hidden');
       document.getElementById('size-info').textContent = '';
-
-      var fd = new FormData();
-      fd.append('file', file);
-      if (onSubmit) onSubmit(fd);
-
-      fetch('/tools/api/image/' + operation, { method:'POST', body:fd })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          document.getElementById('result-spinner').classList.add('hidden');
-          if (data.error) { document.getElementById('result-preview').classList.remove('hidden'); document.getElementById('result-preview').src = ''; alert(data.error); return; }
-          var imgUrl = data.image || data.file;
-          if (imgUrl) {
-            document.getElementById('result-preview').classList.remove('hidden');
-            document.getElementById('result-preview').src = imgUrl;
-            document.getElementById('download-btn').classList.remove('hidden');
-            document.getElementById('download-btn').onclick = function() { downloadData('output.' + (operation === 'to_pdf' ? 'pdf' : 'png'), imgUrl); };
-            if (data.size) document.getElementById('size-info').textContent = (data.size / 1024).toFixed(1) + ' KB';
-          }
-        })
-        .catch(function(err) { document.getElementById('result-spinner').classList.add('hidden'); alert('Error: ' + err.message); });
+      processImage();
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(_imageCurrentFile);
   });
+
+  return processImage;
 }
 
 window.tool_image_remove_bg = function() { imageUploadWorkspace('remove_bg'); };
 window.tool_image_compress = function() {
-  imageUploadWorkspace('compress', '<div class="flex items-center gap-3"><label class="text-sm text-gray-600 dark:text-gray-400">Quality:</label><input type="range" id="quality-range" min="10" max="100" value="60" class="flex-1"><span id="quality-val" class="text-sm font-medium text-gray-700 dark:text-gray-300">60%</span></div>', function(fd) {
+  var _reprocess = imageUploadWorkspace('compress', '<div class="flex items-center gap-3"><label class="text-sm text-gray-600 dark:text-gray-400">Quality:</label><input type="range" id="quality-range" min="10" max="100" value="60" class="flex-1"><span id="quality-val" class="text-sm font-medium text-gray-700 dark:text-gray-300">60%</span></div>', function(fd) {
     var q = document.getElementById('quality-range');
     if (q) fd.append('quality', q.value);
   });
   var qr = document.getElementById('quality-range');
-  if (qr) qr.addEventListener('input', function() { document.getElementById('quality-val').textContent = this.value + '%'; });
+  if (qr) {
+    qr.addEventListener('input', function() {
+      document.getElementById('quality-val').textContent = this.value + '%';
+      if (_imageCurrentFile) { clearTimeout(window._imgTimer); window._imgTimer = setTimeout(_reprocess, 300); }
+    });
+  }
 };
 window.tool_image_resize = function() {
-  imageUploadWorkspace('resize', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Width (px)</label><input type="number" id="resize-w" value="800" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Height (px)</label><input type="number" id="resize-h" value="600" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div><label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><input type="checkbox" id="keep-ratio" checked> Keep aspect ratio</label>', function(fd) {
+  var _reprocess = imageUploadWorkspace('resize', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Width (px)</label><input type="number" id="resize-w" value="800" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Height (px)</label><input type="number" id="resize-h" value="600" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div><label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><input type="checkbox" id="keep-ratio" checked> Keep aspect ratio</label>', function(fd) {
     fd.append('width', document.getElementById('resize-w').value);
     fd.append('height', document.getElementById('resize-h').value);
     fd.append('keep_ratio', document.getElementById('keep-ratio').checked ? 'true' : 'false');
   });
+  ['resize-w','resize-h','keep-ratio'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input change', function() { if (_imageCurrentFile) setTimeout(_reprocess, 300); });
+  });
 };
 window.tool_image_convert = function() {
-  imageUploadWorkspace('convert', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Format</label><select id="convert-format" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="gif">GIF</option><option value="bmp">BMP</option></select></div>', function(fd) {
+  var _reprocess = imageUploadWorkspace('convert', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Format</label><select id="convert-format" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="gif">GIF</option><option value="bmp">BMP</option></select></div>', function(fd) {
     fd.append('format', document.getElementById('convert-format').value);
   });
+  var cf = document.getElementById('convert-format');
+  if (cf) cf.addEventListener('change', function() { if (_imageCurrentFile) _reprocess(); });
 };
 window.tool_image_enhance = function() {
-  imageUploadWorkspace('enhance', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Scale</label><select id="enhance-scale" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="2">2x (Recommended)</option><option value="3">3x</option><option value="4">4x</option></select></div>', function(fd) {
+  var _reprocess = imageUploadWorkspace('enhance', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Scale</label><select id="enhance-scale" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="2">2x (Recommended)</option><option value="3">3x</option><option value="4">4x</option></select></div>', function(fd) {
     fd.append('scale', document.getElementById('enhance-scale').value);
   });
+  var es = document.getElementById('enhance-scale');
+  if (es) es.addEventListener('change', function() { if (_imageCurrentFile) _reprocess(); });
 };
 window.tool_image_filters = function() {
-  imageUploadWorkspace('filters', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Filter</label><select id="filter-select" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="grayscale">Grayscale</option><option value="sepia">Sepia</option><option value="blur">Blur</option><option value="sharpen">Sharpen</option><option value="edge">Edge Detect</option><option value="emboss">Emboss</option><option value="smooth">Smooth</option><option value="contrast">Contrast</option><option value="brightness">Brightness</option></select></div>', function(fd) {
+  var _reprocess = imageUploadWorkspace('filters', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Filter</label><select id="filter-select" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="grayscale">Grayscale</option><option value="sepia">Sepia</option><option value="blur">Blur</option><option value="sharpen">Sharpen</option><option value="edge">Edge Detect</option><option value="emboss">Emboss</option><option value="smooth">Smooth</option><option value="contrast">Contrast</option><option value="brightness">Brightness</option></select></div>', function(fd) {
     fd.append('filter', document.getElementById('filter-select').value);
   });
+  var fs = document.getElementById('filter-select');
+  if (fs) fs.addEventListener('change', function() { if (_imageCurrentFile) _reprocess(); });
 };
 window.tool_image_crop = function() {
-  imageUploadWorkspace('crop', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Left</label><input type="number" id="crop-left" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Top</label><input type="number" id="crop-top" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Right</label><input type="number" id="crop-right" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Bottom</label><input type="number" id="crop-bottom" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div>', function(fd) {
+  var _reprocess = imageUploadWorkspace('crop', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Left</label><input type="number" id="crop-left" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Top</label><input type="number" id="crop-top" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Right</label><input type="number" id="crop-right" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Bottom</label><input type="number" id="crop-bottom" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div>', function(fd) {
     fd.append('left', document.getElementById('crop-left').value);
     fd.append('top', document.getElementById('crop-top').value);
     fd.append('right', document.getElementById('crop-right').value);
     fd.append('bottom', document.getElementById('crop-bottom').value);
   });
+  ['crop-left','crop-top','crop-right','crop-bottom'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', function() { if (_imageCurrentFile) setTimeout(_reprocess, 300); });
+  });
 };
 window.tool_image_to_pdf = function() { imageUploadWorkspace('to_pdf'); };
+
+window.tool_image_canva = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
+    '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-paint-brush mr-1"></i> Design Editor</span>' +
+    '<span class="flex-1"></span>' +
+    '<button onclick="toggleToolFullscreen()" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+  '</div>' +
+  '<div id="de-mount" class="min-h-[500px]"></div>';
+
+  // Load CSS
+  if (!document.querySelector('link[href*="design-editor/style.css"]')) {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/static/css/design-editor/style.css';
+    document.head.appendChild(link);
+  }
+
+  // Load Design Editor modules
+  var scripts = [
+    '/static/js/design-editor/core/state.js',
+    '/static/js/design-editor/core/history.js',
+    '/static/js/design-editor/core/autosave.js',
+    '/static/js/design-editor/objects/object-utils.js',
+    '/static/js/design-editor/canvas/workspace.js',
+    '/static/js/design-editor/ui/toolbar.js',
+    '/static/js/design-editor/ui/left-panel.js',
+    '/static/js/design-editor/ui/right-panel.js',
+    '/static/js/design-editor/ui/layer-panel.js',
+    '/static/js/design-editor/ui/export-dialog.js',
+    '/static/js/design-editor/plugins/plugin-system.js',
+    '/static/js/design-editor/main.js',
+  ];
+
+  var _deEditor = null;
+
+  function loadNext(idx) {
+    if (idx >= scripts.length) {
+      _deEditor = new DesignEditor('de-mount');
+      _deEditor.init();
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = scripts[idx];
+    s.onload = function() { loadNext(idx + 1); };
+    s.onerror = function() { console.error("Failed to load", scripts[idx]); showToast("Design Editor: failed to load " + scripts[idx].split('/').pop(), "error"); loadNext(idx + 1); };
+    document.body.appendChild(s);
+  }
+  loadNext(0);
+
+  window._cleanupCanva = function() {
+    if (_deEditor) {
+      _deEditor.dispose();
+      _deEditor = null;
+    }
+    delete window._cleanupCanva;
+  };
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  📄 PDF TOOLS
@@ -873,6 +1089,7 @@ window.tool_ai_translate = function() {
     }).then(function(r){ return r.json(); }).then(function(data){
       document.getElementById('tl-spinner').classList.add('hidden');
       if (data.success) { document.getElementById('tl-output').value = data.result; }
+      else if (data.error) { document.getElementById('tl-output').value = '[Error] ' + data.error; }
     }).catch(function(){ document.getElementById('tl-spinner').classList.add('hidden'); });
   }
 
@@ -915,23 +1132,33 @@ function devToolWorkspace(lang, label, inputPlaceholder, outputLabel, compileFn)
   '</div>';
 
   document.getElementById('dev-compile-btn').addEventListener('click', function() {
-    var code = document.getElementById('dev-input').value;
+    var code = _cmEditor ? _cmEditor.getValue() : document.getElementById('dev-input').value;
     if (!code.trim()) return;
     var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Compiling...';
     compileFn(code, function(result, err) {
       btn.disabled = false; btn.innerHTML = '<i class="fas fa-play"></i> Compile';
       var out = document.getElementById('dev-output');
       if (err) { out.innerHTML = '<span class="text-red-500">Error: ' + escapeHtml(err) + '</span>'; return; }
-      out.textContent = result;
       // Syntax highlight output using Prism
       if (typeof Prism !== 'undefined') {
-        var langClass = (lang === 'sass' || lang === 'less') ? 'language-css' : lang === 'pug' ? 'language-html' : 'language-javascript';
-        out.innerHTML = Prism.highlight(result, Prism.languages[langClass.replace('language-', '')] || Prism.languages.javascript, langClass.replace('language-', ''));
+        var langName = (lang === 'sass' || lang === 'less') ? 'css' : lang === 'pug' ? 'html' : 'javascript';
+        var grammar = Prism.languages[langName];
+        if (grammar) {
+          out.innerHTML = Prism.highlight(result, grammar, langName);
+        } else if (Prism.plugins && Prism.plugins.autoloader && Prism.plugins.autoloader.loadLanguages) {
+          Prism.plugins.autoloader.loadLanguages(langName, function() {
+            out.innerHTML = Prism.highlight(result, Prism.languages[langName] || Prism.languages.javascript, langName);
+          });
+        } else {
+          out.textContent = result;
+        }
+      } else {
+        out.textContent = result;
       }
     });
   });
   document.getElementById('dev-clear-btn').addEventListener('click', function() {
-    document.getElementById('dev-input').value = '';
+    if (_cmEditor) { _cmEditor.setValue(''); } else { document.getElementById('dev-input').value = ''; }
     document.getElementById('dev-output').innerHTML = '<span class="text-gray-400">Compiled output will appear here...</span>';
   });
 }
@@ -939,12 +1166,10 @@ function devToolWorkspace(lang, label, inputPlaceholder, outputLabel, compileFn)
 window.tool_dev_sass = function() {
   loadCodeMirror(function() {
     devToolWorkspace('sass', 'Sass / SCSS', '// Write your Sass/SCSS code here...', 'Compiled CSS', function(code, done) {
-      fetch('/tools/api/dev/compile', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({language:'sass', code: code})
-      }).then(function(r){ return r.json(); }).then(function(d){
-        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
-      }).catch(function(e){ done(null, e.message); });
+      loadScript('https://cdn.jsdelivr.net/npm/sass.js@0.13.0/dist/sass.min.js').then(function() {
+        try { Sass.compile(code, function(r) { done(r.text || r, null); }); }
+        catch(e) { compileFallback(code, 'sass', done); }
+      }).catch(function() { compileFallback(code, 'sass', done); });
     });
     loadCodeMirrorMode('sass', function() {
       var editor = createCodeEditor('dev-input', 'sass');
@@ -956,12 +1181,10 @@ window.tool_dev_sass = function() {
 window.tool_dev_less = function() {
   loadCodeMirror(function() {
     devToolWorkspace('less', 'Less', '// Write your Less code here...', 'Compiled CSS', function(code, done) {
-      fetch('/tools/api/dev/compile', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({language:'less', code: code})
-      }).then(function(r){ return r.json(); }).then(function(d){
-        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
-      }).catch(function(e){ done(null, e.message); });
+      loadScript('https://cdn.jsdelivr.net/npm/less@4.2.0/dist/less.min.js').then(function() {
+        try { less.render(code, function(e, r) { if (e) compileFallback(code, 'less', done); else done(r.css, null); }); }
+        catch(e) { compileFallback(code, 'less', done); }
+      }).catch(function() { compileFallback(code, 'less', done); });
     });
     loadCodeMirrorMode('css', function() {
       var editor = createCodeEditor('dev-input', 'css');
@@ -973,12 +1196,8 @@ window.tool_dev_less = function() {
 window.tool_dev_pug = function() {
   loadCodeMirror(function() {
     devToolWorkspace('pug', 'Pug / Jade', '// Write your Pug code here...', 'Compiled HTML', function(code, done) {
-      fetch('/tools/api/dev/compile', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({language:'pug', code: code})
-      }).then(function(r){ return r.json(); }).then(function(d){
-        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
-      }).catch(function(e){ done(null, e.message); });
+      // Pug has no reliable frontend-only compiler; always use backend
+      compileFallback(code, 'pug', done);
     });
     loadCodeMirrorMode('html', function() {
       var editor = createCodeEditor('dev-input', 'html');
@@ -990,12 +1209,10 @@ window.tool_dev_pug = function() {
 window.tool_dev_coffeescript = function() {
   loadCodeMirror(function() {
     devToolWorkspace('coffeescript', 'CoffeeScript', '# Write your CoffeeScript code here...', 'Compiled JavaScript', function(code, done) {
-      fetch('/tools/api/dev/compile', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({language:'coffeescript', code: code})
-      }).then(function(r){ return r.json(); }).then(function(d){
-        if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
-      }).catch(function(e){ done(null, e.message); });
+      loadScript('https://cdn.jsdelivr.net/npm/coffeescript@2.7.0/browser-compiler/coffeescript.min.js').then(function() {
+        try { done(CoffeeScript.compile(code, {bare: true}), null); }
+        catch(e) { compileFallback(code, 'coffeescript', done); }
+      }).catch(function() { compileFallback(code, 'coffeescript', done); });
     });
     loadCodeMirrorMode('coffeescript', function() {
       var editor = createCodeEditor('dev-input', 'coffeescript');
@@ -1004,41 +1221,80 @@ window.tool_dev_coffeescript = function() {
   });
 };
 
+window.tool_dev_typescript = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('typescript', 'TypeScript', '// Write your TypeScript code here...', 'Compiled JavaScript', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/typescript@5.3.3/lib/typescript.min.js').then(function() {
+        try {
+          var result = ts.transpileModule(code, {
+            compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2015 }
+          });
+          done(result.outputText, null);
+        }
+        catch(e) { compileFallback(code, 'typescript', done); }
+      }).catch(function() { compileFallback(code, 'typescript', done); });
+    });
+    loadCodeMirrorMode('typescript', function() {
+      var editor = createCodeEditor('dev-input', 'typescript');
+      if (editor) { editor.setValue('// TypeScript Example\ninterface User {\n  name: string;\n  age: number;\n  email?: string;\n}\n\nfunction greet(user: User): string {\n  return `Hello, ${user.name}!`;\n}\n\nconst user: User = {\n  name: "Alice",\n  age: 30,\n  email: "alice@example.com"\n};\n\nconsole.log(greet(user));'); }
+    });
+  });
+};
+
+window.tool_dev_jsx = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('jsx', 'JSX / React', '// Write your JSX code here...', 'Compiled JavaScript', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js').then(function() {
+        try { done(Babel.transform(code, {presets: ['react']}).code, null); }
+        catch(e) { compileFallback(code, 'jsx', done); }
+      }).catch(function() { compileFallback(code, 'jsx', done); });
+    });
+    loadCodeMirrorMode('javascript', function() {
+      var editor = createCodeEditor('dev-input', 'javascript');
+      if (editor) { editor.setValue('// JSX Example\nfunction Welcome(props) {\n  return <h1>Hello, {props.name}</h1>;\n}\n\nfunction App() {\n  return (\n    <div>\n      <Welcome name="Alice" />\n      <Welcome name="Bob" />\n      <Welcome name="Charlie" />\n    </div>\n  );\n}\n\nconsole.log(App());'); }
+    });
+  });
+};
+
 window.tool_dev_playground = function() {
   var ws = document.getElementById('tool-workspace');
-  ws.innerHTML = '<div class="space-y-4">' +
-    '<div class="flex items-center gap-3 flex-wrap">' +
-      '<span class="text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-lg">HTML / CSS / JS</span>' +
-      '<button id="pg-run" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition"><i class="fas fa-play"></i> Run</button>' +
-      '<button id="pg-reset" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-undo"></i> Reset</button>' +
-    '</div>' +
-    '<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">' +
-      '<div><p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">HTML</p><textarea id="pg-html" rows="6" placeholder="<!-- HTML -->" class="w-full px-3 py-2 text-xs font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
-      '<div><p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">CSS</p><textarea id="pg-css" rows="6" placeholder="/* CSS */" class="w-full px-3 py-2 text-xs font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
-      '<div><p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">JavaScript</p><textarea id="pg-js" rows="6" placeholder="// JavaScript" class="w-full px-3 py-2 text-xs font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
-    '</div>' +
-    '<div class="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden"><div class="bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2"><i class="fas fa-eye"></i> Live Preview</div><iframe id="pg-preview" class="w-full h-64 bg-white"></iframe></div>' +
-  '</div>';
+  ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
+    '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-laptop-code mr-1"></i> Code Playground</span>' +
+    '<span class="flex-1"></span>' +
+    '<button onclick="var el=document.getElementById(\'pg-mount\');if(el)el.classList.toggle(\'playground-fullscreen\');" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>' +
+    '<button onclick="__playground&&__playground.palette&&__playground.palette._exportZip()" class="px-2 py-1 text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition" title="Download project as ZIP"><i class="fas fa-download"></i> Project</button>' +
+  '</div>' +
+  '<div id="pg-mount" class="h-[600px] sm:h-[700px] lg:h-[75vh]"></div>';
 
-  function runPlayground() {
-    var html = document.getElementById('pg-html').value;
-    var css = document.getElementById('pg-css').value;
-    var js = document.getElementById('pg-js').value;
-    var iframe = document.getElementById('pg-preview');
-    var doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write('<!DOCTYPE html><html><head><style>' + css + '</style></head><body>' + html + '<script>' + js + '<\/script></body></html>');
-    doc.close();
+  // Load playground modules dynamically
+  var scripts = [
+    '/static/js/playground/state.js',
+    '/static/js/playground/utils.js',
+    '/static/js/playground/filesystem.js',
+    '/static/js/playground/editor.js',
+    '/static/js/playground/preview.js',
+    '/static/js/playground/console.js',
+    '/static/js/playground/terminal.js',
+    '/static/js/playground/layout.js',
+    '/static/js/playground/palette.js',
+    '/static/js/playground/shortcuts.js',
+    '/static/js/playground/theme.js',
+    '/static/js/playground/extensions.js',
+    '/static/js/playground/main.js',
+  ];
+  function loadNext(idx) {
+    if (idx >= scripts.length) {
+      var pg = new Playground('pg-mount');
+      pg.init();
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = scripts[idx];
+    s.onload = function() { loadNext(idx + 1); };
+    s.onerror = function() { console.error('Failed to load', scripts[idx]); loadNext(idx + 1); };
+    document.body.appendChild(s);
   }
-
-  document.getElementById('pg-run').addEventListener('click', runPlayground);
-  document.getElementById('pg-reset').addEventListener('click', function() {
-    document.getElementById('pg-html').value = '<h1>Hello World</h1>\n<p>This is a live preview.</p>';
-    document.getElementById('pg-css').value = 'body { font-family: sans-serif; padding: 2rem; }\nh1 { color: #6366f1; }';
-    document.getElementById('pg-js').value = 'console.log("Hello from playground!");';
-    runPlayground();
-  });
-  document.getElementById('pg-reset').click();
+  loadNext(0);
 };
 
 window.tool_dev_formatter = function() {
@@ -1097,6 +1353,524 @@ window.tool_dev_formatter = function() {
       document.getElementById('fmt-output').value = 'Error: ' + e.message;
     }
   });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🧮 MATH TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_math_latex = function() {
+  var ws = document.getElementById('tool-workspace');
+  var _latexEditor = null;
+  var _latexTa = null;
+  var _renderTimer = null;
+
+  ws.innerHTML = '<div class="flex flex-col h-full space-y-3">' +
+    // Top toolbar
+    '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
+      '<span class="text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-lg">LaTeX Editor</span>' +
+      '<button id="latex-copy-code" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-xs hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Copy LaTeX source"><i class="fas fa-copy"></i> Copy Code</button>' +
+      '<button id="latex-copy-image" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition" title="Copy as image to clipboard"><i class="fas fa-image"></i> Copy Image</button>' +
+      '<button id="latex-pdf-btn" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition" title="Download as PDF"><i class="fas fa-file-pdf"></i> Download PDF</button>' +
+      '<span class="flex-1"></span>' +
+      '<button onclick="toggleToolFullscreen()" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+      '<label class="flex items-center gap-1 text-[10px] text-gray-400"><input type="checkbox" id="latex-autorender" checked> Auto-render</label>' +
+    '</div>' +
+    // Toolbar categories
+    '<div class="flex flex-wrap gap-1 shrink-0" id="latex-toolbar">' +
+      '<select id="latex-structure" class="ltx-select px-2 py-1 text-[10px] border rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><option value="">— Document Structure —</option><option value="\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\begin{document}\n\n\\end{document}">Blank Article</option><option value="\\documentclass{report}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amsmath,amssymb}\n\\begin{document}\n\n\\end{document}">Blank Report</option><option value="\\documentclass{book}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amsmath}\n\\begin{document}\n\n\\end{document}">Blank Book</option><option value="\\documentclass{beamer}\n\\begin{document}\n\\begin{frame}\n\\frametitle{Title}\n\n\\end{frame}\n\\end{document}">Beamer Slide</option><option value="\\usepackage{amsmath}">\\usepackage{amsmath}</option><option value="\\usepackage{amssymb}">\\usepackage{amssymb}</option><option value="\\usepackage{graphicx}">\\usepackage{graphicx}</option><option value="\\usepackage{hyperref}">\\usepackage{hyperref}</option></select>' +
+      '<select id="latex-sections" class="ltx-select px-2 py-1 text-[10px] border rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><option value="">— Sections —</option><option value="\\section{}">\\section{}</option><option value="\\subsection{}">\\subsection{}</option><option value="\\subsubsection{}">\\subsubsection{}</option><option value="\\chapter{}">\\chapter{}</option><option value="\\paragraph{}">\\paragraph{}</option><option value="\\begin{abstract}\n\n\\end{abstract}">Abstract</option></select>' +
+      '<select id="latex-envs" class="ltx-select px-2 py-1 text-[10px] border rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><option value="">— Environments —</option><option value="\\begin{align}\n  \n\\end{align}">align</option><option value="\\begin{equation}\n  \n\\end{equation}">equation</option><option value="\\begin{cases}\n  \n\\end{cases}">cases</option><option value="\\begin{matrix}\n  \n\\end{matrix}">matrix</option><option value="\\begin{bmatrix}\n  \n\\end{bmatrix}">bmatrix</option><option value="\\begin{pmatrix}\n  \n\\end{pmatrix}">pmatrix</option><option value="\\begin{array}{}\n  \n\\end{array}">array</option><option value="\\begin{tabular}{|c|c|}\n  \\hline\n  \n\\end{tabular}">tabular</option><option value="\\begin{itemize}\n  \\item \n\\end{itemize}">itemize</option><option value="\\begin{enumerate}\n  \\item \n\\end{enumerate}">enumerate</option><option value="\\begin{proof}\n  \n\\end{proof}" disabled>proof</option></select>' +
+    '</div>' +
+    '<div class="flex flex-wrap gap-1 shrink-0" id="latex-math-toolbar">' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Math:</span>' +
+      '<button data-latex="\\frac{}{}" title="Fraction">\\frac</button>' +
+      '<button data-latex="\\sqrt{}" title="Square Root">\\sqrt</button>' +
+      '<button data-latex="\\sum_{i=1}^{n}" title="Summation">\\sum</button>' +
+      '<button data-latex="\\int_{a}^{b}" title="Integral">\\int</button>' +
+      '<button data-latex="\\iint_{D}" title="Double Integral">\\iint</button>' +
+      '<button data-latex="\\prod_{i=1}^{n}" title="Product">\\prod</button>' +
+      '<button data-latex="\\lim_{x \\to \\infty}" title="Limit">\\lim</button>' +
+      '<button data-latex="\\log" title="Log">\\log</button>' +
+      '<button data-latex="\\sin" title="Sine">\\sin</button>' +
+      '<button data-latex="\\cos" title="Cosine">\\cos</button>' +
+      '<button data-latex="\\tan" title="Tangent">\\tan</button>' +
+      '<button data-latex="\\binom{n}{k}" title="Binomial">\\binom</button>' +
+      '<button data-latex="\\underset{x \\to 0}{\\lim}" title="Underset">\\underset</button>' +
+      '<button data-latex="\\overset{}{}" title="Overset">\\overset</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Greek:</span>' +
+      '<button data-latex="\\alpha">\\alpha</button>' +
+      '<button data-latex="\\beta">\\beta</button>' +
+      '<button data-latex="\\gamma">\\gamma</button>' +
+      '<button data-latex="\\delta">\\delta</button>' +
+      '<button data-latex="\\epsilon">\\epsilon</button>' +
+      '<button data-latex="\\zeta">\\zeta</button>' +
+      '<button data-latex="\\eta">\\eta</button>' +
+      '<button data-latex="\\theta">\\theta</button>' +
+      '<button data-latex="\\iota">\\iota</button>' +
+      '<button data-latex="\\kappa">\\kappa</button>' +
+      '<button data-latex="\\lambda">\\lambda</button>' +
+      '<button data-latex="\\mu">\\mu</button>' +
+      '<button data-latex="\\nu">\\nu</button>' +
+      '<button data-latex="\\xi">\\xi</button>' +
+      '<button data-latex="\\pi">\\pi</button>' +
+      '<button data-latex="\\rho">\\rho</button>' +
+      '<button data-latex="\\sigma">\\sigma</button>' +
+      '<button data-latex="\\tau">\\tau</button>' +
+      '<button data-latex="\\upsilon">\\upsilon</button>' +
+      '<button data-latex="\\phi">\\phi</button>' +
+      '<button data-latex="\\chi">\\chi</button>' +
+      '<button data-latex="\\psi">\\psi</button>' +
+      '<button data-latex="\\omega">\\omega</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<button data-latex="\\Gamma" title="Capital Gamma">\\Gamma</button>' +
+      '<button data-latex="\\Delta" title="Capital Delta">\\Delta</button>' +
+      '<button data-latex="\\Theta" title="Capital Theta">\\Theta</button>' +
+      '<button data-latex="\\Lambda" title="Capital Lambda">\\Lambda</button>' +
+      '<button data-latex="\\Xi" title="Capital Xi">\\Xi</button>' +
+      '<button data-latex="\\Pi" title="Capital Pi">\\Pi</button>' +
+      '<button data-latex="\\Sigma" title="Capital Sigma">\\Sigma</button>' +
+      '<button data-latex="\\Phi" title="Capital Phi">\\Phi</button>' +
+      '<button data-latex="\\Psi" title="Capital Psi">\\Psi</button>' +
+      '<button data-latex="\\Omega" title="Capital Omega">\\Omega</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Symbols:</span>' +
+      '<button data-latex="\\times">\\times</button>' +
+      '<button data-latex="\\div">\\div</button>' +
+      '<button data-latex="\\pm">\\pm</button>' +
+      '<button data-latex="\\mp">\\mp</button>' +
+      '<button data-latex="\\cdot">\\cdot</button>' +
+      '<button data-latex="\\circ">\\circ</button>' +
+      '<button data-latex="\\ast">\\ast</button>' +
+      '<button data-latex="\\star">\\star</button>' +
+      '<button data-latex="\\infty">\\infty</button>' +
+      '<button data-latex="\\partial">\\partial</button>' +
+      '<button data-latex="\\nabla">\\nabla</button>' +
+      '<button data-latex="\\hbar">\\hbar</button>' +
+      '<button data-latex="\\ell">\\ell</button>' +
+      '<button data-latex="\\Im">\\Im</button>' +
+      '<button data-latex="\\Re">\\Re</button>' +
+      '<button data-latex="\\approx">\\approx</button>' +
+      '<button data-latex="\\neq">\\neq</button>' +
+      '<button data-latex="\\equiv">\\equiv</button>' +
+      '<button data-latex="\\leq">\\leq</button>' +
+      '<button data-latex="\\geq">\\geq</button>' +
+      '<button data-latex="\\subset">\\subset</button>' +
+      '<button data-latex="\\supset">\\supset</button>' +
+      '<button data-latex="\\subseteq">\\subseteq</button>' +
+      '<button data-latex="\\supseteq">\\supseteq</button>' +
+      '<button data-latex="\\cup">\\cup</button>' +
+      '<button data-latex="\\cap">\\cap</button>' +
+      '<button data-latex="\\emptyset">\\emptyset</button>' +
+      '<button data-latex="\\forall">\\forall</button>' +
+      '<button data-latex="\\exists">\\exists</button>' +
+      '<button data-latex="\\in">\\in</button>' +
+      '<button data-latex="\\notin">\\notin</button>' +
+      '<button data-latex="\\to">\\to</button>' +
+      '<button data-latex="\\mapsto">\\mapsto</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Arrows:</span>' +
+      '<button data-latex="\\rightarrow">\\rightarrow</button>' +
+      '<button data-latex="\\leftarrow">\\leftarrow</button>' +
+      '<button data-latex="\\Rightarrow">\\Rightarrow</button>' +
+      '<button data-latex="\\Leftarrow">\\Leftarrow</button>' +
+      '<button data-latex="\\Leftrightarrow">\\Leftrightarrow</button>' +
+      '<button data-latex="\\longrightarrow">\\longrightarrow</button>' +
+      '<button data-latex="\\uparrow">\\uparrow</button>' +
+      '<button data-latex="\\downarrow">\\downarrow</button>' +
+      '<button data-latex="\\nearrow">\\nearrow</button>' +
+      '<button data-latex="\\searrow">\\searrow</button>' +
+    '</div>' +
+    // Main editor + preview grid
+    '<div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">' +
+      '<div class="flex flex-col min-h-0"><div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">LaTeX Source <span class="text-gray-300 font-normal normal-case" id="latex-line-count"></span></div><textarea id="latex-editor-ta" class="flex-1 w-full border rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 font-mono text-sm resize-none" spellcheck="false" placeholder="Type your LaTeX here...">f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi) e^{2 \\pi i \\xi x} \\, d\\xi</textarea></div>' +
+      '<div class="flex flex-col min-h-0"><div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-2">Live Preview <span id="latex-preview-status" class="text-[9px] text-gray-400 font-normal normal-case"></span></div><div id="latex-preview" class="flex-1 border rounded-xl bg-white dark:bg-gray-800 overflow-auto p-4 sm:p-6 flex items-start justify-center min-h-[200px]"><span class="text-gray-400 text-sm mt-8">Preview will appear here...</span></div></div>' +
+    '</div>' +
+  '</div>';
+
+  _latexTa = document.getElementById('latex-editor-ta');
+
+  // ── Toolbar styling ──────────────────────────────────────────────────
+  ws.querySelectorAll('#latex-math-toolbar button').forEach(function(b) {
+    b.className = 'ltx-btn px-1.5 py-0.5 text-[9px] border rounded bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition font-mono';
+  });
+
+  // ── Load html2canvas early for later image/PDF use ───────────────────
+  if (typeof html2canvas === 'undefined') {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  }
+
+  // ── Load CodeMirror with LaTeX mode ───────────────────────────────────
+  loadCodeMirror(function() {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js').then(function() {
+      _latexEditor = CodeMirror.fromTextArea(_latexTa, {
+        mode: 'stex',
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        tabSize: 2,
+        indentUnit: 2,
+        indentWithTabs: false,
+        theme: document.documentElement.classList.contains('dark') ? 'material-darker' : 'default',
+        viewportMargin: Infinity,
+        styleActiveLine: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        extraKeys: {
+          'Ctrl-Space': function(cm) { cm.showHint({ completeSingle: false }); },
+          'Tab': function(cm) { cm.execCommand('insertSoftTab'); }
+        },
+        hintOptions: { completeSingle: false, closeOnUnfocus: true }
+      });
+
+      // Autocomplete for LaTeX commands
+      var latexHints = [
+        '\\frac', '\\sqrt', '\\sum', '\\int', '\\iint', '\\prod', '\\lim',
+        '\\log', '\\ln', '\\sin', '\\cos', '\\tan', '\\cot', '\\sec', '\\csc',
+        '\\arcsin', '\\arccos', '\\arctan', '\\sinh', '\\cosh', '\\tanh',
+        '\\alpha', '\\beta', '\\gamma', '\\delta', '\\epsilon', '\\zeta',
+        '\\eta', '\\theta', '\\iota', '\\kappa', '\\lambda', '\\mu', '\\nu',
+        '\\xi', '\\pi', '\\rho', '\\sigma', '\\tau', '\\upsilon', '\\phi',
+        '\\chi', '\\psi', '\\omega', '\\Gamma', '\\Delta', '\\Theta',
+        '\\Lambda', '\\Xi', '\\Pi', '\\Sigma', '\\Phi', '\\Psi', '\\Omega',
+        '\\times', '\\div', '\\pm', '\\mp', '\\cdot', '\\circ', '\\ast',
+        '\\star', '\\infty', '\\partial', '\\nabla', '\\hbar', '\\ell',
+        '\\Im', '\\Re', '\\approx', '\\neq', '\\equiv', '\\leq', '\\geq',
+        '\\subset', '\\supset', '\\subseteq', '\\supseteq', '\\cup', '\\cap',
+        '\\emptyset', '\\forall', '\\exists', '\\in', '\\notin', '\\to',
+        '\\mapsto', '\\rightarrow', '\\leftarrow', '\\Rightarrow', '\\Leftarrow',
+        '\\Leftrightarrow', '\\uparrow', '\\downarrow', '\\binom', '\\underset',
+        '\\overset', '\\text', '\\mathbf', '\\mathit', '\\mathrm', '\\mathcal',
+        '\\mathbb', '\\mathfrak', '\\widetilde', '\\widehat', '\\bar', '\\dot',
+        '\\ddot', '\\hat', '\\tilde', '\\vec', '\\overline', '\\underline',
+        '\\begin', '\\end', '\\documentclass', '\\usepackage', '\\section',
+        '\\subsection', '\\subsubsection', '\\chapter', '\\paragraph',
+        '\\label', '\\ref', '\\cite', '\\pageref', '\\footnote', '\\item',
+        '\\textbf', '\\textit', '\\emph', '\\underline', '\\textcolor',
+      ];
+      var hintSource = function(cm, opt) {
+        var cur = cm.getCursor(), line = cm.getLine(cur.line);
+        var before = line.slice(0, cur.ch);
+        var m = before.match(/(\\[a-zA-Z]*)$/);
+        if (!m) return;
+        var prefix = m[1];
+        var matches = latexHints.filter(function(h) { return h.startsWith(prefix) && h !== prefix; });
+        return { list: matches.map(function(h) { return { text: h, displayText: h }; }), from: { line: cur.line, ch: cur.ch - prefix.length }, to: cur };
+      };
+      CodeMirror.registerHelper('hint', 'latex', hintSource);
+      _latexEditor.on('inputRead', function(cm, change) {
+        if (change.text && change.text.length === 1 && change.text[0] === '\\') {
+          cm.showHint({ hint: hintSource, completeSingle: false });
+        }
+      });
+
+      function updateLineCount() { var txt = _latexEditor.getValue(); document.getElementById('latex-line-count').textContent = txt ? '(' + _latexEditor.lineCount() + ' lines)' : ''; }
+      _latexEditor.on('change', function() { updateLineCount(); scheduleRender(); });
+
+      updateLineCount();
+      setTimeout(renderLatex, 100);
+
+      var obs = new MutationObserver(function() {
+        _latexEditor.setOption('theme', document.documentElement.classList.contains('dark') ? 'material-darker' : 'default');
+      });
+      obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    });
+  });
+
+  // ── Get current LaTeX code (from CodeMirror or textarea fallback) ───
+  function getLatexCode() {
+    if (_latexEditor) return _latexEditor.getValue();
+    if (_latexTa) return _latexTa.value;
+    return '';
+  }
+
+  // ── Render LaTeX preview ─────────────────────────────────────────────
+  function renderLatex() {
+    var code = getLatexCode().trim();
+    var preview = document.getElementById('latex-preview');
+    var status = document.getElementById('latex-preview-status');
+    if (!code) { preview.innerHTML = '<span class="text-gray-400 text-sm mt-8">Preview will appear here...</span>'; if(status)status.textContent=''; return; }
+    if (typeof katex === 'undefined') { preview.innerHTML = '<span class="text-red-400 text-sm">KaTeX library not loaded</span>'; return; }
+    try {
+      preview.innerHTML = '';
+      katex.render(code, preview, { displayMode: true, throwOnError: false, output: 'html' });
+      if (status) status.textContent = '✓ rendered';
+    } catch(e) {
+      preview.innerHTML = '<span class="text-red-500 text-sm font-mono">Error: ' + escapeHtml(e.message) + '</span>';
+      if (status) status.textContent = '✗ error';
+    }
+  }
+
+  // Also render preview when typing directly in the textarea (CodeMirror fallback)
+  if (_latexTa) {
+    _latexTa.addEventListener('input', function() {
+      if (!_latexEditor) scheduleRender();
+    });
+  }
+
+  function scheduleRender() {
+    var cb = document.getElementById('latex-autorender');
+    if (cb && !cb.checked) return;
+    clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(renderLatex, 350);
+  }
+
+  // ── Toolbar insertion ────────────────────────────────────────────────
+  function insertLatex(text) {
+    if (_latexEditor) {
+      var cur = _latexEditor.getCursor();
+      _latexEditor.replaceRange(text, cur);
+      _latexEditor.focus();
+      _latexEditor.setCursor({ line: cur.line, ch: cur.ch + text.length });
+    } else if (_latexTa) {
+      var start = _latexTa.selectionStart, end = _latexTa.selectionEnd;
+      _latexTa.value = _latexTa.value.substring(0, start) + text + _latexTa.value.substring(end);
+      _latexTa.selectionStart = _latexTa.selectionEnd = start + text.length;
+      _latexTa.focus();
+    }
+  }
+
+  ws.querySelector('#latex-toolbar').addEventListener('change', function(e) {
+    var sel = e.target.closest('.ltx-select');
+    if (!sel) return;
+    var value = sel.value;
+    if (!value) return;
+    insertLatex(value);
+    sel.selectedIndex = 0;
+    scheduleRender();
+  });
+
+  ws.querySelectorAll('.ltx-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var latex = this.getAttribute('data-latex');
+      if (!latex) return;
+      insertLatex(latex);
+      scheduleRender();
+    });
+  });
+
+  // ── Copy LaTeX code ──────────────────────────────────────────────────
+  document.getElementById('latex-copy-code').addEventListener('click', function() {
+    var text = getLatexCode();
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('LaTeX code copied!', 'success');
+    }).catch(function() {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      showToast('Copied!', 'success');
+    });
+  });
+
+  // ── Helper: render LaTeX to a styled div ────────────────────────────
+  function renderLatexToDiv(code) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:20px;background:white;display:inline-block;font-size:18px';
+    try {
+      katex.render(code, div, { displayMode: true, throwOnError: false, output: 'html' });
+    } catch(e) {
+      div.textContent = code;
+      div.style.fontFamily = 'monospace';
+      div.style.fontSize = '14px';
+      div.style.whiteSpace = 'pre-wrap';
+    }
+    return div;
+  }
+
+  // ── Helper: capture div to canvas blob ──────────────────────────────
+  function captureDivToBlob(div, scale, format, quality) {
+    return new Promise(function(resolve, reject) {
+      if (typeof html2canvas !== 'undefined') {
+        html2canvas(div, {
+          scale: scale || 3,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: div.scrollWidth,
+          height: div.scrollHeight
+        }).then(function(canvas) {
+          canvas.toBlob(function(blob) {
+            if (blob) resolve(blob);
+            else reject(new Error('Blob creation failed'));
+          }, format || 'image/png', quality || 1);
+        }).catch(reject);
+      } else {
+        reject(new Error('html2canvas not loaded'));
+      }
+    });
+  }
+
+  // ── Copy as Image ────────────────────────────────────────────────────
+  document.getElementById('latex-copy-image').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    var code = getLatexCode().trim();
+    if (!code) { alert('No content'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Copy Image'; return; }
+
+    var renderDiv = renderLatexToDiv(code);
+    document.body.appendChild(renderDiv);
+
+    if (typeof html2canvas === 'undefined') {
+      document.body.removeChild(renderDiv);
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').then(function() {
+        document.getElementById('latex-copy-image').click();
+      }).catch(function() {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Copy Image';
+        alert('Failed to load image library');
+      });
+      return;
+    }
+
+    captureDivToBlob(renderDiv, 3, 'image/png', 1).then(function(blob) {
+      document.body.removeChild(renderDiv);
+      if (navigator.clipboard && navigator.clipboard.write) {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function() {
+          showToast('Image copied to clipboard!', 'success');
+        }).catch(function() {
+          var url = URL.createObjectURL(blob);
+          downloadData('latex-image.png', url);
+          URL.revokeObjectURL(url);
+          showToast('Image downloaded (clipboard not available)', 'info');
+        });
+      } else {
+        var url = URL.createObjectURL(blob);
+        downloadData('latex-image.png', url);
+        URL.revokeObjectURL(url);
+        showToast('Image downloaded', 'success');
+      }
+    }).catch(function() {
+      document.body.removeChild(renderDiv);
+      showToast('Image capture failed', 'error');
+    }).finally(function() {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Copy Image';
+    });
+  });
+
+  // ── Download PDF ─────────────────────────────────────────────────────
+  document.getElementById('latex-pdf-btn').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    var code = getLatexCode().trim();
+    if (!code) { alert('No content'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF'; return; }
+
+    var renderDiv = renderLatexToDiv(code);
+    document.body.appendChild(renderDiv);
+
+    var _jspdfAvail = typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined';
+    if (typeof html2canvas === 'undefined' || !_jspdfAvail) {
+      document.body.removeChild(renderDiv);
+      Promise.all([
+        typeof html2canvas === 'undefined'
+          ? loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+          : Promise.resolve(),
+        !_jspdfAvail
+          ? loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+          : Promise.resolve()
+      ]).then(function() {
+        document.getElementById('latex-pdf-btn').click();
+      }).catch(function() {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+        alert('Failed to load PDF libraries');
+      });
+      return;
+    }
+
+    captureDivToBlob(renderDiv, 2, 'image/png', 1).then(function(blob) {
+      document.body.removeChild(renderDiv);
+      var reader = new FileReader();
+      reader.onload = function() {
+        var imgData = reader.result;
+        var PDFClass = window.jspdf.jsPDF;
+        var pdf = new PDFClass({
+          orientation: renderDiv.scrollWidth > renderDiv.scrollHeight ? 'landscape' : 'portrait',
+          unit: 'in',
+          format: 'letter'
+        });
+        var pageW = 8.5, pageH = 11;
+        var margin = 0.75;
+        var maxW = pageW - 2 * margin;
+        var maxH = pageH - 2 * margin;
+        var imgW = renderDiv.scrollWidth / 96;
+        var imgH = renderDiv.scrollHeight / 96;
+        var scale = Math.min(maxW / imgW, maxH / imgH, 1);
+        var finalW = imgW * scale;
+        var finalH = imgH * scale;
+        var xOff = (pageW - finalW) / 2;
+        var yOff = (pageH - finalH) / 2;
+        pdf.addImage(imgData, 'PNG', xOff, yOff, finalW, finalH);
+        pdf.save('latex-equation.pdf');
+        showToast('PDF downloaded!', 'success');
+      };
+      reader.readAsDataURL(blob);
+    }).catch(function() {
+      document.body.removeChild(renderDiv);
+      showToast('PDF generation failed', 'error');
+    }).finally(function() {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+    });
+  });
+};
+
+window.tool_math_calculator = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
+    '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-calculator mr-1"></i> Ahmed Calculator</span>' +
+    '<span class="flex-1"></span>' +
+    '<button onclick="toggleToolFullscreen()" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+  '</div>' +
+  '<div id="ahmed-calc-mount"></div>';
+
+  // Load CSS
+  if (!document.querySelector('link[href*="ahmed-calc/style.css"]')) {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/static/css/ahmed-calc/style.css';
+    document.head.appendChild(link);
+  }
+
+  // Load math.js CDN (needed by evaluation pipeline)
+  if (typeof math === 'undefined') {
+    var mScript = document.createElement('script');
+    mScript.src = 'https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.js';
+    document.body.appendChild(mScript);
+  }
+
+  // Load Ahmed Calculator modules (MathIO architecture)
+  var scripts = [
+    '/static/js/ahmed-calc/core/state.js',
+    '/static/js/ahmed-calc/core/latex-parser.js',
+    '/static/js/ahmed-calc/core/history.js',
+    '/static/js/ahmed-calc/input/keypad.js',
+    '/static/js/ahmed-calc/input/keyboard.js',
+    '/static/js/ahmed-calc/modes/mode-manager.js',
+    '/static/js/ahmed-calc/modes/graph-mode.js',
+    '/static/js/ahmed-calc/modes/table-mode.js',
+    '/static/js/ahmed-calc/modes/algebra-mode.js',
+    '/static/js/ahmed-calc/ui/indicators.js',
+    '/static/js/ahmed-calc/main.js',
+  ];
+
+  var _calcInstance = null;
+
+  function loadNext(idx) {
+    if (idx >= scripts.length) {
+      _calcInstance = new AhmedCalculator('ahmed-calc-mount');
+      _calcInstance.init();
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = scripts[idx];
+    s.onload = function() { loadNext(idx + 1); };
+    s.onerror = function() { console.error("Failed to load", scripts[idx]); showToast("Calculator: failed to load " + scripts[idx].split('/').pop(), "error"); loadNext(idx + 1); };
+    document.body.appendChild(s);
+  }
+  loadNext(0);
+
+  window._cleanupCalc = function() {
+    if (_calcInstance) {
+      _calcInstance.dispose();
+      _calcInstance = null;
+    }
+    delete window._cleanupCalc;
+  };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

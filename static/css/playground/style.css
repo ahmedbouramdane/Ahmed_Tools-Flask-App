@@ -1,0 +1,307 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Playground - Browser IDE Styles
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Base Layout ─────────────────────────────────────────────────────── */
+#pg-mount {
+  position: relative;
+  width: 100%;
+  min-height: 500px;
+  overflow: hidden;
+}
+
+.vscode-playground * {
+  box-sizing: border-box;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────── */
+.vscode-playground ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.vscode-playground ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.vscode-playground ::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+.vscode-playground ::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+.vscode-playground ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ── Editor Area ─────────────────────────────────────────────────────── */
+#pg-editor-area {
+  position: relative;
+  overflow: hidden;
+}
+#pg-editor-area .monaco-editor {
+  padding-top: 0;
+}
+#pg-editor-area .monaco-editor .margin {
+  background: #1e1e1e !important;
+}
+#pg-editor-area .monaco-editor .monaco-editor-background {
+  background: #1e1e1e !important;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.pg-tab {
+  user-select: none;
+  transition: background 0.1s;
+}
+.pg-tab.active {
+  border-bottom: 1px solid transparent;
+  margin-bottom: -1px;
+}
+.pg-tab-close {
+  line-height: 1;
+  font-size: 14px;
+}
+
+/* ── Activity Bar ────────────────────────────────────────────────────── */
+.pg-activity-btn.active {
+  border-left: 2px solid #007acc;
+  border-radius: 0;
+  background: #3c3c3c !important;
+  color: white !important;
+}
+.pg-activity-btn {
+  border-left: 2px solid transparent;
+  border-radius: 0;
+}
+
+/* ── File Explorer ───────────────────────────────────────────────────── */
+.pg-file-item {
+  transition: background 0.1s;
+  user-select: none;
+}
+.pg-file-item:hover .pg-fs-rename,
+.pg-file-item .pg-fs-rename {
+  opacity: 0;
+}
+.pg-file-item:hover .pg-fs-rename {
+  opacity: 1;
+}
+
+/* ── Resize Handles ──────────────────────────────────────────────────── */
+.pg-sidebar-resize,
+.pg-bottom-resize,
+.pg-right-resize {
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.pg-sidebar-resize:hover,
+.pg-bottom-resize:hover,
+.pg-right-resize:hover {
+  background: #007acc !important;
+}
+
+/* ── Command Palette ─────────────────────────────────────────────────── */
+#pg-palette-input::placeholder {
+  color: #6b7280;
+}
+#pg-palette-results .pg-palette-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+#pg-palette-results .pg-palette-item.selected {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+/* ── Console ─────────────────────────────────────────────────────────── */
+#pg-console-output {
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+}
+#pg-console-output .pg-console-line {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+#pg-console-output .pg-console-line:last-child {
+  border-bottom: none;
+}
+
+/* ── Terminal ────────────────────────────────────────────────────────── */
+#pg-terminal-output {
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+}
+#pg-terminal-input::placeholder {
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* ── Preview ─────────────────────────────────────────────────────────── */
+.pg-preview-frame-wrapper {
+  transition: all 0.3s ease;
+}
+.pg-preview-frame-wrapper iframe {
+  border: none;
+}
+
+/* ── Switch Toggle ───────────────────────────────────────────────────── */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #555;
+  transition: 0.2s;
+  border-radius: 16px;
+}
+.switch .slider:before {
+  position: absolute;
+  content: '';
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+.switch input:checked + .slider {
+  background-color: #007acc;
+}
+.switch input:checked + .slider:before {
+  transform: translateX(12px);
+}
+
+/* ── Bottom Panel Tabs ───────────────────────────────────────────────── */
+.pg-bottom-tab.active {
+  border-top: 1px solid #007acc;
+  margin-top: -1px;
+}
+
+/* ── Problems Panel ──────────────────────────────────────────────────── */
+.pg-problem-item:hover {
+  background: #2a2a2a;
+}
+
+/* ── Search Panel ────────────────────────────────────────────────────── */
+.pg-search-item {
+  transition: background 0.1s;
+}
+.pg-search-item:hover {
+  background: #3c3c3c;
+}
+
+/* ── Zen Mode ────────────────────────────────────────────────────────── */
+.vscode-playground.pg-zen-mode {
+  border-radius: 0 !important;
+  border: none !important;
+}
+.vscode-playground.pg-zen-mode #pg-editor-area {
+  background: #1e1e1e;
+}
+
+/* ── Loading State ───────────────────────────────────────────────────── */
+#pg-mount.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e1e1e;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* ── Fullscreen Mode ─────────────────────────────────────────────────── */
+#pg-mount.playground-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 9999;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  width: 100vw !important;
+  background: #1e1e1e;
+}
+#pg-mount.playground-fullscreen .vscode-playground {
+  border-radius: 0 !important;
+  border: none !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+/* ── Split Editor ────────────────────────────────────────────────────── */
+.pg-editor-split {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+}
+.pg-editor-split .pg-editor-pane {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.pg-editor-split .pg-editor-pane:first-child {
+  border-right: 2px solid #3c3c3c;
+}
+.pg-editor-split-divider {
+  width: 4px;
+  cursor: col-resize;
+  background: #3c3c3c;
+  flex-shrink: 0;
+}
+.pg-editor-split-divider:hover {
+  background: #007acc;
+}
+
+/* ── Output Tab ──────────────────────────────────────────────────────── */
+#pg-editor-output {
+  display: none;
+  height: 100%;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+#pg-editor-output.active {
+  display: flex;
+  flex-direction: column;
+}
+#pg-editor-output .pg-output-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  font-size: 10px;
+  gap: 8px;
+}
+#pg-editor-output .pg-output-toolbar button {
+  padding: 2px 8px;
+  background: #3c3c3c;
+  color: #ccc;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+}
+#pg-editor-output .pg-output-toolbar button:hover {
+  background: #505050;
+}
+#pg-editor-output .pg-output-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+#pg-editor-output .pg-output-content iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+  border-radius: 4px;
+}

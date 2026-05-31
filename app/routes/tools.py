@@ -242,8 +242,30 @@ def pdf_watermark():
     try:
         reader = PdfReader(request.files['file'])
         writer = PdfWriter()
+
+        # Try to create a real watermark using reportlab
+        watermark_reader = None
+        try:
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.units import inch
+            packet = io.BytesIO()
+            c = canvas.Canvas(packet, pagesize=(612, 792))
+            c.setFont("Helvetica", 48)
+            c.setFillColorRGB(0.8, 0.8, 0.8, 0.3)
+            c.translate(306, 396)
+            c.rotate(45)
+            c.drawCentredString(0, 0, text)
+            c.save()
+            packet.seek(0)
+            watermark_reader = PdfReader(packet)
+        except ImportError:
+            pass
+
         for page in reader.pages:
+            if watermark_reader:
+                page.merge_page(watermark_reader.pages[0])
             writer.add_page(page)
+
         buf = io.BytesIO()
         writer.write(buf)
         b64 = base64.b64encode(buf.getvalue()).decode()
@@ -255,6 +277,98 @@ def pdf_watermark():
 #  🤖 AI TOOLS (Gemini)
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Language name → Google Translate code mapping
+LANG_CODES = {
+    "auto": "auto", "English": "en", "Arabic": "ar", "French": "fr",
+    "Spanish": "es", "German": "de", "Chinese": "zh", "Japanese": "ja",
+    "Russian": "ru", "Portuguese": "pt", "Hindi": "hi", "Italian": "it",
+    "Korean": "ko", "Turkish": "tr", "Dutch": "nl", "Polish": "pl",
+}
+
+# ─── AI Fallback Functions (when Gemini is unavailable) ──────────────────
+
+def fallback_summarize(text):
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    if len(sentences) <= 3:
+        return text
+    return " ".join(sentences[:3]) + " [...]"
+
+def fallback_keywords(text):
+    import collections
+    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+    stop_words = {'the','and','for','are','but','not','you','all','can','had','her','was','one','our','out','has','have','been','some','them','than','its','over','very','just','also','make','their','what','when','with','this','that','from','they','which','would','could','should','about','into','after','other','there','more','these','those','until','while','where','each','before','after'}
+    words = [w for w in words if w not in stop_words]
+    if not words:
+        return "No significant keywords found."
+    freq = collections.Counter(words).most_common(10)
+    return ", ".join(word for word, count in freq if count > 0)
+
+def fallback_rewrite(text):
+    replacements = {
+        r"\bvery good\b": "excellent", r"\bgood\b": "favorable", r"\bbad\b": "unfavorable",
+        r"\bbig\b": "significant", r"\bsmall\b": "minor", r"\bget\b": "obtain",
+        r"\buse\b": "utilize", r"\bshow\b": "demonstrate", r"\bhelp\b": "assist",
+        r"\bmake\b": "create", r"\bchange\b": "modify", r"\bthink\b": "believe",
+        r"\bknow\b": "understand", r"\btell\b": "inform", r"\bask\b": "inquire",
+        r"\bgive\b": "provide", r"\btake\b": "acquire", r"\bcome\b": "arrive",
+        r"\bgo\b": "proceed", r"\blook\b": "examine", r"\bfind\b": "discover",
+        r"\btry\b": "attempt", r"\bneed\b": "require", r"\bwant\b": "desire",
+    }
+    result = text
+    for pattern, replacement in replacements.items():
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+    return f"{result}\n\n[Note: Basic rewrite applied]"
+
+def fallback_caption(text):
+    words = text.split()
+    topic = " ".join(words[:5]) if len(words) > 5 else text
+    return f"1. ✨ Here's my take on {topic} — what do you think?\n2. 📌 {topic} — something worth sharing today\n3. 💡 Thinking about {topic} lately. Your thoughts?"
+
+def fallback_grammar(text):
+    result = text
+    # Capitalize first letter after period
+    result = re.sub(r'\.\s+([a-z])', lambda m: '. ' + m.group(1).upper(), result)
+    # Fix i → I
+    result = re.sub(r'\bi\b', 'I', result)
+    # Remove double spaces
+    result = re.sub(r'  +', ' ', result)
+    # Capitalize first word
+    if result and result[0].islower():
+        result = result[0].upper() + result[1:]
+    return result
+
+def google_translate(text, target_lang, source_lang="auto"):
+    import urllib.request, urllib.parse, json
+    src = LANG_CODES.get(source_lang, "auto")
+    tgt = LANG_CODES.get(target_lang, "en")
+    params = urllib.parse.urlencode({
+        "client": "gtx", "sl": src, "tl": tgt, "dt": "t", "q": text
+    })
+    url = f"https://translate.googleapis.com/translate_a/single?{params}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read())
+            # Google returns [[["translation", ...], ...], ...]
+            translation = "".join(part[0] for part in data[0])
+            return translation
+    except Exception:
+        return None
+
+FALLBACK_HANDLERS = {
+    "summarize": fallback_summarize,
+    "keywords": fallback_keywords,
+    "rewrite": fallback_rewrite,
+    "caption": fallback_caption,
+    "grammar": fallback_grammar,
+}
+
+def try_gemini_or_fallback(prompt, fallback_fn, text):
+    """Try Gemini first, then fallback function."""
+    result = gemini_response(prompt)
+    if result and "unavailable" not in result and "not configured" not in result:
+        return result
+    return fallback_fn(text)
+
 @tools_bp.route("/tools/api/ai/<operation>", methods=["POST"])
 @login_required
 def ai_tool(operation):
@@ -263,22 +377,35 @@ def ai_tool(operation):
     if not text:
         return jsonify({"error": "Text required"}), 400
 
-    prompts = {
+    # Translate has its own fallback (Google Translate API)
+    if operation == "translate":
+        target_lang = data.get("language", "English")
+        source_lang = data.get("source", "auto")
+        style = data.get("style", "standard")
+        gemini_prompt = f"Translate the following text{' from '+source_lang if source_lang and source_lang!='auto' else ''} to {target_lang}.{' Use '+style+' language.' if style and style!='standard' else ''} Only return the translation:\n\n{text}"
+        gemini_result = gemini_response(gemini_prompt)
+        if gemini_result and "unavailable" not in gemini_result and "not configured" not in gemini_result:
+            return jsonify({"success": True, "result": gemini_result})
+        g_result = google_translate(text, target_lang, source_lang)
+        if g_result:
+            return jsonify({"success": True, "result": g_result})
+        return jsonify({"error": "Translation service unavailable"}), 500
+
+    prompt_templates = {
         "summarize": f"Summarize the following text concisively in 3-5 sentences:\n\n{text}",
-        "translate": f"Translate the following text{' from '+data.get('source','auto') if data.get('source') and data.get('source')!='auto' else ''} to {data.get('language', 'English')}.{' Use '+data.get('style','standard')+' language.' if data.get('style') and data.get('style')!='standard' else ''} Only return the translation:\n\n{text}",
         "keywords": f"Extract 5-10 key keywords from this text. Return as a comma-separated list:\n\n{text}",
         "rewrite": f"Rewrite the following text to be clearer and more professional:\n\n{text}",
         "caption": f"Generate 3 social media captions for this text:\n\n{text}",
         "grammar": f"Fix any grammar and spelling errors in this text. Only return the corrected version:\n\n{text}",
     }
-    prompt = prompts.get(operation)
-    if not prompt:
-        return jsonify({"error": "Unknown operation"}), 400
-    try:
-        result = gemini_response(prompt)
+
+    if operation in FALLBACK_HANDLERS:
+        prompt = prompt_templates.get(operation, text)
+        fallback_fn = FALLBACK_HANDLERS[operation]
+        result = try_gemini_or_fallback(prompt, fallback_fn, text)
         return jsonify({"success": True, "result": result})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"error": "Unknown operation"}), 400
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  🔗 URL SHORTENER (via is.gd)

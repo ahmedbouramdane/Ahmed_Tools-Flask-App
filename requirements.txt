@@ -12,3 +12,5 @@ authlib
 rembg
 Pillow
 qrcode[pil]
+PyPDF2
+reportlab

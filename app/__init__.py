@@ -52,6 +52,10 @@ def create_app():
     # Import models (needed for create_all)
     from . import models
 
+    # Register SocketIO namespaces
+    from .terminal_handler import TerminalNamespace
+    socketio.on_namespace(TerminalNamespace('/terminal'))
+
     # Register blueprints
     from .routes.auth import auth_bp
     from .routes.dashboard import dashboard_bp
