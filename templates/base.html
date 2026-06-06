@@ -1,3 +1,8 @@
+{% if request.headers.get('X-Requested-With') == 'XMLHttpRequest' %}
+<title>{{ self.title() }}</title>
+<div id="content">{{ self.content()|safe }}</div>
+{{ self.scripts()|safe }}
+{% else %}
 <!DOCTYPE html>
 <html lang="en" class="">
 <head>
@@ -10,7 +15,7 @@
   <meta property="og:description" content="All-in-one productivity suite with AI tools, image editor, PDF utilities, code playground & more">
   <meta property="og:type" content="website">
   <meta name="robots" content="index, follow">
-  <title>Ahmed BOURAMDANE · Organiser</title>
+  <title>{% block title %}Ahmed BOURAMDANE · Organiser{% endblock %}</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,11 +47,18 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+  <!-- Prism.js syntax highlighting theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
   <!-- FullCalendar CSS -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Anime.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
 
   <!-- Glightbox (calendar attachments) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
@@ -71,10 +83,16 @@
   <!-- html2pdf.js (PDF generation) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+  <!-- Socket.io (required globally for SPA pages like Posts, Chat) -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
   <!-- Quill (notes editor) -->
   <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=calendar-premium-2">
 
   <!-- Custom styles -->
   <style>
@@ -122,6 +140,39 @@
       font-weight: 500;
       direction: rtl;
       text-align: right;
+    }
+
+    /* ===== Image Lightbox Gallery ===== */
+    #imageLightbox {
+      animation: lbFadeIn 0.2s ease-out;
+    }
+    @keyframes lbFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    #lightboxImage {
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+    }
+    #lightboxImage.loading { opacity: 0; }
+    #lightboxImage.loaded { opacity: 1; }
+    .lightbox-btn {
+      transition: all 0.2s ease;
+    }
+    .lightbox-btn:hover {
+      transform: scale(1.08);
+    }
+    .lightbox-btn:active {
+      transform: scale(0.95);
+    }
+    @keyframes lbSpin {
+      to { transform: rotate(360deg); }
+    }
+    .dark #imageLightbox {
+      --lb-bg: rgba(0,0,0,0.88);
+    }
+    /* Zoom transition */
+    .lb-zoomed {
+      cursor: zoom-out !important;
     }
 
     /* Animated dots for AI thinking */
@@ -208,6 +259,44 @@
     .sidebar.collapsed {
       width: 72px !important;
     }
+    /* Quick actions bar - hide when collapsed */
+    .sidebar-quick-actions {
+      display: flex;
+      padding: 10px 14px;
+      gap: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 4px;
+    }
+    .sidebar-quick-actions button,
+    .sidebar-quick-actions a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 6px;
+      border-radius: 12px;
+      color: #9ca3af;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      border-left: none !important;
+    }
+    .sidebar-quick-actions button:hover,
+    .sidebar-quick-actions a:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      transform: translateY(-1px);
+    }
+    .sidebar-quick-actions button:active,
+    .sidebar-quick-actions a:active {
+      transform: translateY(0);
+    }
+    .sidebar.collapsed .sidebar-quick-actions {
+      display: none;
+    }
     /* Hide text labels when collapsed */
     .brand-text, .sidebar a span, .nav-bottom-text {
       display: inline-block;
@@ -225,35 +314,242 @@
       pointer-events: none;
     }
     /* Center icons when collapsed */
+    .sidebar.collapsed nav {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-top: 0 !important;
+    }
+    .sidebar.collapsed .sidebar-quick-actions {
+      display: none !important;
+    }
     .sidebar.collapsed nav a {
-      justify-content: center;
-      padding-left: 0;
-      padding-right: 0;
+      justify-content: center !important;
+      padding: 10px 0 !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      width: 48px;
+      border-radius: 12px !important;
+      border-left: none !important;
+      gap: 0 !important;
     }
     .sidebar.collapsed nav a i {
-      margin: 0;
+      margin: 0 !important;
+      width: 20px;
+      text-align: center;
+    }
+    /* Improved nav item styling */
+    .sidebar nav a {
+      position: relative;
+      border-left: 3px solid transparent;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar nav a i {
+      transition: transform 0.2s ease;
+    }
+    .sidebar nav a:hover i {
+      transform: scale(1.1);
+    }
+    .sidebar nav a.bg-indigo-600 {
+      border-left-color: #a78bfa;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(255,255,255,0.08);
     }
     .sidebar.collapsed .brand {
       justify-content: center;
       padding-left: 0;
+      gap: 0;
+    }
+    .sidebar.collapsed .brand svg {
+      width: 24px;
+      height: 24px;
     }
     .sidebar.collapsed > div:first-child {
-      justify-content: center;
+      justify-content: center !important;
+      padding: 14px !important;
     }
-    .sidebar.collapsed #global-sidebar-toggle i {
-      transform: rotate(180deg);
+    /* Brand hover effect */
+    #sidebar-brand svg {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #sidebar-brand:hover svg {
+      transform: scale(1.12) rotate(-2deg);
+    }
+    .sidebar.collapsed > div:last-child {
+      padding: 8px !important;
+    }
+    .sidebar.collapsed > div:last-child a {
+      justify-content: center !important;
+      padding: 10px 0 !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      width: 48px;
+      border-radius: 12px !important;
+      gap: 0 !important;
+    }
+    .sidebar.collapsed > div:last-child a i {
+      margin: 0 !important;
+    }
+    .sidebar.collapsed #global-sidebar-toggle {
+      display: none;
+    }
+    .sidebar.collapsed #sidebar-expand-btn {
+      display: flex !important;
     }
     .sidebar:not(.collapsed) #sidebar-expand-btn {
       display: none;
     }
     /* Show expand arrow when collapsed - via the toggle btn direction */
     .sidebar-resize-handle {
-      position: absolute;
-      top: 0; right: -4px;
+      position: absolute; top: 0; right: -4px;
       width: 8px; height: 100%;
       cursor: col-resize;
       z-index: 1000;
     }
+
+    /* ===== Splash Screen Animations ===== */
+    @keyframes splashBarRise {
+      0% { transform: translateY(70px) scaleY(0.3); opacity: 0; }
+      60% { transform: translateY(-4px) scaleY(1.1); opacity: 1; }
+      100% { transform: translateY(0) scaleY(1); opacity: 1; }
+    }
+    @keyframes splashCharIn {
+      0% { transform: translateY(40px) scale(0.2) rotateX(40deg); opacity: 0; }
+      65% { transform: translateY(-6px) scale(1.12) rotateX(0deg); opacity: 1; }
+      100% { transform: translateY(0) scale(1) rotateX(0deg); opacity: 1; }
+    }
+    @keyframes splashSlideLeft {
+      0% { opacity: 0; transform: translateX(-40px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes splashSlideRight {
+      0% { opacity: 0; transform: translateX(40px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes splashFadeUp {
+      0% { opacity: 0; transform: translateY(20px); filter: blur(4px); }
+      100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+    @keyframes splashLogoPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    @keyframes splashGradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .splash-logo-bar {
+      will-change: transform, opacity;
+      animation: splashBarRise 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .splash-title span {
+      display: inline-block;
+      perspective: 400px;
+      will-change: transform, opacity;
+      animation: splashCharIn 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .splash-subtitle {
+      will-change: transform, opacity;
+      animation: splashSlideLeft 1.2s ease-out both;
+    }
+    .splash-credit {
+      will-change: transform, opacity;
+      animation: splashSlideRight 1.2s ease-out 0.4s both;
+    }
+    .splash-tagline {
+      will-change: transform, opacity, filter;
+      animation: splashFadeUp 1.5s ease-out 0.8s both;
+    }
+    .splash-logo-wrap {
+      will-change: transform;
+      animation: splashLogoPulse 3s ease-in-out infinite;
+    }
+    #splash-screen .splash-title span.text-transparent {
+      background-size: 200% 200%;
+      animation-name: splashCharIn, splashGradientShift;
+      animation-duration: 1.2s, 4s;
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease;
+      animation-fill-mode: both, none;
+      animation-iteration-count: 1, infinite;
+    }
+    /* Skip button fades in late */
+    #splash-skip-btn {
+      animation: splashFadeUp 1s ease-out 4s both;
+    }
+    #splash-screen.animate-out {
+      animation: splashFadeUp 0.5s ease-in reverse both;
+      pointer-events: none;
+    }
+    /* Hide main page content while splash is active */
+    body.splash-active #sidebar,
+    body.splash-active #sidebar-backdrop,
+    body.splash-active #main-content,
+    body.splash-active footer {
+      visibility: hidden;
+    }
+
+    /* ===== Prism Syntax Highlighting ===== */
+    /* Base: light theme (default prism theme is fine) */
+    .dark pre[class*="language-"],
+    .dark code[class*="language-"] {
+      background: #1e293b !important;
+      color: #e2e8f0 !important;
+      text-shadow: none !important;
+    }
+    .dark .token.comment,
+    .dark .token.prolog,
+    .dark .token.doctype,
+    .dark .token.cdata {
+      color: #94a3b8 !important;
+    }
+    .dark .token.punctuation {
+      color: #cbd5e1 !important;
+    }
+    .dark .token.property,
+    .dark .token.tag,
+    .dark .token.boolean,
+    .dark .token.number,
+    .dark .token.constant,
+    .dark .token.symbol,
+    .dark .token.deleted {
+      color: #f472b6 !important;
+    }
+    .dark .token.selector,
+    .dark .token.attr-name,
+    .dark .token.string,
+    .dark .token.char,
+    .dark .token.builtin,
+    .dark .token.inserted {
+      color: #34d399 !important;
+    }
+    .dark .token.operator,
+    .dark .token.entity,
+    .dark .token.url {
+      color: #22d3ee !important;
+    }
+    .dark .token.atrule,
+    .dark .token.attr-value,
+    .dark .token.keyword {
+      color: #818cf8 !important;
+    }
+    .dark .token.function,
+    .dark .token.class-name {
+      color: #fbbf24 !important;
+    }
+    .dark .token.regex,
+    .dark .token.important,
+    .dark .token.variable {
+      color: #f59e0b !important;
+    }
+    .dark .token.bold { font-weight: bold !important; }
+    .dark .token.italic { font-style: italic !important; }
+    .dark .line-numbers .line-numbers-rows {
+      border-right-color: #374151 !important;
+    }
+    .dark .line-numbers .line-numbers-rows > span:before {
+      color: #64748b !important;
+    }
+    /* Ensure math renders with proper color in dark mode */
+    .dark .katex { color: #e2e8f0 !important; }
   </style>
 
   <!-- Theme Initialization Script -->
@@ -275,9 +571,166 @@
         localStorage.setItem('theme', serverTheme);
       }
     })();
+
+    // Global theme toggle function
+    function toggleTheme() {
+      var isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Set theme to specific value
+    function setTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else if (theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        // Auto
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', 'auto');
+      }
+    }
   </script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
+
+  <!-- Loading indicator bar -->
+  <div id="loading-bar" class="fixed top-0 left-0 h-1 bg-indigo-600 z-[9999] hidden transition-none" style="width: 0%;"></div>
+
+  <!-- Splash Screen (visible by default, shown on every full page load) -->
+  <div id="splash-screen" class="fixed inset-0 z-[99999] flex items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/40 to-gray-100 dark:from-gray-900 dark:via-indigo-950/30 dark:to-gray-950">
+    <div class="splash-inner text-center" style="transform: translateY(0);">
+      <!-- Splash Logo -->
+      <div class="splash-logo-wrap mx-auto w-24 h-24 mb-10 relative">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-full drop-shadow-lg">
+          <defs>
+            <linearGradient id="splash-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="40%" stop-color="#8b5cf6"/>
+              <stop offset="100%" stop-color="#ec4899"/>
+            </linearGradient>
+            <filter id="splash-glow">
+              <feGaussianBlur stdDeviation="6" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <!-- Stack bars -->
+          <rect class="splash-logo-bar" x="40" y="152" width="120" height="14" rx="7" fill="url(#splash-grad)" filter="url(#splash-glow)" data-bar="1"/>
+          <rect class="splash-logo-bar" x="52" y="122" width="96" height="14" rx="7" fill="url(#splash-grad)" opacity="0.9" data-bar="2"/>
+          <rect class="splash-logo-bar" x="64" y="92" width="72" height="14" rx="7" fill="url(#splash-grad)" opacity="0.8" data-bar="3"/>
+          <rect class="splash-logo-bar" x="76" y="62" width="48" height="14" rx="7" fill="url(#splash-grad)" opacity="0.7" data-bar="4"/>
+          <rect class="splash-logo-bar" x="88" y="32" width="24" height="14" rx="7" fill="url(#splash-grad)" opacity="0.6" data-bar="5"/>
+        </svg>
+      </div>
+      <!-- Splash Title -->
+      <h1 class="splash-title text-4xl font-bold text-gray-800 dark:text-white mb-3 tracking-tight">
+        <span>H</span><span>e</span><span>l</span><span>l</span><span>o</span><span>,</span>
+        <span>&nbsp;</span>
+        <span>I</span><span>'</span><span>m</span>
+        <span>&nbsp;</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">A</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">h</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">m</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">e</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">d</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">—</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">S</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">t</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">a</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">c</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">k</span>
+      </h1>
+      <p class="splash-subtitle text-xl text-gray-500 dark:text-gray-400 font-medium mb-2 tracking-wide">Ahmed—Stack Platform</p>
+      <p class="splash-credit text-sm text-gray-400 dark:text-gray-500">by <strong>Ahmed BOURAMDANE</strong></p>
+      <p class="splash-tagline text-xs text-indigo-500 dark:text-indigo-400 mt-8 font-medium tracking-[0.2em] uppercase">Let's build the future...</p>
+      <!-- Loading Bar -->
+      <div class="splash-loader-wrap mt-12 mx-auto w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+        <div id="splash-loader-bar" class="h-full bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500 rounded-full shadow-lg shadow-purple-500/30" style="width:0%;"></div>
+      </div>
+      <!-- Skip Button -->
+      <button id="splash-skip-btn" class="mt-8 text-xs text-gray-400 dark:text-gray-600 hover:text-indigo-500 dark:hover:text-indigo-400 transition cursor-pointer" onclick="skipSplash()">Skip →</button>
+    </div>
+  </div>
+  <!-- Splash activation: runs immediately before any content renders -->
+  <script>
+  (function(){
+    var s = document.getElementById('splash-screen');
+    if (!s) return;
+    document.body.classList.add('splash-active');
+
+    // Stagger logo bar animations (0.2s apart, 5 bars → 0.8s total stagger)
+    var bars = s.querySelectorAll('.splash-logo-bar');
+    bars.forEach(function(b, i){ b.style.animationDelay = (i * 0.2) + 's'; });
+
+    // Stagger title character animations (start at 1s, 0.05s apart)
+    var chars = s.querySelectorAll('.splash-title span');
+    chars.forEach(function(c, i){
+      var delay = (1.0 + i * 0.05) + 's';
+      // text-transparent spans have two animations (charIn + gradient)
+      c.style.animationDelay = c.classList.contains('text-transparent') ? delay + ', 0s' : delay;
+    });
+
+    // Loading bar using requestAnimationFrame — fills over 4s
+    var loader = document.getElementById('splash-loader-bar');
+    var progress = 0;
+    var startTime = performance.now();
+    var duration = 4000;
+    function tick(now) {
+      var elapsed = now - startTime;
+      progress = Math.min(100, (elapsed / duration) * 100);
+      if (loader) loader.style.width = progress + '%';
+      if (progress < 100) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    // Skip button
+    window.skipSplash = function(){
+      if (loader) loader.style.width = '100%';
+      dismissSplash();
+    };
+
+    function dismissSplash(){
+      if (s.classList.contains('animate-out')) return;
+      s.classList.add('animate-out');
+      setTimeout(function(){
+        document.body.classList.remove('splash-active');
+        s.style.display = 'none';
+        s.remove();
+      }, 500);
+    }
+
+    // Splash stays at least 5s, plus wait for page load
+    var MIN_DURATION = 5000;
+    function onReady() {
+      var elapsed = performance.now() - startTime;
+      var remaining = Math.max(0, MIN_DURATION - elapsed);
+      setTimeout(dismissSplash, remaining + 200);
+    }
+    if (document.readyState === 'complete') {
+      setTimeout(dismissSplash, MIN_DURATION);
+    } else {
+      window.addEventListener('load', onReady);
+      setTimeout(dismissSplash, 8000); // fallback
+    }
+  })();
+  </script>
+  <!-- End Splash Screen -->
 
   <!-- Mobile backdrop -->
   <div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
@@ -291,18 +744,53 @@
       <i class="fas fa-angle-double-right text-xs"></i>
     </button>
 
-    <div class="p-6 border-b border-gray-800 flex items-center justify-between">
-      <h1 id="sidebar-brand" class="text-2xl font-bold flex items-center gap-3 brand cursor-pointer">
-        <i class="fas fa-crown text-indigo-400"></i>
-        <span class="brand-text">{{ current_user.username if current_user.is_authenticated and current_user.email_verified else 'Ahmed' }}</span>
+    <div class="p-4 border-b border-gray-800 flex items-center justify-between relative">
+      <!-- Brand gradient glow line -->
+      <div class="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-indigo-500/0 via-indigo-500/40 to-purple-500/0"></div>
+      <h1 id="sidebar-brand" class="text-xl font-bold flex items-center gap-2.5 brand cursor-pointer select-none">
+        <!-- Mini stacked bars logo matching splash -->
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 flex-shrink-0">
+          <defs>
+            <linearGradient id="sidebar-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="50%" stop-color="#8b5cf6"/>
+              <stop offset="100%" stop-color="#ec4899"/>
+            </linearGradient>
+          </defs>
+          <rect x="40" y="152" width="120" height="14" rx="7" fill="url(#sidebar-grad)" opacity="1"/>
+          <rect x="52" y="122" width="96" height="14" rx="7" fill="url(#sidebar-grad)" opacity="0.85"/>
+          <rect x="64" y="92" width="72" height="14" rx="7" fill="url(#sidebar-grad)" opacity="0.7"/>
+          <rect x="76" y="62" width="48" height="14" rx="7" fill="url(#sidebar-grad)" opacity="0.55"/>
+          <rect x="88" y="32" width="24" height="14" rx="7" fill="url(#sidebar-grad)" opacity="0.4"/>
+        </svg>
+        <span class="brand-text bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Ahmed—Stack</span>
       </h1>
-      <button id="global-sidebar-toggle" class="text-gray-400 hover:text-white transition focus:outline-none" title="Toggle sidebar">
+      <button id="global-sidebar-toggle" class="text-gray-500 hover:text-indigo-400 transition focus:outline-none" title="Toggle sidebar">
         <i class="fas fa-angle-double-left"></i>
       </button>
     </div>
 
     {% if current_user.is_authenticated and current_user.email_verified %}
-    <nav class="mt-6 flex-1 space-y-1 px-3">
+    <nav class="flex-1 space-y-1 px-3">
+      <!-- Quick actions: icon-only buttons above nav items -->
+      <div class="sidebar-quick-actions">
+        <button onclick="toggleTheme(); return false;" title="Toggle theme" class="sidebar-quick-btn">
+          <i class="fas fa-moon dark:hidden"></i>
+          <i class="fas fa-sun hidden dark:inline"></i>
+        </button>
+        <a href="{{ url_for('user_chat.user_chat') }}" title="Messages" class="sidebar-quick-btn relative">
+          <i class="fab fa-facebook-messenger"></i>
+          <span id="quick-unread" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center hidden">0</span>
+        </a>
+        <a href="{{ url_for('posts.posts_feed') }}" title="Posts" class="sidebar-quick-btn">
+          <i class="fas fa-newspaper"></i>
+        </a>
+        <a href="{{ url_for('posts.notifications_page') }}" title="Notifications" class="sidebar-quick-btn relative" id="notif-bell-link">
+          <i class="fas fa-bell"></i>
+          <span id="notif-bell-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center hidden">0</span>
+        </a>
+      </div>
+
       <a href="{{ url_for('dashboard.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'dashboard.dashboard' }}">
         <i class="fas fa-tachometer-alt w-5"></i> <span>Dashboard</span>
       </a>
@@ -325,6 +813,13 @@
       <a href="{{ url_for('tools.tools_page') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint and request.endpoint.startswith('tools.') }}">
         <i class="fas fa-toolbox w-5"></i> <span>Tools</span>
       </a>
+      <a href="{{ url_for('posts.posts_feed') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint and request.endpoint.startswith('posts.') }}">
+        <i class="fas fa-newspaper w-5"></i> <span>Posts</span>
+      </a>
+      <a href="{{ url_for('posts.notifications_page') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'posts.notifications_page' }}">
+        <i class="fas fa-bell w-5"></i> <span>Notifications</span>
+        <span id="notif-nav-badge" class="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 hidden">0</span>
+      </a>
       <a href="{{ url_for('profile.profile') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition {{ 'bg-indigo-600 text-white font-semibold' if request.endpoint == 'profile.profile' }}">
         <i class="fas fa-user-circle w-5"></i> <span>Profile</span>
       </a>
@@ -334,17 +829,18 @@
     </nav>
     {% endif %}
 
-    <div class="p-4 border-t border-gray-800 mt-auto">
+    <div class="p-3 border-t border-gray-800/60 mt-auto space-y-0.5">
+      <div class="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-indigo-500/0 via-indigo-500/20 to-purple-500/0 pointer-events-none"></div>
       {% if current_user.is_authenticated %}
-      <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-red-600 hover:text-white transition">
-        <i class="fas fa-sign-out-alt w-5"></i> <span class="nav-bottom-text">Logout</span>
+      <a href="#" onclick="confirmLogout(event)" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-400 hover:bg-red-600/15 hover:text-red-400 transition group">
+        <i class="fas fa-sign-out-alt w-5 transition group-hover:scale-110"></i> <span class="nav-bottom-text text-sm">Logout</span>
       </a>
       {% else %}
-      <a href="{{ url_for('auth.login') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition">
-        <i class="fas fa-sign-in-alt w-5"></i> <span>Login</span>
+      <a href="{{ url_for('auth.login') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-400 hover:bg-gray-800 transition group">
+        <i class="fas fa-sign-in-alt w-5 transition group-hover:scale-110"></i> <span class="text-sm">Login</span>
       </a>
-      <a href="{{ url_for('auth.register') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition">
-        <i class="fas fa-user-plus w-5"></i> <span>Register</span>
+      <a href="{{ url_for('auth.register') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-400 hover:bg-gray-800 transition group">
+        <i class="fas fa-user-plus w-5 transition group-hover:scale-110"></i> <span class="text-sm">Register</span>
       </a>
       {% endif %}
     </div>
@@ -357,28 +853,59 @@
         <i class="fas fa-bars"></i>
       </button>
       <span class="font-bold text-lg dark:text-white">Ahmed BOURAMDANE</span>
-      <span></span>
+      <div class="flex items-center gap-2">
+        <!-- Theme Toggle Button (Mobile) -->
+        <button id="theme-toggle-btn-mobile" class="p-2 rounded-lg text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Toggle theme" onclick="toggleTheme(); return false;">
+          <i class="fas fa-moon dark:hidden"></i>
+          <i class="fas fa-sun hidden dark:inline"></i>
+        </button>
+      </div>
     </header>
 
-    <main class="p-6 lg:p-10">
+    <main class="p-0">
+      <div id="toast-container" class="fixed top-4 right-4 z-[99999] flex flex-col gap-2 pointer-events-none"></div>
+
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
             <script>
-              Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: '{{ "success" if category == "success" else "error" if category == "danger" else "info" }}',
-                title: '{{ message|escape }}',
-                showConfirmButton: false,
-                timer: 3500
-              });
+              (function() {
+                var iconMap = { success: 'check-circle', danger: 'times-circle', warning: 'exclamation-circle', info: 'info-circle' };
+                var colorMap = {
+                  success: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300',
+                  danger: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300',
+                  warning: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300',
+                  info: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                };
+                var icon = iconMap['{{ category }}'] || 'info-circle';
+                var cls = colorMap['{{ category }}'] || colorMap.info;
+                var toast = document.createElement('div');
+                toast.className = cls + ' pointer-events-auto border rounded-xl px-4 py-3 shadow-lg flex items-center gap-2.5 text-sm font-medium translate-x-full opacity-0 transition-all duration-500 ease-out';
+                toast.innerHTML = '<i class="fas fa-' + icon + '"></i><span>{{ message|escape }}</span>';
+                var container = document.getElementById('toast-container');
+                if (!container) {
+                  container = document.createElement('div');
+                  container.id = 'toast-container';
+                  container.className = 'fixed top-4 right-4 z-[99999] flex flex-col gap-2 pointer-events-none';
+                  document.body.appendChild(container);
+                }
+                container.appendChild(toast);
+                requestAnimationFrame(function() {
+                  toast.classList.remove('translate-x-full', 'opacity-0');
+                  toast.classList.add('translate-x-0', 'opacity-100');
+                });
+                setTimeout(function() {
+                  toast.classList.remove('translate-x-0', 'opacity-100');
+                  toast.classList.add('translate-x-full', 'opacity-0');
+                  setTimeout(function() { toast.remove(); }, 500);
+                }, 4000);
+              })();
             </script>
           {% endfor %}
         {% endif %}
       {% endwith %}
 
-      {% block content %}{% endblock %}
+      <div id="content">{% block content %}{% endblock %}</div>
     </main>
   </div>
 
@@ -411,7 +938,7 @@
       if (window.innerWidth < 1024) {
         mainContent.style.marginLeft = '0px';
       } else {
-        mainContent.style.marginLeft = collapsed ? '80px' : sidebar.style.width;
+        mainContent.style.marginLeft = window.getComputedStyle(sidebar).width;
       }
     }
 
@@ -451,7 +978,7 @@
     function onMouseMove(e) {
       if (!isResizing) return;
       const newWidth = startWidth + (e.clientX - startX);
-      if (newWidth >= 64 && newWidth <= 400) {
+      if (newWidth >= 200 && newWidth <= 400) {
         sidebar.style.width = newWidth + 'px';
         applyMargin();
       }
@@ -464,6 +991,8 @@
       localStorage.setItem('sidebarWidth', sidebar.style.width);
     }
   </script>
+
+  <!-- Splash Screen JS → handled by inline script above -->
 
   <!-- Unread badge polling -->
   {% if current_user.is_authenticated and current_user.unread_badge_enabled %}
@@ -485,6 +1014,29 @@
       .catch(() => {});
     setTimeout(pollUnread, 10000);
   })();
+
+  // Notification badge polling
+  (function pollNotifs() {
+    fetch('/api/notifications/unread-count')
+      .then(r => r.json())
+      .then(data => {
+        const bellBadge = document.getElementById('notif-bell-badge');
+        const navBadge = document.getElementById('notif-nav-badge');
+        const count = data.unread_count || 0;
+        [bellBadge, navBadge].forEach(b => {
+          if (b) {
+            if (count > 0) {
+              b.classList.remove('hidden');
+              b.textContent = count > 99 ? '99+' : count;
+            } else {
+              b.classList.add('hidden');
+            }
+          }
+        });
+      })
+      .catch(() => {});
+    setTimeout(pollNotifs, 15000);
+  })();
   </script>
   {% endif %}
 
@@ -493,7 +1045,209 @@
 
 
 
+  <!-- ===== Image Lightbox Gallery ===== -->
+  <div id="imageLightbox" class="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-sm flex items-center justify-center hidden" onclick="if(event.target===this)closeImageLightbox()">
+    <!-- Top bar -->
+    <div class="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 sm:px-6 py-3 bg-gradient-to-b from-black/50 to-transparent pointer-events-none">
+      <div class="pointer-events-auto flex items-center gap-3">
+        <div id="lightboxCounter" class="text-white/90 text-sm font-medium px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">1 / 1</div>
+      </div>
+      <div class="pointer-events-auto flex items-center gap-2">
+        <button onclick="downloadCurrentImage()" class="lightbox-btn w-10 h-10 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg" title="Download" aria-label="Download image">
+          <i class="fas fa-download"></i>
+        </button>
+        <button onclick="closeImageLightbox()" class="lightbox-btn w-10 h-10 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg" title="Close" aria-label="Close gallery">
+          <i class="fas fa-times text-lg"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Navigation -->
+    <button onclick="navigateLightbox(-1)" id="lightboxPrevBtn" class="lightbox-btn absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg" title="Previous" aria-label="Previous image">
+      <i class="fas fa-chevron-left text-xl sm:text-2xl"></i>
+    </button>
+    <button onclick="navigateLightbox(1)" id="lightboxNextBtn" class="lightbox-btn absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg" title="Next" aria-label="Next image">
+      <i class="fas fa-chevron-right text-xl sm:text-2xl"></i>
+    </button>
+    <!-- Image area -->
+    <div class="w-full h-full flex items-center justify-center p-4 sm:p-8 md:p-16">
+      <div class="relative flex items-center justify-center" onclick="event.stopPropagation()">
+        <img id="lightboxImage" src="" alt="Enlarged image" class="max-w-full max-h-[85vh] object-contain select-none rounded-lg shadow-2xl loading cursor-zoom-in" onclick="toggleLightboxZoom()">
+        <div id="lightboxSpinner" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+          <div class="w-10 h-10 border-[3px] border-indigo-400 border-t-transparent rounded-full" style="animation: lbSpin 0.7s linear infinite;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  var lightboxImages = [];
+  var lightboxIndex = 0;
+  var lightboxZoomed = false;
+
+  function openImageGallery(postId, index) {
+    var postEl = document.getElementById('post-' + postId);
+    if (!postEl) return;
+    var images;
+    try { images = JSON.parse(postEl.dataset.images || '[]'); } catch(e) { images = []; }
+    if (!images || images.length === 0) return;
+
+    lightboxImages = images;
+    lightboxIndex = Math.min(index, images.length - 1);
+    lightboxZoomed = false;
+
+    var overlay = document.getElementById('imageLightbox');
+    var img = document.getElementById('lightboxImage');
+    var spinner = document.getElementById('lightboxSpinner');
+
+    img.classList.remove('loaded');
+    img.classList.add('loading');
+    spinner.classList.remove('hidden');
+    img.style.transform = 'scale(1)';
+    img.className = img.className.replace('lb-zoomed', '') + ' cursor-zoom-in';
+
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    img.src = images[lightboxIndex];
+    img.onload = function() {
+      spinner.classList.add('hidden');
+      img.classList.remove('loading');
+      img.classList.add('loaded');
+    };
+    img.onerror = function() {
+      spinner.classList.add('hidden');
+      img.classList.remove('loading');
+      img.classList.add('loaded');
+    };
+
+    updateLightboxUI();
+  }
+
+  function updateLightboxUI() {
+    document.getElementById('lightboxCounter').textContent = (lightboxIndex + 1) + ' / ' + lightboxImages.length;
+    var single = lightboxImages.length <= 1;
+    document.getElementById('lightboxPrevBtn').style.display = single ? 'none' : 'flex';
+    document.getElementById('lightboxNextBtn').style.display = single ? 'none' : 'flex';
+  }
+
+  function navigateLightbox(dir) {
+    lightboxIndex = (lightboxIndex + dir + lightboxImages.length) % lightboxImages.length;
+    lightboxZoomed = false;
+
+    var img = document.getElementById('lightboxImage');
+    var spinner = document.getElementById('lightboxSpinner');
+
+    img.classList.remove('loaded');
+    img.classList.add('loading');
+    spinner.classList.remove('hidden');
+    img.style.transform = 'scale(1)';
+    img.className = img.className.replace('lb-zoomed', '') + ' cursor-zoom-in';
+
+    img.src = lightboxImages[lightboxIndex];
+    img.onload = function() {
+      spinner.classList.add('hidden');
+      img.classList.remove('loading');
+      img.classList.add('loaded');
+    };
+    img.onerror = function() {
+      spinner.classList.add('hidden');
+      img.classList.remove('loading');
+      img.classList.add('loaded');
+    };
+
+    updateLightboxUI();
+  }
+
+  function closeImageLightbox() {
+    var overlay = document.getElementById('imageLightbox');
+    overlay.classList.add('hidden');
+    document.body.style.overflow = '';
+    lightboxImages = [];
+    lightboxZoomed = false;
+  }
+
+  function downloadCurrentImage() {
+    if (!lightboxImages || !lightboxImages[lightboxIndex]) return;
+    var link = document.createElement('a');
+    link.href = lightboxImages[lightboxIndex];
+    link.download = lightboxImages[lightboxIndex].split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function toggleLightboxZoom() {
+    var img = document.getElementById('lightboxImage');
+    lightboxZoomed = !lightboxZoomed;
+    img.style.transform = lightboxZoomed ? 'scale(2.2)' : 'scale(1)';
+    img.className = lightboxZoomed ? 'max-w-full max-h-[85vh] object-contain select-none rounded-lg shadow-2xl loaded lb-zoomed' : 'max-w-full max-h-[85vh] object-contain select-none rounded-lg shadow-2xl loaded cursor-zoom-in';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    var overlay = document.getElementById('imageLightbox');
+    if (overlay.classList.contains('hidden')) return;
+    if (e.key === 'Escape') { closeImageLightbox(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { navigateLightbox(-1); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { navigateLightbox(1); e.preventDefault(); }
+  });
+  </script>
+
   {% block scripts %}{% endblock %}
+
+<script src="{{ url_for('static', filename='js/router.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+
+<!-- Offline indicator -->
+<div id="offline-indicator" class="fixed bottom-6 left-6 z-[9999] hidden">
+  <div class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold shadow-lg shadow-red-500/30 animate-bounce">
+    <i class="fas fa-wifi-slash"></i>
+    <span>You are offline</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  var indicator = document.getElementById('offline-indicator');
+  function updateOnlineStatus() {
+    if (navigator.onLine) {
+      indicator.classList.add('hidden');
+    } else {
+      indicator.classList.remove('hidden');
+    }
+  }
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+})();
+
+document.addEventListener('click', function(e) {
+  var link = e.target.closest('a[href]');
+  if (link && link.pathname === window.location.pathname && link.hostname === window.location.hostname && link.hash === '') {
+    e.preventDefault();
+  }
+});
+
+function confirmLogout(event) {
+  event.preventDefault();
+  Swal.fire({
+    title: 'Sign Out?',
+    text: 'Are you sure you want to log out of your account?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: '<i class="fas fa-sign-out-alt mr-1"></i> Yes, Logout',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff',
+    color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b',
+  }).then(function(result) {
+    if (result.isConfirmed) {
+      window.location.href = '{{ url_for("auth.logout") }}';
+    }
+  });
+}
+</script>
 
 <!-- Footer -->
 <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-10">
@@ -506,3 +1260,4 @@
 
 </body>
 </html>
+{% endif %}

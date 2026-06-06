@@ -19,12 +19,15 @@ class AhmedCalculator {
     this._sidePanel = null;
     this._debounceTimer = null;
     this._evalTimer = null;
+    this._aiKeyConfigured = false;
+    this._aiStatusEl = null;
   }
 
   init() {
     var self = this;
     this.container.innerHTML = '';
-    this.container.className = 'ahmed-calc';
+    var isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+    this.container.className = 'ahmed-calc ' + (isDark ? 'dark-mode' : 'light-mode');
 
     if (!this._mathLiveReady()) {
       this.container.innerHTML = '<div class="ck-loading">Loading calculator...</div>';
@@ -71,12 +74,14 @@ class AhmedCalculator {
       '<button class="ck-side-tab" data-tab="graph"><i class="fas fa-chart-line"></i> Graph</button>',
       '<button class="ck-side-tab" data-tab="table"><i class="fas fa-table"></i> Table</button>',
       '<button class="ck-side-tab" data-tab="algebra"><i class="fas fa-superscript"></i> Algebra</button>',
+      '<button class="ck-side-tab" data-tab="ai"><i class="fas fa-robot"></i> AI</button>',
       '</div>',
       '<div class="ck-side-content">',
       '<div class="ck-side-panel active" id="ck-panel-history"><div class="ck-history-list"><div class="ck-empty-state">No calculations yet</div></div></div>',
       '<div class="ck-side-panel" id="ck-panel-graph"><div class="ck-graph-area"></div></div>',
       '<div class="ck-side-panel" id="ck-panel-table"><div class="ck-table-area"></div></div>',
       '<div class="ck-side-panel" id="ck-panel-algebra"><div class="ck-algebra-area"></div></div>',
+      '<div class="ck-side-panel" id="ck-panel-ai"><div class="ck-ai-panel"><div class="ck-ai-intro">AI Solver ready. Enter an expression, equation or function and press AI Steps for a CASIO/GeoGebra-style walkthrough.</div><div class="ck-ai-output">No AI query yet.</div></div></div>',
       '</div>',
       '</div>',
       '</div>'
@@ -102,6 +107,8 @@ class AhmedCalculator {
     this._bindSideTabs();
     this._bindHistoryClicks();
     this._bindAlgebraUI();
+    this._bindAiButtons();
+    this._checkAiStatus();
 
     var self = this;
     this.state.on('history:changed', function() { self._renderHistory(); });
@@ -127,6 +134,21 @@ class AhmedCalculator {
     this._resultEl.className = 'ck-result';
     this._resultEl.innerHTML = '<span class="ck-result-placeholder">Press EXE or = to evaluate</span>';
     container.appendChild(this._resultEl);
+
+    this._aiToolbar = document.createElement('div');
+    this._aiToolbar.className = 'ck-ai-actions';
+    this._aiToolbar.innerHTML = '<button class="ck-btn ck-ai-action-btn" data-ai="steps"><i class="fas fa-robot"></i> AI Steps</button><button class="ck-btn ck-ai-action-btn" data-ai="graph"><i class="fas fa-chart-line"></i> GeoGebra Graph</button>';
+    container.appendChild(this._aiToolbar);
+
+    this._aiStatusEl = document.createElement('div');
+    this._aiStatusEl.className = 'ck-ai-status';
+    this._aiStatusEl.innerHTML = '<span class="ck-ai-status-badge">AI status:</span> Checking API key...';
+    container.appendChild(this._aiStatusEl);
+
+    this._aiOutputEl = document.createElement('div');
+    this._aiOutputEl.className = 'ck-ai-panel';
+    this._aiOutputEl.innerHTML = '<div class="ck-ai-output">Advanced CASIO + GeoGebra AI solver ready. Enter expression and press AI Steps. Ensure <code>GEMINI_API_KEY</code> is set in your .env.</div>';
+    container.appendChild(this._aiOutputEl);
   }
 
   _onFieldInput() {
@@ -540,6 +562,79 @@ class AhmedCalculator {
       html = '<div class="ck-alg-answer">' + escapeHtml(result.text || result) + '</div>';
     }
     el.innerHTML = html;
+  }
+
+  _bindAiButtons() {
+    var self = this;
+    this.container.querySelectorAll('.ck-ai-action-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { self._performAiAction(btn.dataset.ai); });
+    });
+  }
+
+  _checkAiStatus() {
+    var self = this;
+    fetch('/tools/api/math/ai-status').then(function(res) { return res.json(); }).then(function(data) {
+      self._aiKeyConfigured = data.configured === true;
+      self._showAiStatus(data.configured === true, data.message || 'AI status unknown');
+    }).catch(function() {
+      self._aiKeyConfigured = false;
+      self._showAiStatus(false, 'Unable to reach AI status endpoint.');
+    });
+  }
+
+  _showAiStatus(ready, message) {
+    if (!this._aiStatusEl) return;
+    this._aiStatusEl.innerHTML = '<span class="ck-ai-status-badge">AI status:</span> ' + message;
+    this._aiStatusEl.classList.toggle('ck-ai-status-ok', ready);
+    this._aiStatusEl.classList.toggle('ck-ai-status-warning', !ready);
+  }
+
+  _performAiAction(action) {
+    if (action === 'steps' && !this._aiKeyConfigured) {
+      this._showAiOutput('AI key not configured. Please add GEMINI_API_KEY to your .env and restart the app.');
+      return;
+    }
+
+    var mf = this._mathField;
+    var expr = mf ? mf.value.trim() : '';
+    if (!expr) {
+      this._showAiOutput('Enter an expression or equation first.');
+      return;
+    }
+    if (action === 'graph') {
+      var graphExpr = expr.replace(/^\s*(?:y|f\(x\))\s*=\s*/i, '');
+      this._openGraphTab();
+      this.graphMode.addFunction(graphExpr);
+      this.graphMode.render();
+      this._showAiOutput('Graph added to GeoGebra-style plot for: ' + graphExpr);
+      return;
+    }
+    this._showAiLoading();
+    var self = this;
+    fetch('/tools/api/math/ai-solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'expression=' + encodeURIComponent(expr)
+    }).then(function(res) { return res.json(); }).then(function(data) {
+      if (data.success) {
+        self._showAiOutput(data.solution || 'AI returned no solution.');
+      } else {
+        self._showAiOutput('AI error: ' + (data.error || 'Unknown error'));
+      }
+    }).catch(function(err) {
+      console.error(err);
+      self._showAiOutput('AI request failed. Check your API configuration or network.');
+    });
+  }
+
+  _showAiLoading() {
+    if (!this._aiOutputEl) return;
+    this._aiOutputEl.innerHTML = '<div class="ck-ai-output"><i class="fas fa-spinner fa-spin"></i> Asking AI for step-by-step solution...</div>';
+  }
+
+  _showAiOutput(text) {
+    if (!this._aiOutputEl) return;
+    this._aiOutputEl.innerHTML = '<div class="ck-ai-output">' + escapeHtml(text).replace(/\n/g, '<br>') + '</div>';
   }
 
   _openGraphTab() {

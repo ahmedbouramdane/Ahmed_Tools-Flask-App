@@ -1,0 +1,1727 @@
+{% extends "base.html" %}
+{% block title %}Posts Feed - Ahmed BOURAMDANE · Organiser{% endblock %}
+
+{% macro render_post(post) %}
+{% set post_images = post.images if post.images else [] %}
+{% set post_image_urls = post_images | map(attribute='image_url') | list %}
+{% if not post_image_urls and post.image_url %}
+  {% set post_image_urls = [post.image_url] %}
+{% endif %}
+{% set has_multi = post_images|length > 1 %}
+{% set single_img = post_images[0].image_url if post_images else post.image_url %}
+{% set react_counts = post.reaction_counts %}
+{% set user_reaction = post.user_reaction(current_user.id) %}
+{% set total_reacts = post.total_reactions %}
+{% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
+<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.id }}" data-images='{{ post_image_urls | tojson | safe }}' data-user-reaction="{{ user_reaction or '' }}">
+  <div class="p-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      {% if post.author.avatar_url %}
+        <img src="{{ post.author.avatar_url }}" alt="{{ post.author.username }}" class="w-10 h-10 rounded-full object-cover">
+      {% else %}
+        <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
+          {{ post.author.username[0] | upper }}
+        </div>
+      {% endif %}
+      <div>
+        <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+          {{ post.author.username }}
+        </a>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          <a href="{{ url_for('posts.view_post', post_id=post.id) }}" class="hover:underline">{{ post.created_at.strftime('%B %d, %Y at %H:%M') }}</a>
+          {% if post.updated_at and post.updated_at != post.created_at %}
+            <span class="italic">(edited)</span>
+          {% endif %}
+          {% if post.visibility == 'public' %}<i class="fas fa-globe ml-1" title="Public"></i>
+          {% elif post.visibility == 'friends' %}<i class="fas fa-user-friends ml-1" title="Friends"></i>
+          {% else %}<i class="fas fa-lock ml-1" title="Private"></i>{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="relative">
+      <button onclick="togglePostMenu({{ post.id }})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
+        <i class="fas fa-ellipsis-v"></i>
+      </button>
+      <div id="post-menu-{{ post.id }}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
+        {% if post.user_id == current_user.id %}
+          <button onclick="openEditPostModal({{ post.id }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+        {% endif %}
+        <button onclick="copyPostLink({{ post.id }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+          <i class="fas fa-link"></i> Copy link
+        </button>
+        {% if post.user_id == current_user.id %}
+          <hr class="border-gray-200 dark:border-gray-700 my-1">
+          <button onclick="deletePost({{ post.id }})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 pb-3">
+    <div id="post-content-{{ post.id }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content }}</div>
+  </div>
+
+  {% if post_images or post.image_url %}
+  <div class="w-full post-images-container" data-post-id="{{ post.id }}">
+    {% if has_multi %}
+    <div class="splide" id="splide-{{ post.id }}">
+      <div class="splide__track">
+        <ul class="splide__list">
+          {% for img in post_images %}
+          <li class="splide__slide">
+            <img src="{{ img.image_url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, {{ loop.index0 }})" loading="lazy">
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% else %}
+    <img src="{{ single_img }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, 0)" loading="lazy">
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+    <div class="flex items-center gap-3">
+      <span id="stats-like-{{ post.id }}" class="font-medium text-gray-700 dark:text-gray-300 flex items-center">
+        {% if total_reacts > 0 %}
+          <span class="flex -space-x-1 mr-1.5 items-center">
+            {% set count = namespace(value=0) %}
+            {% for r, c in react_counts.items() %}
+              {% if c > 0 and count.value < 3 %}
+                <span class="text-sm leading-none z-[{{ 10 - count.value }}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-850 p-0.5 shadow-sm" title="{{ r | capitalize }}">{{ emoji_map.get(r, '👍') }}</span>
+                {% set count.value = count.value + 1 %}
+              {% endif %}
+            {% endfor %}
+          </span>
+          {{ total_reacts }}
+        {% else %}
+          <span class="mr-1">👍</span> 0
+        {% endif %}
+      </span>
+      <span id="stats-comment-{{ post.id }}"><i class="fas fa-comment mr-1"></i> {{ post.comments | length }}</span>
+    </div>
+  </div>
+  <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="{{ post.id }}">
+    {% for r, c in react_counts.items() %}
+      {% if c > 0 %}
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="{{ post.id }}-{{ r }}">
+        {{ emoji_map.get(r, r) }} {{ c }}
+      </span>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+    {% set btn_color = 'text-gray-600 dark:text-gray-400 font-medium' %}
+    {% if user_reaction == 'like' %}
+      {% set btn_color = 'text-blue-500 font-semibold' %}
+    {% elif user_reaction == 'love' %}
+      {% set btn_color = 'text-red-500 font-semibold' %}
+    {% elif user_reaction in ['haha', 'wow', 'sad'] %}
+      {% set btn_color = 'text-yellow-500 font-semibold' %}
+    {% elif user_reaction == 'angry' %}
+      {% set btn_color = 'text-orange-500 font-semibold' %}
+    {% endif %}
+    <div class="flex items-center justify-between">
+      <div class="relative like-btn-wrap" onmouseenter="showReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
+        <div id="reactions-picker-{{ post.id }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
+          <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost({{ post.id }}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+          <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost({{ post.id }}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+          <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost({{ post.id }}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+          <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost({{ post.id }}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+          <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost({{ post.id }}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+          <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost({{ post.id }}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+        </div>
+        <button onclick="reactToPost({{ post.id }}, 'main', event)" id="like-btn-{{ post.id }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
+          {% if user_reaction %}<span class="text-lg leading-none" id="like-icon-{{ post.id }}">{{ emoji_map.get(user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="like-icon-{{ post.id }}"></i>{% endif %}
+          <span id="like-count-{{ post.id }}">{{ total_reacts }}</span>
+        </button>
+      </div>
+      <button onclick="toggleComments({{ post.id }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+        <i class="far fa-comment"></i><span id="comment-btn-count-{{ post.id }}">{{ post.comments | length }}</span>
+      </button>
+      <button onclick="sharePost({{ post.id }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+        <i class="far fa-share-square"></i><span>Share</span>
+      </button>
+    </div>
+  </div>
+
+  {% set top_comments = post.comments | selectattr('parent_id', 'none') | list %}
+  <div id="comment-section-{{ post.id }}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+    <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-{{ post.id }}">
+      {% for comment in top_comments %}
+      <div class="comment-thread" data-comment-id="{{ comment.id }}">
+        <div class="flex gap-2" id="comment-{{ comment.id }}">
+          <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">{{ comment.author.username[0] | upper }}</div>
+          <div class="flex-1 min-w-0">
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ comment.author.username }}</span>
+                <div class="flex items-center gap-1">
+                  {% if comment.user_id == current_user.id %}
+                  <button onclick="editComment({{ comment.id }}, {{ post.id }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs" title="Edit"><i class="fas fa-pen"></i></button>
+                  {% endif %}
+                  {% if comment.user_id == current_user.id or post.user_id == current_user.id %}
+                  <button onclick="deleteComment({{ comment.id }}, {{ post.id }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs" title="Delete"><i class="fas fa-times"></i></button>
+                  {% endif %}
+                </div>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-{{ comment.id }}">{{ comment.content }}</p>
+            </div>
+            <div class="flex items-center gap-3 mt-0.5 ml-1">
+              <span class="text-xs text-gray-400 dark:text-gray-500">{{ comment.created_at.strftime('%H:%M') }}</span>
+              <button onclick="openReply({{ comment.id }}, {{ post.id }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+            </div>
+            <div class="ml-5 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3 comment-replies-container">
+              {% for reply in comment.replies %}
+              <div class="flex gap-2" id="comment-{{ reply.id }}">
+                <div class="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{{ reply.author.username[0] | upper }}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ reply.author.username }}</span>
+                      <div class="flex items-center gap-1">
+                        {% if reply.user_id == current_user.id %}
+                        <button onclick="editComment({{ reply.id }}, {{ post.id }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>
+                        {% endif %}
+                        {% if reply.user_id == current_user.id or post.user_id == current_user.id %}
+                        <button onclick="deleteComment({{ reply.id }}, {{ post.id }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-{{ reply.id }}">{{ reply.content }}</p>
+                  </div>
+                  <div class="flex items-center gap-3 mt-0.5 ml-1">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">{{ reply.created_at.strftime('%H:%M') }}</span>
+                    <button onclick="openReply({{ reply.id }}, {{ post.id }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div id="reply-form-{{ comment.id }}" class="hidden mt-2 ml-5">
+              <form onsubmit="addReply(event, {{ post.id }}, {{ comment.id }})" class="flex gap-2">
+                <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium transition"><i class="fas fa-paper-plane"></i></button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-{{ post.id }}">No comments yet.</p>
+      {% endfor %}
+    </div>
+    <form onsubmit="addComment(event, {{ post.id }})" class="flex gap-2">
+      <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
+    </form>
+  </div>
+</article>
+{% endmacro %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css">
+<style>
+/* Reactions picker */
+.reactions-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 6px 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 100;
+  margin-bottom: 10px;
+  opacity: 0;
+  transform: translateY(12px) scale(0.85);
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dark .reactions-picker {
+  background: rgba(31, 41, 55, 0.95);
+  border-color: rgba(75, 85, 99, 0.4);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+.reactions-picker.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.reactions-picker .reaction-btn {
+  font-size: 26px;
+  padding: 4px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: none;
+  background: none;
+  line-height: 1;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.reactions-picker .reaction-btn:hover {
+  transform: scale(1.45) translateY(-4px);
+}
+.reactions-picker .reaction-btn .reaction-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+.reactions-picker .reaction-btn:hover .reaction-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-8px);
+}
+.reaction-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.reaction-bar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+/* Like button animation */
+@keyframes likePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.like-animate {
+  animation: likePop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+</style>
+<div class="max-w-4xl mx-auto px-4 py-6">
+  <!-- Create Post Trigger Card -->
+  <div id="create-post-trigger" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6 cursor-pointer hover:shadow-md transition" onclick="openCreatePost()">
+    <div class="flex items-center gap-3">
+      {% if current_user.avatar_url %}
+      <img src="{{ current_user.avatar_url }}" class="w-12 h-12 rounded-full object-cover">
+      {% else %}
+      <div class="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">{{ current_user.username[0] | upper }}</div>
+      {% endif %}
+      <div class="flex-1 px-4 py-3 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-left text-sm">
+        What's on your mind, {{ current_user.username }}?
+      </div>
+      <button class="text-green-500 hover:text-green-600 p-2"><i class="fas fa-image text-xl"></i></button>
+    </div>
+  </div>
+
+  <!-- Create Post Form (hidden by default) -->
+  <div id="create-post-card" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        {% if current_user.avatar_url %}
+        <img src="{{ current_user.avatar_url }}" class="w-10 h-10 rounded-full object-cover">
+        {% else %}
+        <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">{{ current_user.username[0] | upper }}</div>
+        {% endif %}
+        <span class="font-semibold text-gray-800 dark:text-white">{{ current_user.username }}</span>
+      </div>
+      <button type="button" onclick="closeCreatePost()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <form onsubmit="createPost(event)" id="create-post-form">
+      <textarea name="content" id="post-content" rows="3" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="What's on your mind, {{ current_user.username }}?" style="min-height:100px" oninput="document.getElementById('post-content-error')?.classList.add('hidden');this.classList.remove('border-red-500')"></textarea>
+      <p id="post-content-error" class="hidden text-red-500 text-sm mt-1"><i class="fas fa-exclamation-circle mr-1"></i>Please write something to post</p>
+      
+      <div id="image-preview-grid" class="mt-3 grid grid-cols-3 gap-2"></div>
+
+      <div class="flex items-center justify-between mt-4 flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="document.getElementById('post-images-input').click()" class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm transition">
+            <i class="fas fa-image text-green-500"></i> Add Photos
+          </button>
+          <input type="file" id="post-images-input" accept="image/*" multiple class="hidden" onchange="handleImageSelect(this)">
+          <select id="post-visibility" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+            <option value="public">🌍 Public</option>
+            <option value="friends">👥 Friends</option>
+            <option value="private">🔒 Private</option>
+          </select>
+        </div>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold transition flex items-center gap-2">
+          <i class="fas fa-paper-plane"></i> Post
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Feed Header -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800 dark:text-white"><i class="fas fa-newspaper text-indigo-600 mr-2"></i> News Feed</h2>
+    <a href="{{ url_for('posts.explore') }}" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 text-sm font-medium">Explore <i class="fas fa-compass ml-1"></i></a>
+  </div>
+
+  <!-- Posts Container -->
+  <div class="space-y-6" id="posts-container">
+    {% if posts.items %}
+      {% for post in posts.items %}{{ render_post(post) }}{% endfor %}
+    {% else %}
+      <div class="text-center py-12"><i class="fas fa-newspaper text-5xl text-gray-300 dark:text-gray-600 mb-4"></i><p class="text-gray-500 dark:text-gray-400 text-lg">No posts yet. Be the first to share something!</p></div>
+    {% endif %}
+  </div>
+
+  <div id="load-more-container" class="flex justify-center mt-8 mb-8">
+    {% if posts.has_next %}
+    <button id="load-more-btn" onclick="loadMorePosts()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2 shadow-sm">
+      <i class="fas fa-spinner hidden" id="load-more-spinner"></i>
+      <span id="load-more-text">Load More</span>
+    </button>
+    {% else %}
+    <p class="text-gray-400 dark:text-gray-500 text-sm">You've reached the end of the feed</p>
+    {% endif %}
+  </div>
+  <input type="hidden" id="current-page" value="{{ posts.page }}">
+  <input type="hidden" id="has-next" value="{{ 'true' if posts.has_next else 'false' }}">
+</div>
+
+<!-- Edit Post Modal -->
+<div id="edit-post-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-xl font-bold text-gray-800 dark:text-white"><i class="fas fa-edit text-indigo-600 mr-2"></i> Edit Post</h3>
+      <button onclick="closeEditPostModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <form id="edit-post-form" onsubmit="saveEditedPost(event)">
+      <input type="hidden" id="edit-post-id">
+      <div class="p-6">
+        <textarea id="edit-post-content" rows="6" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+        <div id="edit-images-grid" class="mt-4 grid grid-cols-3 gap-3"></div>
+        <div class="mt-4 flex items-center gap-4">
+          <button type="button" onclick="document.getElementById('edit-images-input').click()" class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm transition">
+            <i class="fas fa-image text-green-500"></i> Add Images
+          </button>
+          <input type="file" id="edit-images-input" accept="image/*" multiple class="hidden" onchange="handleEditImageSelect(this)">
+          <select id="edit-post-visibility" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+            <option value="public">🌍 Public</option>
+            <option value="friends">👥 Friends</option>
+            <option value="private">🔒 Private</option>
+          </select>
+        </div>
+      </div>
+      <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button type="button" onclick="closeEditPostModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+<script>
+var socket = io('/posts', {
+  auth: { user_id: {{ current_user.id | tojson }} },
+  transports: ['websocket', 'polling'],
+  withCredentials: true,
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 5
+});
+
+var socketConnected = false;
+var pendingImages = [];
+
+socket.on('connect', () => {
+  socketConnected = true;
+  document.querySelectorAll('[id^="post-"]').forEach(el => {
+    const postId = el.id.replace('post-', '');
+    if (!isNaN(postId)) socket.emit('join_post', { post_id: parseInt(postId) });
+  });
+});
+
+socket.on('connect_error', (error) => console.error('Socket connection error:', error.message));
+socket.on('disconnect', () => { socketConnected = false; });
+
+// ===== Real-time Event Listeners =====
+
+socket.on('new_post', (data) => {
+  const existing = document.getElementById(`post-${data.post_id}`);
+  if (existing) return;
+  const html = renderPostHTML(data);
+  const container = document.getElementById('posts-container');
+  const emptyEl = container.querySelector('.text-center.py-12');
+  if (emptyEl) emptyEl.remove();
+  container.insertAdjacentHTML('afterbegin', html);
+  initSplideForPost(data.post_id);
+  const currentUser = {{ current_user.id }};
+  if (data.author && data.author.id !== currentUser) {
+    Swal.fire({ toast: true, position: 'top-start', icon: 'success', title: `${data.author.username} posted something new!`, showConfirmButton: false, timer: 3000 });
+  }
+});
+
+socket.on('post_liked', (data) => {
+  const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+  const currentUserId = {{ current_user.id }};
+  const statEl = document.getElementById(`stats-like-${data.post_id}`);
+  if (statEl) statEl.innerHTML = `<span class="mr-1">👍</span> ${data.like_count}`;
+  if (data.user && data.user.id === currentUserId) {
+    const likeBtn = document.getElementById(`like-btn-${data.post_id}`);
+    if (likeBtn) {
+      const countSpan = document.getElementById(`like-count-${data.post_id}`);
+      if (countSpan) countSpan.textContent = data.like_count;
+      const icon = document.getElementById(`like-icon-${data.post_id}`);
+      if (icon) {
+        if (data.liked) {
+          icon.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + data.post_id + '">👍</span>';
+          likeBtn.classList.add('text-red-500');
+          likeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+        } else {
+          icon.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + data.post_id + '"></i>';
+          likeBtn.classList.remove('text-red-500');
+          likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
+        }
+        const newIcon = document.getElementById(`like-icon-${data.post_id}`);
+        if (newIcon) newIcon.classList.add('like-animate');
+      }
+    }
+    const postEl = document.getElementById(`post-${data.post_id}`);
+    if (postEl) postEl.dataset.userReaction = data.liked ? 'like' : '';
+  }
+  if (data.counts) {
+    const reactBar = document.querySelector(`[data-reaction-bar="${data.post_id}"]`);
+    if (reactBar) {
+      reactBar.innerHTML = Object.entries(data.counts).map(([r, c]) => {
+        if (c === 0) return '';
+        return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="' + data.post_id + '-' + r + '">' +
+          (emojiMap[r] || r) + ' ' + c + '</span>';
+      }).filter(Boolean).join(' ');
+    }
+  }
+});
+
+socket.on('new_comment', (data) => {
+  const list = document.getElementById(`comments-list-${data.post_id}`);
+  if (!list) return;
+  if (document.getElementById(`comment-${data.comment_id}`)) return;
+  const currentUserId = {{ current_user.id }};
+  const authorName = data.author ? data.author.username : '{{ current_user.username }}';
+  const initial = authorName.charAt(0).toUpperCase();
+  const isOwn = data.author && data.author.id === currentUserId;
+  const editBtn = isOwn ? `<button onclick="editComment(${data.comment_id}, ${data.post_id})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>` : '';
+  const deleteBtn = isOwn ? `<button onclick="deleteComment(${data.comment_id}, ${data.post_id})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>` : '';
+
+  const commentHtml = `
+    <div class="flex gap-2" id="comment-${data.comment_id}">
+      <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+      <div class="flex-1 min-w-0">
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(authorName)}</span>
+            <div class="flex items-center gap-1">${editBtn}${deleteBtn}</div>
+          </div>
+          <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-${data.comment_id}">${escapeHtml(data.content)}</p>
+        </div>
+        <div class="flex items-center gap-3 mt-0.5 ml-1">
+          <span class="text-xs text-gray-400 dark:text-gray-500">${data.created_at || 'just now'}</span>
+          <button onclick="openReply(${data.comment_id}, ${data.post_id})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+        </div>
+        <div id="reply-form-${data.comment_id}" class="hidden mt-2 ml-5">
+          <form onsubmit="addReply(event, ${data.post_id}, ${data.comment_id})" class="flex gap-2">
+            <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium transition"><i class="fas fa-paper-plane"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>`;
+
+  if (data.parent_id) {
+    // It's a reply - find the parent thread and insert
+    const parentThread = document.querySelector(`.comment-thread[data-comment-id="${data.parent_id}"]`);
+    if (parentThread) {
+      const replyContainer = parentThread.querySelector('.comment-replies-container');
+      const replyForm = parentThread.querySelector(`#reply-form-${data.parent_id}`);
+      if (replyContainer) {
+        replyContainer.insertAdjacentHTML('beforeend', commentHtml);
+        replyContainer.scrollTop = replyContainer.scrollHeight;
+      }
+      if (replyForm) replyForm.classList.add('hidden');
+    }
+  } else {
+    // It's a top-level comment
+    const noComments = document.getElementById(`no-comments-${data.post_id}`);
+    if (noComments) noComments.remove();
+    const wrapper = document.createElement('div');
+    wrapper.className = 'comment-thread';
+    wrapper.dataset.commentId = data.comment_id;
+    wrapper.innerHTML = commentHtml + `<div class="ml-5 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3 comment-replies-container"></div>`;
+    list.appendChild(wrapper);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  const statC = document.getElementById(`stats-comment-${data.post_id}`);
+  if (statC) {
+    const m = statC.innerText.match(/\d+/);
+    if (m) statC.innerHTML = `<i class="fas fa-comment mr-1"></i> ${parseInt(m[0]) + 1}`;
+  }
+  const btnC = document.getElementById(`comment-btn-count-${data.post_id}`);
+  if (btnC) btnC.textContent = parseInt(btnC.textContent || '0') + 1;
+});
+
+socket.on('post_deleted', (data) => {
+  const el = document.getElementById(`post-${data.post_id}`);
+  if (el) { el.remove(); Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Post deleted', showConfirmButton: false, timer: 2000 }); }
+});
+
+socket.on('post_edited', (data) => {
+  const el = document.getElementById(`post-content-${data.post_id}`);
+  if (el) el.innerText = data.content;
+  // Update images if provided
+  if (data.image_urls) {
+    const imgContainer = document.querySelector(`#post-${data.post_id} .post-images-container`);
+    if (imgContainer) {
+      if (data.image_urls.length > 0) {
+        const html = renderImagesHTML(data.post_id, data.image_urls);
+        imgContainer.outerHTML = html;
+        initSplideForPost(data.post_id);
+      } else {
+        imgContainer.remove();
+      }
+    } else if (data.image_urls.length > 0) {
+      // No existing images container, add one after content
+      const contentEl = document.getElementById(`post-content-${data.post_id}`);
+      if (contentEl) {
+        const wrapper = contentEl.closest('.px-4');
+        if (wrapper) {
+          wrapper.insertAdjacentHTML('afterend', renderImagesHTML(data.post_id, data.image_urls));
+          initSplideForPost(data.post_id);
+        }
+      }
+    }
+  }
+});
+
+socket.on('comment_deleted', (data) => {
+  const el = document.getElementById(`comment-${data.comment_id}`);
+  if (el) {
+    const isReply = el.closest('.comment-replies-container');
+    if (isReply) {
+      el.remove();
+    } else {
+      const thread = el.closest('.comment-thread');
+      if (thread) thread.remove();
+      else el.remove();
+    }
+    // Show "no comments" if list is empty
+    const list = document.getElementById(`comments-list-${data.post_id}`);
+    if (list && !list.querySelector('.comment-thread')) {
+      list.innerHTML = '<p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-' + data.post_id + '">No comments yet.</p>';
+    }
+  }
+});
+
+socket.on('post_reacted', (data) => {
+  const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+  const statEl = document.getElementById(`stats-like-${data.post_id}`);
+  const currentUserId = {{ current_user.id }};
+  const likeBtn = document.getElementById(`like-btn-${data.post_id}`);
+  const countSpan = document.getElementById(`like-count-${data.post_id}`);
+  const postEl = document.getElementById(`post-${data.post_id}`);
+  
+  const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : 0;
+  if (countSpan) countSpan.textContent = total;
+  
+  if (statEl) {
+    if (data.counts && total > 0) {
+      const sortedReacts = Object.entries(data.counts)
+        .filter(([_, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1]);
+      if (sortedReacts.length > 0) {
+        const emojisHtml = sortedReacts.slice(0, 3).map(([r, _], idx) => {
+          const zIndex = 10 - idx;
+          return `<span class="text-sm leading-none z-[${zIndex}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-800 p-0.5 shadow-sm">${emojiMap[r] || '👍'}</span>`;
+        }).join('');
+        statEl.innerHTML = `<span class="flex -space-x-1 mr-1.5 items-center">${emojisHtml}</span> ${total}`;
+      } else {
+        statEl.innerHTML = '<span class="mr-1">👍</span> 0';
+      }
+    } else {
+      statEl.innerHTML = '<span class="mr-1">👍</span> 0';
+    }
+  }
+  
+  if (data.user && data.user.id === currentUserId) {
+    if (postEl) postEl.dataset.userReaction = data.reaction || '';
+    if (likeBtn) {
+      const icon = likeBtn.querySelector('i, span');
+      if (icon) {
+        if (data.reaction) {
+          icon.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + data.post_id + '">' + (emojiMap[data.reaction] || '👍') + '</span>';
+          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+          if (data.reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
+          else if (data.reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
+          else likeBtn.classList.add('text-yellow-500', 'font-semibold');
+        } else {
+          icon.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + data.post_id + '"></i>';
+          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'font-semibold');
+          likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
+        }
+        const newIcon = document.getElementById(`like-icon-${data.post_id}`);
+        if (newIcon) newIcon.classList.add('like-animate');
+      }
+    }
+  }
+  const reactBar = document.querySelector(`[data-reaction-bar="${data.post_id}"]`);
+  if (reactBar && data.counts) {
+    reactBar.innerHTML = Object.entries(data.counts).map(([r, c]) => {
+      if (c === 0) return '';
+      return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="' + data.post_id + '-' + r + '">' +
+        (emojiMap[r] || r) + ' ' + c + '</span>';
+    }).filter(Boolean).join(' ');
+  }
+});
+
+socket.on('new_notification', (data) => {
+  // Update notification badge in real-time
+  const bellBadge = document.getElementById('notif-bell-badge');
+  const navBadge = document.getElementById('notif-nav-badge');
+  [bellBadge, navBadge].forEach(b => {
+    if (b) {
+      const current = parseInt(b.textContent || '0');
+      b.classList.remove('hidden');
+      b.textContent = current + 1 > 99 ? '99+' : current + 1;
+    }
+  });
+});
+
+// ===== Render Post HTML (for real-time new posts) =====
+function renderPostHTML(data) {
+  const author = data.author || {};
+  const avatar = author.avatar_url
+    ? `<img src="${author.avatar_url}" alt="${escapeHtml(author.username)}" class="w-10 h-10 rounded-full object-cover">`
+    : `<div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">${(author.username || '?')[0].toUpperCase()}</div>`;
+  const currentUserId = {{ current_user.id }};
+  const isOwner = author.id === currentUserId;
+  const imageHtml = data.image_urls && data.image_urls.length > 0 ? renderImagesHTML(data.post_id, data.image_urls) : (data.image_url ? renderImagesHTML(data.post_id, [data.image_url]) : '');
+  const time = data.created_at || new Date().toLocaleString();
+  const imagesJson = data.image_urls ? JSON.stringify(data.image_urls).replace(/'/g, "&#39;") : '[]';
+  return `<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${data.post_id}" data-images='${imagesJson}' data-user-reaction="">
+    <div class="p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">${avatar}
+        <div>
+          <a href="/profile/${escapeHtml(author.username)}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">${escapeHtml(author.username)}</a>
+          <p class="text-xs text-gray-500 dark:text-gray-400"><a href="/posts/${data.post_id}" class="hover:underline">${escapeHtml(time)}</a></p>
+        </div>
+      </div>
+      <div class="relative">
+        <button onclick="togglePostMenu(${data.post_id})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition"><i class="fas fa-ellipsis-v"></i></button>
+        <div id="post-menu-${data.post_id}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
+          ${isOwner ? `<button onclick="openEditPostModal(${data.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-edit"></i> Edit</button>` : ''}
+          <button onclick="copyPostLink(${data.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-link"></i> Copy link</button>
+          ${isOwner ? `<hr class="border-gray-200 dark:border-gray-700 my-1"><button onclick="deletePost(${data.post_id})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-trash"></i> Delete</button>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="px-4 pb-3"><div id="post-content-${data.post_id}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(data.content)}</div></div>
+    ${imageHtml}
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+      <div class="flex items-center gap-3">
+        <span id="stats-like-${data.post_id}" class="font-medium text-gray-700 dark:text-gray-300"><span class="mr-1">👍</span> 0</span>
+        <span id="stats-comment-${data.post_id}"><i class="fas fa-comment mr-1"></i> 0</span>
+      </div>
+    </div>
+    <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="${data.post_id}"></div>
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between">
+        <div class="relative like-btn-wrap" onmouseenter="showReactions(${data.post_id})" onmouseleave="startHideReactions(${data.post_id})">
+          <div id="reactions-picker-${data.post_id}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions(${data.post_id})" onmouseleave="startHideReactions(${data.post_id})">
+            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost(${data.post_id}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost(${data.post_id}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost(${data.post_id}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost(${data.post_id}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost(${data.post_id}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost(${data.post_id}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+          </div>
+          <button onclick="reactToPost(${data.post_id}, 'main', event)" id="like-btn-${data.post_id}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-thumbs-up" id="like-icon-${data.post_id}"></i><span id="like-count-${data.post_id}">0</span></button>
+        </div>
+        <button onclick="toggleComments(${data.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-comment"></i><span id="comment-btn-count-${data.post_id}">0</span></button>
+        <button onclick="sharePost(${data.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-share-square"></i><span>Share</span></button>
+      </div>
+    </div>
+    <div id="comment-section-${data.post_id}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+      <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-${data.post_id}">
+        <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-${data.post_id}">No comments yet.</p>
+      </div>
+      <form onsubmit="addComment(event, ${data.post_id})" class="flex gap-2">
+        <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
+      </form>
+    </div>
+  </article>`;
+}
+
+function renderImagesHTML(postId, urls) {
+  if (!urls || urls.length === 0) return '';
+  if (urls.length === 1) {
+    return `<div class="w-full"><img src="${urls[0]}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery(${postId}, 0)" loading="lazy"></div>`;
+  }
+  let slides = urls.map((u, i) =>
+    `<li class="splide__slide"><img src="${u}" alt="Post image ${i+1}" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery(${postId}, ${i})" loading="lazy"></li>`
+  ).join('');
+  return `<div class="w-full post-images-container" data-post-id="${postId}"><div class="splide" id="splide-${postId}"><div class="splide__track"><ul class="splide__list">${slides}</ul></div></div></div>`;
+}
+
+// ===== Create Post =====
+function openCreatePost() {
+  document.getElementById('create-post-trigger').classList.add('hidden');
+  document.getElementById('create-post-card').classList.remove('hidden');
+  document.getElementById('post-content').focus();
+}
+
+function closeCreatePost() {
+  document.getElementById('create-post-card').classList.add('hidden');
+  document.getElementById('create-post-trigger').classList.remove('hidden');
+  resetCreateForm();
+}
+
+function resetCreateForm() {
+  document.getElementById('post-content').value = '';
+  document.getElementById('post-visibility').value = 'public';
+  clearImagePreviews();
+  selectedFiles = [];
+}
+
+var selectedFiles = [];
+
+function handleImageSelect(input) {
+  const files = Array.from(input.files);
+  const grid = document.getElementById('image-preview-grid');
+  const remaining = 10 - selectedFiles.length;
+  files.slice(0, remaining).forEach((file, idx) => {
+    selectedFiles.push(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600">
+        <button type="button" onclick="removePendingImage(${selectedFiles.length - 1})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 hidden group-hover:flex"><i class="fas fa-times"></i></button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+  if (selectedFiles.length >= 10) Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Max 10 images', showConfirmButton: false, timer: 2000 });
+}
+
+function removePendingImage(index) {
+  selectedFiles.splice(index, 1);
+  const grid = document.getElementById('image-preview-grid');
+  grid.innerHTML = '';
+  selectedFiles.forEach((f, i) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600">
+        <button type="button" onclick="removePendingImage(${i})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 hidden group-hover:flex"><i class="fas fa-times"></i></button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function clearImagePreviews() {
+  selectedFiles.length = 0;
+  document.getElementById('image-preview-grid').innerHTML = '';
+}
+
+function createPost(e) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const contentInput = document.getElementById('post-content');
+  const content = contentInput.value.trim();
+  const errorEl = document.getElementById('post-content-error');
+  if (!content) {
+    contentInput.classList.add('border-red-500');
+    errorEl?.classList.remove('hidden');
+    contentInput.focus();
+    return;
+  }
+  const visibility = document.getElementById('post-visibility').value;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+
+  const done = () => {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post';
+  };
+
+  const doCreate = (imageUrls = []) => {
+    if (socket && socket.connected) {
+      socket.emit('create_post', { content, image_urls: imageUrls, visibility }, (response) => {
+        done();
+        if (response && (response.success || response.post)) {
+          closeCreatePost();
+          clearImagePreviews();
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Post created!', showConfirmButton: false, timer: 2000 });
+        }
+      });
+    } else {
+      fetchFallbackCreate(content, imageUrls, visibility, submitBtn, done);
+    }
+  };
+
+  if (selectedFiles.length > 0) {
+    const formData = new FormData();
+    selectedFiles.forEach(f => formData.append('images', f));
+    fetch('/upload_post_image', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) doCreate(res.urls || []);
+        else done();
+      })
+      .catch(() => done());
+  } else {
+    doCreate([]);
+  }
+  } catch(ex) { console.error('createPost error:', ex); }
+}
+
+function fetchFallbackCreate(content, imageUrls, visibility, submitBtn, done) {
+  const formData = new FormData();
+  formData.append('content', content);
+  formData.append('visibility', visibility);
+  formData.append('image_urls', JSON.stringify(imageUrls));
+  fetch('/posts/create', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: formData
+  })
+  .then(r => r.json())
+  .then(d => {
+    done();
+    if (d.success) {
+      closeCreatePost();
+      clearImagePreviews();
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Post created!', showConfirmButton: false, timer: 2000 });
+    }
+  })
+  .catch(() => done());
+}
+
+// ===== Reactions =====
+var reactionHideTimers = {};
+
+function showReactions(postId) {
+  if (reactionHideTimers[postId]) {
+    clearTimeout(reactionHideTimers[postId]);
+    delete reactionHideTimers[postId];
+  }
+  const picker = document.getElementById(`reactions-picker-${postId}`);
+  if (picker) picker.classList.add('show');
+}
+
+function startHideReactions(postId) {
+  reactionHideTimers[postId] = setTimeout(() => {
+    const picker = document.getElementById(`reactions-picker-${postId}`);
+    if (picker) picker.classList.remove('show');
+    delete reactionHideTimers[postId];
+  }, 400);
+}
+
+function cancelHideReactions(postId) {
+  if (reactionHideTimers[postId]) {
+    clearTimeout(reactionHideTimers[postId]);
+    delete reactionHideTimers[postId];
+  }
+  const picker = document.getElementById(`reactions-picker-${postId}`);
+  if (picker) picker.classList.add('show');
+}
+
+function reactToPost(postId, reaction, event) {
+  try { if (event) event.stopPropagation(); } catch(ex) {}
+  try {
+    cancelHideReactions(postId);
+    startHideReactions(postId);
+    
+    const postEl = document.getElementById(`post-${postId}`);
+    const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
+    
+    let targetReaction = reaction;
+    let optimisticReaction = reaction;
+    
+    if (reaction === 'main') {
+      if (prevReaction) {
+        targetReaction = prevReaction;
+        optimisticReaction = '';
+      } else {
+        targetReaction = 'like';
+        optimisticReaction = 'like';
+      }
+    } else {
+      if (prevReaction === reaction) {
+        optimisticReaction = '';
+      } else {
+        optimisticReaction = reaction;
+      }
+    }
+    
+    const icon = document.getElementById(`like-icon-${postId}`);
+    if (icon) icon.classList.add('like-animate');
+    const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+    
+    const setReact = (r) => {
+      const ic = document.getElementById(`like-icon-${postId}`);
+      const bt = document.getElementById(`like-btn-${postId}`);
+      const pe = document.getElementById(`post-${postId}`);
+      if (ic) {
+        if (r) {
+          ic.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + postId + '">' + (emojiMap[r] || '👍') + '</span>';
+        } else {
+          ic.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + postId + '"></i>';
+        }
+      }
+      if (bt) {
+        bt.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+        if (r) {
+          if (r === 'like') bt.classList.add('text-blue-500', 'font-semibold');
+          else if (r === 'love') bt.classList.add('text-red-500', 'font-semibold');
+          else bt.classList.add('text-yellow-500', 'font-semibold');
+        } else {
+          bt.classList.add('text-gray-600', 'dark:text-gray-400');
+        }
+      }
+      if (pe) pe.dataset.userReaction = r || '';
+    };
+    
+    const setCounts = (counts) => {
+      const ct = document.getElementById(`like-count-${postId}`);
+      const se = document.getElementById(`stats-like-${postId}`);
+      const t = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
+      if (ct) ct.textContent = t;
+      if (se) {
+        if (counts && t > 0) {
+          const sortedReacts = Object.entries(counts)
+            .filter(([_, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1]);
+          if (sortedReacts.length > 0) {
+            const emojisHtml = sortedReacts.slice(0, 3).map(([r, _], idx) => {
+              const zIndex = 10 - idx;
+              return `<span class="text-sm leading-none z-[${zIndex}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-800 p-0.5 shadow-sm">${emojiMap[r] || '👍'}</span>`;
+            }).join('');
+            se.innerHTML = `<span class="flex -space-x-1 mr-1.5 items-center">${emojisHtml}</span> ${t}`;
+          } else {
+            se.innerHTML = '<span class="mr-1">👍</span> 0';
+          }
+        } else {
+          se.innerHTML = '<span class="mr-1">👍</span> 0';
+        }
+      }
+      const rb = document.querySelector(`[data-reaction-bar="${postId}"]`);
+      if (rb && counts) {
+        rb.innerHTML = Object.entries(counts).map(([r, c]) => c > 0 ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="' + postId + '-' + r + '">' + (emojiMap[r] || r) + ' ' + c + '</span>' : '').filter(Boolean).join(' ');
+      }
+    };
+    
+    setReact(optimisticReaction);
+    
+    // Optimistic count adjustment
+    const currentCountEl = document.getElementById(`like-count-${postId}`);
+    if (currentCountEl) {
+      let currentCount = parseInt(currentCountEl.textContent) || 0;
+      if (prevReaction && !optimisticReaction) {
+        currentCount = Math.max(0, currentCount - 1);
+      } else if (!prevReaction && optimisticReaction) {
+        currentCount = currentCount + 1;
+      }
+      currentCountEl.textContent = currentCount;
+    }
+    
+    const handleResp = (resp) => {
+      if (!resp || !resp.success) { setReact(prevReaction); return; }
+      setReact(resp.removed ? '' : (resp.reaction || ''));
+      setCounts(resp.counts);
+    };
+    
+    if (socket && socket.connected) {
+      socket.emit('react_to_post', { post_id: postId, reaction: targetReaction }, handleResp);
+    } else {
+      fetch('/posts/' + postId + '/react', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams({ reaction: targetReaction }) })
+        .then(r => r.json()).then(handleResp).catch(() => setReact(prevReaction));
+    }
+  } catch(ex) { console.error('reactToPost error:', ex); }
+}
+
+// ===== Comments =====
+function toggleComments(postId) {
+  document.getElementById(`comment-section-${postId}`).classList.toggle('hidden');
+}
+
+function addComment(e, postId) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const input = e.target.querySelector('input[name="content"]');
+  const content = input.value.trim();
+  if (!content) return;
+  input.disabled = true;
+  if (socket && socket.connected) {
+    socket.emit('add_comment', { post_id: postId, content }, (response) => {
+      input.disabled = false;
+      if (response && response.success) {
+        input.value = '';
+      }
+    });
+  } else {
+    fetch(`/posts/${postId}/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams({ content })
+    }).then(r => r.json()).then(data => {
+      input.disabled = false;
+      if (data.success) {
+        input.value = '';
+        if (data.comment) {
+          // Update UI with the new comment
+          const list = document.getElementById(`comments-list-${postId}`);
+          if (list) {
+            const noComments = document.getElementById(`no-comments-${postId}`);
+            if (noComments) noComments.remove();
+            const initial = (data.comment.author ? data.comment.author.username : '{{ current_user.username }}').charAt(0).toUpperCase();
+            const wrapper = document.createElement('div');
+            wrapper.className = 'comment-thread';
+            wrapper.dataset.commentId = data.comment_id;
+            wrapper.innerHTML = `
+              <div class="flex gap-2" id="comment-${data.comment_id}">
+                <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(data.comment.author ? data.comment.author.username : '{{ current_user.username }}')}</span>
+                      <div class="flex items-center gap-1">
+                        <button onclick="deleteComment(${data.comment_id}, ${postId})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                      </div>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-${data.comment_id}">${escapeHtml(data.comment.content)}</p>
+                  </div>
+                  <div class="flex items-center gap-3 mt-0.5 ml-1">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">${data.comment.created_at || 'just now'}</span>
+                    <button onclick="openReply(${data.comment_id}, ${postId})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                  </div>
+                  <div id="reply-form-${data.comment_id}" class="hidden mt-2 ml-5">
+                    <form onsubmit="addReply(event, ${postId}, ${data.comment_id})" class="flex gap-2">
+                      <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium"><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <div class="ml-5 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3 comment-replies-container"></div>`;
+            list.appendChild(wrapper);
+          }
+        }
+        // Update comment counts
+        const statC = document.getElementById(`stats-comment-${postId}`);
+        if (statC) { const m = statC.innerText.match(/\d+/); if (m) statC.innerHTML = '<i class="fas fa-comment mr-1"></i> ' + (parseInt(m[0]) + 1); }
+        const btnC = document.getElementById(`comment-btn-count-${postId}`);
+        if (btnC) btnC.textContent = parseInt(btnC.textContent || '0') + 1;
+      }
+    }).catch(() => { input.disabled = false; });
+  }
+  } catch(ex) { console.error('addComment error:', ex); }
+}
+
+// ===== Reply to Comments =====
+function openReply(commentId, postId) {
+  const form = document.getElementById(`reply-form-${commentId}`);
+  if (form) {
+    form.classList.toggle('hidden');
+    const input = form.querySelector('input[name="content"]');
+    if (input && !form.classList.contains('hidden')) input.focus();
+  }
+}
+
+function addReply(e, postId, parentId) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const input = e.target.querySelector('input[name="content"]');
+  const content = input.value.trim();
+  if (!content) return;
+  input.disabled = true;
+  if (socket && socket.connected) {
+      socket.emit('add_comment', { post_id: postId, content, parent_id: parentId }, (response) => {
+        input.disabled = false;
+        if (response && response.success) {
+          input.value = '';
+          document.getElementById(`reply-form-${parentId}`).classList.add('hidden');
+        }
+      });
+  } else {
+    fetch(`/posts/${postId}/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams({ content, parent_id: parentId })
+    }).then(r => r.json()).then(data => {
+      input.disabled = false;
+      if (data.success) {
+        input.value = '';
+        document.getElementById(`reply-form-${parentId}`).classList.add('hidden');
+        if (data.comment) {
+          const parentThread = document.querySelector(`.comment-thread[data-comment-id="${parentId}"]`);
+          if (parentThread) {
+            const replyContainer = parentThread.querySelector('.comment-replies-container');
+            if (replyContainer) {
+              const authorName = data.comment.author ? data.comment.author.username : '{{ current_user.username }}';
+              const initial = authorName.charAt(0).toUpperCase();
+              const replyHtml = `
+                <div class="flex gap-2" id="comment-${data.comment_id}">
+                  <div class="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">${initial}</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(authorName)}</span>
+                        <div class="flex items-center gap-1">
+                          <button onclick="deleteComment(${data.comment_id}, ${postId})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                        </div>
+                      </div>
+                      <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-${data.comment_id}">${escapeHtml(data.comment.content)}</p>
+                    </div>
+                    <div class="flex items-center gap-3 mt-0.5 ml-1">
+                      <span class="text-xs text-gray-400 dark:text-gray-500">${data.comment.created_at || 'just now'}</span>
+                    </div>
+                  </div>
+                </div>`;
+              replyContainer.insertAdjacentHTML('beforeend', replyHtml);
+            }
+          }
+        }
+      }
+    }).catch(() => { input.disabled = false; });
+  }
+  } catch(ex) { console.error('addReply error:', ex); }
+}
+
+function editComment(commentId, postId) {
+  Swal.fire({
+    title: 'Edit Comment',
+    input: 'text',
+    inputValue: document.getElementById(`comment-content-${commentId}`).innerText,
+    showCancelButton: true,
+    confirmButtonText: 'Save',
+    preConfirm: (val) => { if (!val.trim()) { Swal.showValidationMessage('Content cannot be empty'); } }
+  }).then((r) => {
+    if (r.isConfirmed) {
+      fetch(`/posts/${postId}/comment/${commentId}/edit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: new URLSearchParams({ content: r.value.trim() })
+      }).then(res => res.json()).then(data => {
+        if (data.success) {
+          document.getElementById(`comment-content-${commentId}`).innerText = data.content;
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Comment updated', showConfirmButton: false, timer: 2000 });
+        }
+      });
+    }
+  });
+}
+
+// ===== Delete =====
+function deletePost(postId) {
+  Swal.fire({
+    title: 'Delete this post?', text: "This cannot be undone.", icon: 'warning', showCancelButton: true,
+    confirmButtonColor: '#e53e3e', cancelButtonColor: '#718096', confirmButtonText: 'Yes, delete it!'
+  }).then((r) => {
+    if (r.isConfirmed) {
+      if (socket && socket.connected) {
+        socket.emit('delete_post', { post_id: postId }, (response) => {
+          if (response && response.success) {
+            const el = document.getElementById(`post-${postId}`);
+            if (el) el.remove();
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Post deleted', showConfirmButton: false, timer: 2000 });
+          }
+        });
+      } else {
+        fetch(`/posts/${postId}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(r => r.json()).then(data => {
+          if (data.success) {
+            const el = document.getElementById(`post-${postId}`);
+            if (el) el.remove();
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Post deleted', showConfirmButton: false, timer: 2000 });
+          }
+        }).catch(() => {});
+      }
+    }
+  });
+}
+
+function deleteComment(commentId, postId) {
+  Swal.fire({
+    title: 'Delete this comment?', text: "This cannot be undone.", icon: 'warning', showCancelButton: true,
+    confirmButtonColor: '#e53e3e', cancelButtonColor: '#718096', confirmButtonText: 'Yes, delete it!'
+  }).then((r) => {
+    if (r.isConfirmed) {
+      const removeCommentEl = () => {
+        const el = document.getElementById(`comment-${commentId}`);
+        if (el) {
+          const isReply = el.closest('.comment-replies-container');
+          if (isReply) { el.remove(); }
+          else { const thread = el.closest('.comment-thread'); if (thread) thread.remove(); else el.remove(); }
+        }
+        const list = document.getElementById(`comments-list-${postId}`);
+        if (list && !list.querySelector('.comment-thread')) {
+          list.innerHTML = '<p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-' + postId + '">No comments yet.</p>';
+        }
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Comment deleted', showConfirmButton: false, timer: 2000 });
+      };
+      if (socket && socket.connected) {
+        socket.emit('delete_comment', { comment_id: commentId, post_id: postId }, (response) => {
+          if (response && response.success) { removeCommentEl(); }
+        });
+      } else {
+        fetch(`/posts/${postId}/comment/${commentId}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(r => r.json()).then(data => {
+          if (data.success) { removeCommentEl(); }
+        }).catch(() => {});
+      }
+    }
+  });
+}
+
+// ===== Edit Post =====
+function openEditPostModal(postId) {
+  const content = document.getElementById(`post-content-${postId}`).innerText;
+  document.getElementById('edit-post-id').value = postId;
+  document.getElementById('edit-post-content').value = content;
+  const grid = document.getElementById('edit-images-grid');
+  grid.innerHTML = '';
+  editPostLoadedImages = [];
+  // Load images from data attribute
+  const postEl = document.getElementById(`post-${postId}`);
+  if (postEl) {
+    try {
+      const images = JSON.parse(postEl.dataset.images || '[]');
+      images.forEach(url => {
+        if (!url) return;
+        editPostLoadedImages.push(url);
+        const div = document.createElement('div');
+        div.className = 'relative group';
+        div.innerHTML = `<img src="${url}" class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"><button type="button" onclick="removeEditImage(${editPostLoadedImages.length - 1})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 hidden group-hover:flex"><i class="fas fa-times"></i></button>`;
+        grid.appendChild(div);
+      });
+    } catch(e) {}
+  }
+  document.getElementById('edit-post-modal').classList.remove('hidden');
+  closeAllMenus();
+}
+
+var editPostLoadedImages = [];
+var editPostNewImages = [];
+
+function removeEditImage(index) {
+  editPostLoadedImages.splice(index, 1);
+  const grid = document.getElementById('edit-images-grid');
+  grid.innerHTML = '';
+  editPostLoadedImages.forEach((url, i) => {
+    const div = document.createElement('div');
+    div.className = 'relative group';
+    div.innerHTML = `<img src="${url}" class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"><button type="button" onclick="removeEditImage(${i})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 hidden group-hover:flex"><i class="fas fa-times"></i></button>`;
+    grid.appendChild(div);
+  });
+}
+
+function handleEditImageSelect(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    editPostNewImages.push(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const grid = document.getElementById('edit-images-grid');
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg border border-green-400 dark:border-green-600"><span class="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 rounded">new</span><button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600" onclick="this.closest('.relative').remove()"><i class="fas fa-times"></i></button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function closeEditPostModal() {
+  document.getElementById('edit-post-modal').classList.add('hidden');
+  editPostLoadedImages = [];
+  editPostNewImages = [];
+}
+
+function saveEditedPost(e) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const postId = document.getElementById('edit-post-id').value;
+  const content = document.getElementById('edit-post-content').value.trim();
+  if (!content) return;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  const resetBtn = () => { submitBtn.disabled = false; submitBtn.innerHTML = 'Save Changes'; };
+
+  const doSave = (newUrls = []) => {
+    const allUrls = [...editPostLoadedImages, ...newUrls];
+    fetch(`/posts/${postId}/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams({ content, image_urls: JSON.stringify(allUrls), visibility: document.getElementById('edit-post-visibility').value })
+    }).then(r => r.json()).then(data => {
+      resetBtn();
+      if (data.success) {
+        document.getElementById(`post-content-${postId}`).innerText = data.content;
+        const postEl = document.getElementById(`post-${postId}`);
+        if (postEl && data.image_urls) {
+          postEl.dataset.images = JSON.stringify(data.image_urls);
+        }
+        if (data.image_urls) {
+          const existingContainer = document.querySelector(`#post-${postId} .post-images-container`);
+          if (existingContainer) {
+            if (data.image_urls.length > 0) {
+              existingContainer.outerHTML = renderImagesHTML(parseInt(postId), data.image_urls);
+            } else {
+              existingContainer.remove();
+            }
+          } else if (data.image_urls.length > 0) {
+            const contentDiv = document.getElementById(`post-content-${postId}`);
+            if (contentDiv) {
+              const wrapper = contentDiv.closest('.px-4');
+              if (wrapper) {
+                wrapper.insertAdjacentHTML('afterend', renderImagesHTML(parseInt(postId), data.image_urls));
+              }
+            }
+          }
+          initSplideForPost(parseInt(postId));
+        }
+        socket.emit('edit_post', { post_id: parseInt(postId), content });
+        closeEditPostModal();
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Post updated!', showConfirmButton: false, timer: 2000 });
+      }
+    });
+  };
+
+  if (editPostNewImages.length > 0) {
+    const fd = new FormData();
+    editPostNewImages.forEach(f => fd.append('images', f));
+    fetch('/upload_post_image', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(res => { if (res.success) doSave(res.urls); else resetBtn(); })
+      .catch(() => resetBtn());
+  } else {
+    doSave([]);
+  }
+  } catch(ex) { console.error('saveEditedPost error:', ex); }
+}
+
+// ===== Splide Init =====
+var currentGalleryIndex = 0;
+var currentGalleryPostId = null;
+
+function openImageGallery(postId, index) {
+  currentGalleryPostId = postId;
+  currentGalleryIndex = index;
+  const postEl = document.getElementById(`post-${postId}`);
+  if (!postEl) return;
+  let images = [];
+  try { images = JSON.parse(postEl.dataset.images || '[]'); } catch(e) {}
+  if (images.length === 0) {
+    const imgs = postEl.querySelectorAll('.post-images-container img, .splide__slide img');
+    images = Array.from(imgs).map(img => img.getAttribute('src')).filter(Boolean);
+  }
+  if (images.length === 0) return;
+  showGalleryModal(images, index);
+}
+
+function showGalleryModal(images, startIndex) {
+  let currentIdx = startIndex;
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-black/90 z-[100] flex items-center justify-center';
+  overlay.innerHTML = `
+    <button class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300 z-10" onclick="this.closest('.fixed').remove()">&times;</button>
+    <button class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300 z-10 ${images.length <= 1 ? 'hidden' : ''}" onclick="galleryNav(-1)">&lsaquo;</button>
+    <button class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300 z-10 ${images.length <= 1 ? 'hidden' : ''}" onclick="galleryNav(1)">&rsaquo;</button>
+    <div class="text-white text-sm absolute bottom-4 left-1/2 -translate-x-1/2"><span id="gallery-counter">${startIndex + 1}</span> / ${images.length}</div>
+    <img id="gallery-img" src="${images[startIndex]}" class="max-w-[90vw] max-h-[90vh] object-contain">
+  `;
+  overlay._images = images;
+  overlay._index = startIndex;
+  document.body.appendChild(overlay);
+  document.addEventListener('keydown', galleryKeyHandler);
+}
+
+function galleryNav(dir) {
+  const overlay = document.querySelector('.fixed.inset-0.bg-black\\/90');
+  if (!overlay) return;
+  const images = overlay._images || [];
+  let idx = overlay._index + dir;
+  if (idx < 0) idx = images.length - 1;
+  if (idx >= images.length) idx = 0;
+  overlay._index = idx;
+  const img = document.getElementById('gallery-img');
+  if (img) img.src = images[idx];
+  const counter = document.getElementById('gallery-counter');
+  if (counter) counter.textContent = idx + 1;
+}
+
+function galleryKeyHandler(e) {
+  if (e.key === 'Escape') {
+    const overlay = document.querySelector('.fixed.inset-0.bg-black\\/90');
+    if (overlay) overlay.remove();
+    document.removeEventListener('keydown', galleryKeyHandler);
+  } else if (e.key === 'ArrowLeft') galleryNav(-1);
+  else if (e.key === 'ArrowRight') galleryNav(1);
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('fixed') && e.target.classList.contains('bg-black\\/90')) {
+    e.target.remove();
+    document.removeEventListener('keydown', galleryKeyHandler);
+  }
+});
+
+var splidePending = [];
+
+function initSplideForPost(postId) {
+  const el = document.getElementById(`splide-${postId}`);
+  if (!el) return;
+  if (typeof Splide !== 'undefined') {
+    try {
+      if (el.classList.contains('splide--mounted')) return;
+      new Splide(el, { type: 'loop', perPage: 1, pagination: true, arrows: true, gap: '1rem' }).mount();
+      el.classList.add('splide--mounted');
+    } catch(e) { splidePending.push(postId); }
+  } else {
+    splidePending.push(postId);
+  }
+}
+
+function processSplidePending() {
+  while (splidePending.length > 0) {
+    initSplideForPost(splidePending.shift());
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.splide').forEach(el => {
+    const id = el.id;
+    if (id && id.startsWith('splide-')) initSplideForPost(id.replace('splide-', ''));
+  });
+});
+
+(function pollSplide() {
+  if (typeof Splide !== 'undefined') {
+    processSplidePending();
+    document.querySelectorAll('.splide:not(.splide--mounted)').forEach(el => {
+      try {
+        new Splide(el, { type: 'loop', perPage: 1, pagination: true, arrows: true, gap: '1rem' }).mount();
+        el.classList.add('splide--mounted');
+      } catch(e) {}
+    });
+  } else {
+    setTimeout(pollSplide, 200);
+  }
+})();
+
+// ===== Menu Functions =====
+function togglePostMenu(postId) { closeAllMenus(); document.getElementById(`post-menu-${postId}`).classList.toggle('hidden'); }
+function closeAllMenus() { document.querySelectorAll('[id^="post-menu-"]').forEach(m => m.classList.add('hidden')); }
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('[id^="post-menu-"]') && !e.target.closest('button[onclick^="togglePostMenu"]')) closeAllMenus();
+});
+
+function copyPostLink(postId) {
+  navigator.clipboard.writeText(window.location.origin + '/posts/' + postId);
+  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Link copied!', showConfirmButton: false, timer: 2000 });
+  closeAllMenus();
+}
+
+function sharePost(postId) {
+  const url = window.location.origin + '/posts/' + postId;
+  if (navigator.share) { navigator.share({ title: 'Check out this post!', url }); }
+  else { copyPostLink(postId); }
+}
+
+var isLoadingMore = false;
+
+function loadMorePosts() {
+  if (isLoadingMore) return;
+  isLoadingMore = true;
+  const btn = document.getElementById('load-more-btn');
+  const spinner = document.getElementById('load-more-spinner');
+  const text = document.getElementById('load-more-text');
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  if (text) text.textContent = 'Loading...';
+
+  const page = parseInt(document.getElementById('current-page').value) + 1;
+  fetch(`/posts?page=${page}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(data => {
+      const container = document.getElementById('posts-container');
+      const emptyEl = container.querySelector('.text-center.py-12');
+      if (emptyEl) emptyEl.remove();
+      const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+      data.items.forEach(p => {
+        if (document.getElementById(`post-${p.post_id}`)) return;
+        renderAndAppendPost(p, container, emojiMap);
+      });
+      document.getElementById('current-page').value = data.page;
+      if (!data.has_next) {
+        const loadMore = document.getElementById('load-more-container');
+        if (loadMore) loadMore.innerHTML = '<p class="text-gray-400 dark:text-gray-500 text-sm">You\'ve reached the end of the feed</p>';
+      } else {
+        if (btn) btn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
+        if (text) text.textContent = 'Load More';
+      }
+      isLoadingMore = false;
+    })
+    .catch(() => {
+      if (btn) btn.disabled = false;
+      if (spinner) spinner.classList.add('hidden');
+      if (text) text.textContent = 'Load More';
+      isLoadingMore = false;
+      Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Failed to load posts', showConfirmButton: false, timer: 2000 });
+    });
+}
+
+function renderAndAppendPost(p, container, emojiMap) {
+  const avatarHtml = p.author.avatar_url
+    ? `<img src="${p.author.avatar_url}" alt="${escapeHtml(p.author.username)}" class="w-10 h-10 rounded-full object-cover">`
+    : `<div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">${(p.author.username || '?')[0].toUpperCase()}</div>`;
+  const imagesJson = JSON.stringify(p.image_urls || []).replace(/'/g, "&#39;");
+  const imgHtml = renderImagesHTML(p.post_id, p.image_urls || []);
+  const reactBarHtml = (p.react_counts ? Object.entries(p.react_counts).filter(([, c]) => c > 0).map(([r, c]) =>
+    '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="' + p.post_id + '-' + r + '">' +
+    (emojiMap[r] || r) + ' ' + c + '</span>'
+  ).join(' ') : '');
+  const userReact = p.user_reaction || '';
+  
+  let likeBtnClass = 'text-gray-600 dark:text-gray-400 font-medium';
+  if (userReact) {
+    if (userReact === 'like') likeBtnClass = 'text-blue-500 font-semibold';
+    else if (userReact === 'love') likeBtnClass = 'text-red-500 font-semibold';
+    else likeBtnClass = 'text-yellow-500 font-semibold';
+  }
+  
+  const likeIconHtml = userReact ? '<span class="text-lg leading-none" id="like-icon-' + p.post_id + '">' + (emojiMap[userReact] || '👍') + '</span>' : '<i class="far fa-thumbs-up" id="like-icon-' + p.post_id + '"></i>';
+  const editMenu = p.is_owner
+    ? `<button onclick="openEditPostModal(${p.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-edit"></i> Edit</button><hr class="border-gray-200 dark:border-gray-700 my-1"><button onclick="deletePost(${p.post_id})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-trash"></i> Delete</button>`
+    : '';
+
+  let statsLikeInner = `<span class="mr-1">👍</span> ${p.likes_count}`;
+  if (p.react_counts && p.likes_count > 0) {
+    const sorted = Object.entries(p.react_counts)
+      .filter(([_, c]) => c > 0)
+      .sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) {
+      const emojis = sorted.slice(0, 3).map(([r, _], idx) => {
+        const zIndex = 10 - idx;
+        return `<span class="text-sm leading-none z-[${zIndex}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-800 p-0.5 shadow-sm">${emojiMap[r] || '👍'}</span>`;
+      }).join('');
+      statsLikeInner = `<span class="flex -space-x-1 mr-1.5 items-center">${emojis}</span> ${p.likes_count}`;
+    }
+  }
+
+  const html = `<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${p.post_id}" data-images='${imagesJson}' data-user-reaction="${userReact}">
+    <div class="p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">${avatarHtml}
+        <div>
+          <a href="/profile/${escapeHtml(p.author.username)}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">${escapeHtml(p.author.username)}</a>
+          <p class="text-xs text-gray-500 dark:text-gray-400"><a href="/posts/${p.post_id}" class="hover:underline">${escapeHtml(p.created_at)}</a></p>
+        </div>
+      </div>
+      <div class="relative">
+        <button onclick="togglePostMenu(${p.post_id})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition"><i class="fas fa-ellipsis-v"></i></button>
+        <div id="post-menu-${p.post_id}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
+          ${editMenu}
+          <button onclick="copyPostLink(${p.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-link"></i> Copy link</button>
+        </div>
+      </div>
+    </div>
+    <div class="px-4 pb-3"><div id="post-content-${p.post_id}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(p.content)}</div></div>
+    ${imgHtml}
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+      <div class="flex items-center gap-3">
+        <span id="stats-like-${p.post_id}" class="font-medium text-gray-700 dark:text-gray-300 flex items-center">${statsLikeInner}</span>
+        <span id="stats-comment-${p.post_id}"><i class="fas fa-comment mr-1"></i> ${p.comments_count}</span>
+      </div>
+    </div>
+    <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="${p.post_id}">${reactBarHtml}</div>
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between">
+        <div class="relative like-btn-wrap" onmouseenter="showReactions(${p.post_id})" onmouseleave="startHideReactions(${p.post_id})">
+          <div id="reactions-picker-${p.post_id}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions(${p.post_id})" onmouseleave="startHideReactions(${p.post_id})">
+            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost(${p.post_id}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost(${p.post_id}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost(${p.post_id}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost(${p.post_id}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost(${p.post_id}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost(${p.post_id}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+          </div>
+          <button onclick="reactToPost(${p.post_id}, 'main', event)" id="like-btn-${p.post_id}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition ${likeBtnClass}">${likeIconHtml}<span id="like-count-${p.post_id}">${p.likes_count}</span></button>
+        </div>
+        <button onclick="toggleComments(${p.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-comment"></i><span id="comment-btn-count-${p.post_id}">${p.comments_count}</span></button>
+        <button onclick="sharePost(${p.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-share-square"></i><span>Share</span></button>
+      </div>
+    </div>
+    <div id="comment-section-${p.post_id}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+      <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-${p.post_id}">
+        <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-${p.post_id}">No comments yet.</p>
+      </div>
+      <form onsubmit="addComment(event, ${p.post_id})" class="flex gap-2">
+        <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
+      </form>
+    </div>
+  </article>`;
+  container.insertAdjacentHTML('beforeend', html);
+  initSplideForPost(p.post_id);
+}
+
+var scrollLoadObserver = null;
+document.addEventListener('DOMContentLoaded', function() {
+  const sentinel = document.createElement('div');
+  sentinel.id = 'scroll-sentinel';
+  sentinel.className = 'h-4';
+  const loadMore = document.getElementById('load-more-container');
+  if (loadMore) loadMore.parentNode.insertBefore(sentinel, loadMore.nextSibling);
+  if (window.IntersectionObserver) {
+    scrollLoadObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && document.getElementById('has-next')?.value === 'true') {
+        loadMorePosts();
+      }
+    }, { rootMargin: '200px' });
+    scrollLoadObserver.observe(sentinel);
+  }
+});
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 flex items-center gap-4 border border-gray-100 dark:border-gray-700">
+    <div class="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 text-2xl">
+      <i class="fas fa-sticky-note"></i>
+    </div>
+    <div>
+      <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ notes_count }}</h3>
+      <p class="text-gray-500 dark:text-gray-400">Notes</p>
+      <a href="{{ url_for('notes.notes') }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Open notes</a>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 flex items-center gap-4 border border-gray-100 dark:border-gray-700">
+    <div class="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-300 text-2xl">
+      <i class="fas fa-check-circle"></i>
+    </div>
+    <div>
+      <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ tasks_done }}/{{ tasks_total }}</h3>
+      <p class="text-gray-500 dark:text-gray-400">Tasks completed</p>
+      <a href="{{ url_for('tasks.tasks') }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Open tasks</a>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 flex items-center gap-4 border border-gray-100 dark:border-gray-700">
+    <div class="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-300 text-2xl">
+      <i class="fas fa-calendar-check"></i>
+    </div>
+    <div>
+      <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ upcoming_events|length }}</h3>
+      <p class="text-gray-500 dark:text-gray-400">Upcoming events</p>
+      <a href="{{ url_for('calendar.calendar') }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Open calendar</a>
+    </div>
+  </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 mt-6">
+  <h4 class="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+    <i class="fas fa-calendar-check text-indigo-600"></i> Upcoming Events
+  </h4>
+  {% if upcoming_events %}
+    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for ev in upcoming_events %}
+        <li class="py-3 flex justify-between items-center">
+          <span class="font-medium text-gray-800 dark:text-white">{{ ev.title }}</span>
+          <span class="text-sm text-gray-500 dark:text-gray-400">{{ ev.start.strftime('%a %d %b %H:%M') }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-gray-500 dark:text-gray-400">No upcoming events.</p>
+  {% endif %}
+</div>
+

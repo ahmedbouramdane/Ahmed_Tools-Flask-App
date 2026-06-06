@@ -1,0 +1,1220 @@
+{% extends "base.html" %}
+{% block title %}Post - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block content %}
+{% set view_images = post.images if post.images else [] %}
+{% set view_image_urls = view_images | map(attribute='image_url') | list %}
+{% if not view_image_urls and post.image_url %}
+  {% set view_image_urls = [post.image_url] %}
+{% endif %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <!-- Back Button -->
+  <a href="{{ url_for('posts.posts_feed') }}" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 mb-4 inline-flex items-center gap-2">
+    <i class="fas fa-arrow-left"></i> Back to Feed
+  </a>
+
+  <!-- Post Card -->
+  <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.id }}" data-images="{{ view_image_urls | tojson | safe }}">
+    <!-- Post Header -->
+    <div class="p-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        {% if post.author.avatar_url %}
+          <img src="{{ post.author.avatar_url }}" alt="{{ post.author.username }}" class="w-12 h-12 rounded-full object-cover">
+        {% else %}
+          <div class="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
+            {{ post.author.username[0] | upper }}
+          </div>
+        {% endif %}
+        <div>
+          <a href="{{ url_for('posts.user_posts', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+            {{ post.author.username }}
+          </a>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            {{ post.created_at.strftime('%B %d, %Y at %H:%M') }}
+            {% if post.updated_at and post.updated_at != post.created_at %}
+              <span class="italic">(edited)</span>
+            {% endif %}
+            {% if post.visibility == 'public' %}<i class="fas fa-globe ml-1 text-xs" title="Public"></i>
+            {% elif post.visibility == 'friends' %}<i class="fas fa-user-friends ml-1 text-xs" title="Friends"></i>
+            {% else %}<i class="fas fa-lock ml-1 text-xs" title="Private"></i>{% endif %}
+          </p>
+        </div>
+      </div>
+      <!-- Post Actions Menu -->
+      <div class="relative">
+        <button onclick="togglePostMenu()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div id="post-menu" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
+          {% if post.user_id == current_user.id %}
+            <button onclick="openEditPostModal()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+          {% endif %}
+          <button onclick="copyPostLink()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <i class="fas fa-link"></i> Copy link
+          </button>
+          <button onclick="bookmarkPost()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <i class="far fa-bookmark"></i> Save
+          </button>
+          {% if post.user_id != current_user.id %}
+            <button onclick="reportPost()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+              <i class="fas fa-flag"></i> Report
+            </button>
+          {% endif %}
+          {% if post.user_id == current_user.id %}
+            <hr class="border-gray-200 dark:border-gray-700 my-1">
+            <button onclick="deletePost()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Post Content -->
+    <div class="px-6 pb-4">
+      <div id="post-content-{{ post.id }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-lg">{{ post.content }}</div>
+    </div>
+
+    <!-- Post Images -->
+    {% set view_single = view_image_urls[0] if view_image_urls else '' %}
+    {% if view_image_urls %}
+      <div class="w-full post-images-container">
+        {% if view_image_urls|length > 1 %}
+        <div class="splide" id="splide-view-{{ post.id }}">
+          <div class="splide__track">
+            <ul class="splide__list">
+              {% for url in view_image_urls %}
+              <li class="splide__slide">
+                <img src="{{ url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, {{ loop.index0 }})" loading="lazy">
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        {% else %}
+        <img src="{{ view_single }}" alt="Post image" class="w-full max-h-[500px] object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, 0)">
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Post Stats & Reaction Bar -->
+    <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between">        <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <span class="flex items-center">
+            <span id="stats-like-{{ post.id }}" class="flex items-center">
+              {% set view_react_counts = post.reaction_counts %}
+              {% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
+              {% if post.total_reactions > 0 %}
+                <span class="flex -space-x-1 mr-1.5 items-center">
+                  {% set count = namespace(value=0) %}
+                  {% for r, c in view_react_counts.items() %}
+                    {% if c > 0 and count.value < 3 %}
+                      <span class="text-sm leading-none z-[{{ 10 - count.value }}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-850 p-0.5 shadow-sm" title="{{ r | capitalize }}">{{ emoji_map.get(r, '👍') }}</span>
+                      {% set count.value = count.value + 1 %}
+                    {% endif %}
+                  {% endfor %}
+                </span>
+                <span id="like-count-display">{{ post.total_reactions }}</span>
+              {% else %}
+                <span class="mr-1">👍</span> <span id="like-count-display">0</span>
+              {% endif %}
+            </span>
+            <span class="ml-1">reactions</span>
+          </span>
+          <span><i class="fas fa-comment mr-1"></i> <span id="comments-count-display">{{ post.comments | length }}</span> comments</span>
+        </div>
+      </div>
+      <div class="mt-1 text-xs reaction-bar" id="reaction-bar-{{ post.id }}">
+        {% for r, c in view_react_counts.items() %}
+          {% if c > 0 %}
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">{{ emoji_map.get(r, r) }} {{ c }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Post Actions -->
+    <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700">
+      {% set btn_color = 'text-gray-600 dark:text-gray-400 font-medium' %}
+      {% if user_reaction == 'like' %}
+        {% set btn_color = 'text-blue-500 font-semibold' %}
+      {% elif user_reaction == 'love' %}
+        {% set btn_color = 'text-red-500 font-semibold' %}
+      {% elif user_reaction in ['haha', 'wow', 'sad'] %}
+        {% set btn_color = 'text-yellow-500 font-semibold' %}
+      {% elif user_reaction == 'angry' %}
+        {% set btn_color = 'text-orange-500 font-semibold' %}
+      {% endif %}
+      <div class="flex items-center justify-between">
+        <div class="relative like-btn-wrap" onmouseenter="showReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
+          <div id="reactions-picker-{{ post.id }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
+            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost({{ post.id }}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost({{ post.id }}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost({{ post.id }}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost({{ post.id }}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost({{ post.id }}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost({{ post.id }}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+          </div>
+          <button onclick="reactToPost({{ post.id }}, 'main', event)" id="like-btn-{{ post.id }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
+            {% if user_reaction %}<span class="text-lg leading-none" id="like-icon-{{ post.id }}">{{ emoji_map.get(user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="like-icon-{{ post.id }}"></i>{% endif %}
+            <span id="like-count-{{ post.id }}">{{ post.total_reactions }}</span>
+          </button>
+        </div>
+        <button onclick="document.getElementById('comment-input').focus()" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+          <i class="far fa-comment"></i>
+          <span>Comment</span>
+        </button>
+        <button onclick="sharePost()" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+          <i class="far fa-share-square"></i>
+          <span>Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Comments ({{ post.comments | length }})</h3>
+      
+      {% set view_top_comments = post.comments | selectattr('parent_id', 'none') | list %}
+      <!-- Comments List -->
+      <div id="comments-list" class="space-y-4 mb-6">
+        {% for comment in view_top_comments %}
+          <div class="comment-thread" data-comment-id="{{ comment.id }}">
+            <div class="flex gap-3" id="comment-{{ comment.id }}">
+              <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">
+                {{ comment.author.username[0] | upper }}
+              </div>
+              <div class="flex-1">
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-semibold text-sm text-gray-800 dark:text-white">{{ comment.author.username }}</span>
+                    <div class="flex items-center gap-1">
+                      {% if comment.user_id == current_user.id %}
+                        <button onclick="openEditCommentModal({{ comment.id }})" class="text-gray-400 hover:text-indigo-500 p-1 text-xs"><i class="fas fa-pen"></i></button>
+                      {% endif %}
+                      {% if comment.user_id == current_user.id or post.user_id == current_user.id %}
+                        <button onclick="deleteComment({{ comment.id }})" class="text-gray-400 hover:text-red-500 p-1 text-xs"><i class="fas fa-times"></i></button>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <p class="text-gray-700 dark:text-gray-300" id="comment-content-{{ comment.id }}">{{ comment.content }}</p>
+                </div>
+                <div class="flex items-center gap-3 mt-1">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ comment.created_at.strftime('%B %d, %Y at %H:%M') }}</span>
+                  {% if comment.updated_at and comment.updated_at != comment.created_at %}
+                    <span class="text-xs text-gray-400 dark:text-gray-500 italic">(edited)</span>
+                  {% endif %}
+                  <button onclick="openViewReply({{ comment.id }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                </div>
+                {% if comment.replies %}
+                <div class="ml-8 mt-2 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4 comment-replies-container">
+                  {% for reply in comment.replies %}
+                  <div class="flex gap-2" id="comment-{{ reply.id }}">
+                    <div class="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{{ reply.author.username[0] | upper }}</div>
+                    <div class="flex-1">
+                      <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+                        <div class="flex items-center justify-between">
+                          <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ reply.author.username }}</span>
+                          <div class="flex items-center gap-1">
+                            {% if reply.user_id == current_user.id %}
+                            <button onclick="openEditCommentModal({{ reply.id }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>
+                            {% endif %}
+                            {% if reply.user_id == current_user.id or post.user_id == current_user.id %}
+                            <button onclick="deleteComment({{ reply.id }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                            {% endif %}
+                          </div>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-{{ reply.id }}">{{ reply.content }}</p>
+                      </div>
+                      <div class="flex items-center gap-3 mt-0.5">
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{{ reply.created_at.strftime('%H:%M') }}</span>
+                        <button onclick="openViewReply({{ comment.id }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                <div id="view-reply-form-{{ comment.id }}" class="hidden mt-2 ml-8">
+                  <form onsubmit="addViewReply(event, {{ post.id }}, {{ comment.id }})" class="flex gap-2">
+                    <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium"><i class="fas fa-paper-plane"></i></button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Add Comment Form -->
+      <form id="comment-form" class="flex gap-3" onsubmit="return addViewComment(event, {{ post.id }})">
+        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">
+          {{ current_user.username[0] | upper }}
+        </div>
+        <div class="flex-1">
+          <input type="text" id="comment-input" name="content" placeholder="Write a comment..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input type="hidden" id="comment-parent-id" value="">
+        </div>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-medium transition">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+  </article>
+</div>
+
+<!-- Edit Post Modal -->
+<div id="edit-post-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-xl font-bold text-gray-800 dark:text-white"><i class="fas fa-edit text-indigo-600 mr-2"></i> Edit Post</h3>
+      <button onclick="closeEditPostModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+    <form id="edit-post-form" onsubmit="saveEditedPost(event)">
+      <input type="hidden" id="edit-post-id" value="{{ post.id }}">
+      <div class="p-6">
+        <textarea id="edit-post-content" name="content" rows="6" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+        <div id="edit-images-grid" class="mt-4 grid grid-cols-3 gap-3"></div>
+        <div class="mt-4 flex items-center gap-4">
+          <button type="button" onclick="document.getElementById('edit-images-input').click()" class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm transition">
+            <i class="fas fa-image text-green-500"></i> Add Images
+          </button>
+          <input type="file" id="edit-images-input" accept="image/*" multiple class="hidden" onchange="handleEditImageSelect(this)">
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600 dark:text-gray-400">Visibility:</label>
+            <select id="edit-post-visibility" name="visibility" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+              <option value="public">🌍 Public</option><option value="friends">👥 Friends</option><option value="private">🔒 Private</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button type="button" onclick="closeEditPostModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Comment Modal -->
+<div id="edit-comment-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fas fa-edit text-indigo-600 mr-2"></i> Edit Comment</h3>
+      <button onclick="closeEditCommentModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form id="edit-comment-form" onsubmit="saveEditedComment(event)">
+      <input type="hidden" id="edit-comment-id" name="comment_id">
+      <div class="p-6">
+        <textarea id="edit-comment-content" name="content" rows="3" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+      </div>
+      <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button type="button" onclick="closeEditCommentModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.reactions-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 6px 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 100;
+  margin-bottom: 10px;
+  opacity: 0;
+  transform: translateY(12px) scale(0.85);
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dark .reactions-picker {
+  background: rgba(31, 41, 55, 0.95);
+  border-color: rgba(75, 85, 99, 0.4);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+.reactions-picker.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.reactions-picker .reaction-btn {
+  font-size: 26px;
+  padding: 4px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: none;
+  background: none;
+  line-height: 1;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.reactions-picker .reaction-btn:hover {
+  transform: scale(1.45) translateY(-4px);
+}
+.reactions-picker .reaction-btn .reaction-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+.reactions-picker .reaction-btn:hover .reaction-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-8px);
+}
+.reaction-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.reaction-bar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+@keyframes likePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.like-animate {
+  animation: likePop 0.3s ease;
+}
+</style>
+
+<script>
+var viewSocket = io('/posts', {
+  auth: { user_id: {{ current_user.id | tojson }} },
+  transports: ['websocket', 'polling'],
+  withCredentials: true,
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 5
+});
+
+var viewSocketConnected = false;
+
+viewSocket.on('connect', () => {
+  viewSocketConnected = true;
+  viewSocket.emit('join_post', { post_id: {{ post.id }} });
+});
+
+viewSocket.on('connect_error', (error) => console.error('Socket connection error:', error.message));
+viewSocket.on('disconnect', () => { viewSocketConnected = false; });
+
+// Real-time updates
+viewSocket.on('post_liked', (data) => {
+  updateViewLikeUI(data.post_id, data);
+});
+viewSocket.on('post_reacted', (data) => {
+  updateViewLikeUI(data.post_id, data);
+});
+viewSocket.on('new_comment', (data) => {
+  if (data.post_id !== {{ post.id }}) return;
+  const list = document.getElementById('comments-list');
+  if (!list) return;
+  if (document.getElementById(`comment-${data.comment_id}`)) return;
+  const currentUserId = {{ current_user.id }};
+  const authorName = data.author ? data.author.username : '{{ current_user.username }}';
+  const initial = authorName.charAt(0).toUpperCase();
+  const isOwn = data.author && data.author.id === currentUserId;
+  const editBtn = isOwn ? `<button onclick="openEditCommentModal(${data.comment_id})" class="text-gray-400 hover:text-indigo-500 p-1 text-xs"><i class="fas fa-pen"></i></button>` : '';
+  const deleteBtn = isOwn ? `<button onclick="deleteComment(${data.comment_id})" class="text-gray-400 hover:text-red-500 p-1 text-xs"><i class="fas fa-times"></i></button>` : '';
+
+  const commentHtml = `
+    <div class="flex gap-3" id="comment-${data.comment_id}">
+      <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+      <div class="flex-1">
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-semibold text-sm text-gray-800 dark:text-white">${escapeHtml(authorName)}</span>
+            <div class="flex items-center gap-1">${editBtn}${deleteBtn}</div>
+          </div>
+          <p class="text-gray-700 dark:text-gray-300" id="comment-content-${data.comment_id}">${escapeHtml(data.content)}</p>
+        </div>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">${data.created_at || 'just now'}</span>
+          <button onclick="openViewReply(${data.comment_id})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+        </div>
+        <div id="view-reply-form-${data.comment_id}" class="hidden mt-2 ml-8">
+          <form onsubmit="addViewReply(event, ${data.post_id}, ${data.comment_id})" class="flex gap-2">
+            <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium"><i class="fas fa-paper-plane"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>`;
+
+  if (data.parent_id) {
+    const parentThread = document.querySelector(`.comment-thread[data-comment-id="${data.parent_id}"]`);
+    if (parentThread) {
+      const replyContainer = parentThread.querySelector('.comment-replies-container');
+      const replyForm = parentThread.querySelector(`#view-reply-form-${data.parent_id}`);
+      if (replyContainer) replyContainer.insertAdjacentHTML('beforeend', commentHtml);
+      if (replyForm) replyForm.classList.add('hidden');
+    }
+  } else {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'comment-thread';
+    wrapper.dataset.commentId = data.comment_id;
+    wrapper.innerHTML = commentHtml + `<div class="ml-8 mt-2 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4 comment-replies-container"></div>`;
+    list.appendChild(wrapper);
+  }
+  const ccDisplay = document.getElementById('comments-count-display');
+  if (ccDisplay) ccDisplay.textContent = parseInt(ccDisplay.textContent || '0') + 1;
+});
+
+viewSocket.on('comment_deleted', (data) => {
+  if (data.post_id !== {{ post.id }}) return;
+  const el = document.getElementById(`comment-${data.comment_id}`);
+  if (el) {
+    const thread = el.closest('.comment-thread');
+    if (thread) thread.remove();
+    else el.remove();
+  }
+  const ccDisplay = document.getElementById('comments-count-display');
+  if (ccDisplay) ccDisplay.textContent = Math.max(0, parseInt(ccDisplay.textContent || '0') - 1);
+});
+
+viewSocket.on('post_deleted', (data) => {
+  if (data.post_id === {{ post.id }}) { window.location.href = '/posts'; }
+});
+
+viewSocket.on('post_edited', (data) => {
+  if (data.post_id !== {{ post.id }}) return;
+  const el = document.getElementById(`post-content-{{ post.id }}`);
+  if (el) el.innerText = data.content;
+});
+
+viewSocket.on('comment_edited', (data) => {
+  if (data.post_id !== {{ post.id }}) return;
+  const el = document.getElementById(`comment-content-${data.comment_id}`);
+  if (el) el.innerText = data.content;
+});
+
+viewSocket.on('new_notification', (data) => {
+  const bellBadge = document.getElementById('notif-bell-badge');
+  const navBadge = document.getElementById('notif-nav-badge');
+  [bellBadge, navBadge].forEach(b => {
+    if (b) {
+      const current = parseInt(b.textContent || '0');
+      b.classList.remove('hidden');
+      b.textContent = current + 1 > 99 ? '99+' : current + 1;
+    }
+  });
+});
+
+var reactionHideTimers = {};
+
+function showReactions(postId) {
+  if (reactionHideTimers[postId]) {
+    clearTimeout(reactionHideTimers[postId]);
+    delete reactionHideTimers[postId];
+  }
+  const picker = document.getElementById(`reactions-picker-${postId}`);
+  if (picker) picker.classList.add('show');
+}
+
+function startHideReactions(postId) {
+  reactionHideTimers[postId] = setTimeout(() => {
+    const picker = document.getElementById(`reactions-picker-${postId}`);
+    if (picker) picker.classList.remove('show');
+    delete reactionHideTimers[postId];
+  }, 400);
+}
+
+function cancelHideReactions(postId) {
+  if (reactionHideTimers[postId]) {
+    clearTimeout(reactionHideTimers[postId]);
+    delete reactionHideTimers[postId];
+  }
+  const picker = document.getElementById(`reactions-picker-${postId}`);
+  if (picker) picker.classList.add('show');
+}
+
+function updateViewLikeUI(postId, data) {
+  if (postId !== {{ post.id }}) return;
+  const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+  const likeBtn = document.getElementById(`like-btn-${postId}`);
+  const countSpan = document.getElementById(`like-count-${postId}`);
+  const likeDisplay = document.getElementById('like-count-display');
+  const postEl = document.getElementById(`post-${postId}`);
+  
+  const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : (data.like_count || 0);
+  if (countSpan) countSpan.textContent = total;
+  if (likeDisplay) likeDisplay.textContent = total;
+  
+  // Update reaction bar
+  const reactBar = document.getElementById(`reaction-bar-${postId}`);
+  if (reactBar && data.counts) {
+    reactBar.innerHTML = Object.entries(data.counts).map(([r, c]) => {
+      if (c === 0) return '';
+      return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">' + (emojiMap[r] || r) + ' ' + c + '</span>';
+    }).filter(Boolean).join(' ');
+  }
+  
+  // Update stats overlapping emojis
+  const statEl = document.getElementById(`stats-like-${postId}`);
+  if (statEl) {
+    if (data.counts && total > 0) {
+      const sortedReacts = Object.entries(data.counts)
+        .filter(([_, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1]);
+      if (sortedReacts.length > 0) {
+        const emojisHtml = sortedReacts.slice(0, 3).map(([r, _], idx) => {
+          const zIndex = 10 - idx;
+          return `<span class="text-sm leading-none z-[${zIndex}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-850 p-0.5 shadow-sm">${emojiMap[r] || '👍'}</span>`;
+        }).join('');
+        statEl.innerHTML = `<span class="flex -space-x-1 mr-1.5 items-center">${emojisHtml}</span> <span id="like-count-display">${total}</span>`;
+      } else {
+        statEl.innerHTML = `<span class="mr-1">👍</span> <span id="like-count-display">${total}</span>`;
+      }
+    } else {
+      statEl.innerHTML = `<span class="mr-1">👍</span> <span id="like-count-display">${total}</span>`;
+    }
+  }
+
+  const currentUserId = {{ current_user.id }};
+  if (data.user && data.user.id === currentUserId || data.user_id === currentUserId) {
+    const reaction = data.reaction || (data.liked ? 'like' : '');
+    if (postEl) postEl.dataset.userReaction = reaction || '';
+    if (likeBtn) {
+      const existingIcon = likeBtn.querySelector('i, span');
+      if (existingIcon) {
+        if (reaction) {
+          existingIcon.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + postId + '">' + (emojiMap[reaction] || '👍') + '</span>';
+          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+          if (reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
+          else if (reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
+          else likeBtn.classList.add('text-yellow-500', 'font-semibold');
+        } else {
+          existingIcon.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + postId + '"></i>';
+          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'font-semibold');
+          likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
+        }
+        const newIcon = document.getElementById(`like-icon-${postId}`);
+        if (newIcon) newIcon.classList.add('like-animate');
+      }
+    }
+  }
+}
+
+// React to post with socket + fallback
+function reactToPost(postId, reaction, event) {
+  try { if (event && event.stopPropagation) event.stopPropagation(); } catch(ex) {}
+  try {
+    cancelHideReactions(postId);
+    startHideReactions(postId);
+    
+    const postEl = document.getElementById(`post-${postId}`);
+    const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
+    
+    let targetReaction = reaction;
+    let optimisticReaction = reaction;
+    
+    if (reaction === 'main') {
+      if (prevReaction) {
+        targetReaction = prevReaction;
+        optimisticReaction = '';
+      } else {
+        targetReaction = 'like';
+        optimisticReaction = 'like';
+      }
+    } else {
+      if (prevReaction === reaction) {
+        optimisticReaction = '';
+      } else {
+        optimisticReaction = reaction;
+      }
+    }
+    
+    const icon = document.getElementById(`like-icon-${postId}`);
+    if (icon) icon.classList.add('like-animate');
+    const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+    
+    const setReact = (r) => {
+      const ic = document.getElementById(`like-icon-${postId}`);
+      const bt = document.getElementById(`like-btn-${postId}`);
+      const pe = document.getElementById(`post-${postId}`);
+      if (ic) {
+        if (r) {
+          ic.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + postId + '">' + (emojiMap[r] || '👍') + '</span>';
+        } else {
+          ic.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + postId + '"></i>';
+        }
+      }
+      if (bt) {
+        bt.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+        if (r) {
+          if (r === 'like') bt.classList.add('text-blue-500', 'font-semibold');
+          else if (r === 'love') bt.classList.add('text-red-500', 'font-semibold');
+          else bt.classList.add('text-yellow-500', 'font-semibold');
+        } else {
+          bt.classList.add('text-gray-600', 'dark:text-gray-400');
+        }
+      }
+      if (pe) pe.dataset.userReaction = r || '';
+    };
+    
+    const setCounts = (counts) => {
+      const ct = document.getElementById(`like-count-${postId}`);
+      const d = document.getElementById('like-count-display');
+      const se = document.getElementById(`stats-like-${postId}`);
+      const t = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
+      if (ct) ct.textContent = t;
+      if (d) d.textContent = t;
+      
+      if (se) {
+        if (counts && t > 0) {
+          const sortedReacts = Object.entries(counts)
+            .filter(([_, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1]);
+          if (sortedReacts.length > 0) {
+            const emojisHtml = sortedReacts.slice(0, 3).map(([r, _], idx) => {
+              const zIndex = 10 - idx;
+              return `<span class="text-sm leading-none z-[${zIndex}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-850 p-0.5 shadow-sm">${emojiMap[r] || '👍'}</span>`;
+            }).join('');
+            se.innerHTML = `<span class="flex -space-x-1 mr-1.5 items-center">${emojisHtml}</span> <span id="like-count-display">${t}</span>`;
+          } else {
+            se.innerHTML = `<span class="mr-1">👍</span> <span id="like-count-display">${t}</span>`;
+          }
+        } else {
+          se.innerHTML = `<span class="mr-1">👍</span> <span id="like-count-display">${t}</span>`;
+        }
+      }
+      
+      const rb = document.getElementById(`reaction-bar-${postId}`);
+      if (rb && counts) {
+        rb.innerHTML = Object.entries(counts).map(([r, c]) => c > 0 ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">' + (emojiMap[r] || r) + ' ' + c + '</span>' : '').filter(Boolean).join(' ');
+      }
+    };
+    
+    setReact(optimisticReaction);
+    
+    // Optimistic count adjustment
+    const currentCountEl = document.getElementById(`like-count-${postId}`);
+    const currentDisplayEl = document.getElementById('like-count-display');
+    if (currentCountEl || currentDisplayEl) {
+      let currentCount = parseInt(currentCountEl ? currentCountEl.textContent : (currentDisplayEl ? currentDisplayEl.textContent : '0')) || 0;
+      if (prevReaction && !optimisticReaction) {
+        currentCount = Math.max(0, currentCount - 1);
+      } else if (!prevReaction && optimisticReaction) {
+        currentCount = currentCount + 1;
+      }
+      if (currentCountEl) currentCountEl.textContent = currentCount;
+      if (currentDisplayEl) currentDisplayEl.textContent = currentCount;
+    }
+    
+    const handleResp = (resp) => {
+      if (!resp || !resp.success) { setReact(prevReaction); return; }
+      setReact(resp.removed ? '' : (resp.reaction || ''));
+      setCounts(resp.counts);
+    };
+    
+    if (viewSocket && viewSocket.connected) {
+      viewSocket.emit('react_to_post', { post_id: postId, reaction: targetReaction }, handleResp);
+    } else {
+      fetch('/posts/' + postId + '/react', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams({ reaction: targetReaction }) })
+        .then(r => r.json()).then(handleResp).catch(() => setReact(prevReaction));
+    }
+  } catch(ex) { console.error('reactToPost error:', ex); }
+}
+
+// Add comment with AJAX + socket fallback
+function addViewComment(e, postId) {
+  try { e.preventDefault(); } catch(ex) { return false; }
+  try {
+  const input = document.getElementById('comment-input');
+  const content = input.value.trim();
+  const parentId = document.getElementById('comment-parent-id').value;
+  if (!content) return false;
+  input.disabled = true;
+
+  const doFetchComment = () => {
+    const body = parentId ? new URLSearchParams({ content, parent_id: parentId }) : new URLSearchParams({ content });
+    fetch(`/posts/${postId}/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+      body: body
+    }).then(r => r.json()).then(data => {
+      input.disabled = false;
+      if (data.success) { handleCommentResponse(data, postId, parentId); input.value = ''; document.getElementById('comment-parent-id').value = ''; }
+    }).catch(() => { input.disabled = false; });
+  };
+
+  if (viewSocket && viewSocket.connected) {
+    viewSocket.emit('add_comment', { post_id: postId, content, parent_id: parentId || undefined }, (response) => {
+      input.disabled = false;
+      if (response && response.success) { input.value = ''; document.getElementById('comment-parent-id').value = ''; }
+      else { doFetchComment(); }
+    });
+  } else {
+    doFetchComment();
+  }
+  return false;
+  } catch(ex) { console.error('addViewComment error:', ex); return false; }
+}
+
+function handleCommentResponse(data, postId, parentId) {
+  const authorName = data.comment && data.comment.author ? data.comment.author.username : '{{ current_user.username }}';
+  const initial = authorName.charAt(0).toUpperCase();
+  const commentHtml = `
+    <div class="flex gap-3" id="comment-${data.comment_id}">
+      <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+      <div class="flex-1">
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-semibold text-sm text-gray-800 dark:text-white">${escapeHtml(authorName)}</span>
+            <div class="flex items-center gap-1">
+              <button onclick="deleteComment(${data.comment_id})" class="text-gray-400 hover:text-red-500 p-1 text-xs"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <p class="text-gray-700 dark:text-gray-300" id="comment-content-${data.comment_id}">${escapeHtml(data.comment ? data.comment.content : data.content)}</p>
+        </div>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">${data.comment && data.comment.created_at ? data.comment.created_at : data.created_at || 'just now'}</span>
+          <button onclick="openViewReply(${data.comment_id})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+        </div>
+        <div id="view-reply-form-${data.comment_id}" class="hidden mt-2 ml-8">
+          <form onsubmit="addViewReply(event, ${postId}, ${data.comment_id})" class="flex gap-2">
+            <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium"><i class="fas fa-paper-plane"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>`;
+
+  if (parentId) {
+    const parentThread = document.querySelector(`.comment-thread[data-comment-id="${parentId}"] .comment-replies-container`);
+    if (parentThread) { parentThread.insertAdjacentHTML('beforeend', commentHtml); }
+    document.getElementById(`view-reply-form-${parentId}`).classList.add('hidden');
+  } else {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'comment-thread';
+    wrapper.dataset.commentId = data.comment_id;
+    wrapper.innerHTML = commentHtml + `<div class="ml-8 mt-2 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4 comment-replies-container"></div>`;
+    document.getElementById('comments-list').appendChild(wrapper);
+  }
+  Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Comment added!', showConfirmButton: false, timer: 2000});
+  const ccDisplay = document.getElementById('comments-count-display');
+  if (ccDisplay) ccDisplay.textContent = parseInt(ccDisplay.textContent || '0') + 1;
+}
+
+// Reply functions for view.html
+function openViewReply(commentId) {
+  const form = document.getElementById(`view-reply-form-${commentId}`);
+  if (form) {
+    form.classList.toggle('hidden');
+    const input = form.querySelector('input[name="content"]');
+    if (input && !form.classList.contains('hidden')) input.focus();
+  }
+}
+
+function addViewReply(e, postId, parentId) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const input = e.target.querySelector('input[name="content"]');
+  const content = input.value.trim();
+  if (!content) return;
+  input.disabled = true;
+  const doFetchReply = () => {
+    fetch(`/posts/${postId}/comment`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+      body: new URLSearchParams({ content, parent_id: parentId })
+    }).then(r => r.json()).then(data => {
+      input.disabled = false;
+      if (data.success) {
+        input.value = '';
+        document.getElementById(`view-reply-form-${parentId}`).classList.add('hidden');
+        appendViewReplyHTML(data, parentId);
+      }
+    }).catch(() => { input.disabled = false; });
+  };
+  if (viewSocket && viewSocket.connected) {
+    viewSocket.emit('add_comment', { post_id: postId, content, parent_id: parentId }, (response) => {
+      input.disabled = false;
+      if (response && response.success) { input.value = ''; document.getElementById(`view-reply-form-${parentId}`).classList.add('hidden'); }
+      else { doFetchReply(); }
+    });
+  } else { doFetchReply(); }
+  } catch(ex) { console.error('addViewReply error:', ex); }
+}
+
+function appendViewReplyHTML(data, parentId) {
+  const authorName = data.comment && data.comment.author ? data.comment.author.username : '{{ current_user.username }}';
+  const initial = authorName.charAt(0).toUpperCase();
+  const replyHtml = `
+    <div class="flex gap-2" id="comment-${data.comment_id}">
+      <div class="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">${initial}</div>
+      <div class="flex-1">
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(authorName)}</span>
+            <div class="flex items-center gap-1">
+              <button onclick="deleteComment(${data.comment_id})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <p class="text-gray-700 dark:text-gray-300 text-sm">${escapeHtml(data.comment ? data.comment.content : data.content)}</p>
+        </div>
+        <div class="flex items-center gap-3 mt-0.5">
+          <span class="text-xs text-gray-400 dark:text-gray-500">${data.comment && data.comment.created_at ? data.comment.created_at : data.created_at || 'just now'}</span>
+        </div>
+      </div>
+    </div>`;
+  const container = document.querySelector(`.comment-thread[data-comment-id="${parentId}"] .comment-replies-container`);
+  if (container) container.insertAdjacentHTML('beforeend', replyHtml);
+}
+
+// Delete comment with socket + fallback
+function deleteComment(commentId) {
+  Swal.fire({
+    title: 'Delete this comment?',
+    text: "This cannot be undone.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e53e3e',
+    cancelButtonColor: '#718096',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const postId = {{ post.id }};
+      const removeViewCommentEl = () => {
+        const commentEl = document.getElementById(`comment-${commentId}`);
+        if (commentEl) {
+          const thread = commentEl.closest('.comment-thread');
+          if (thread) thread.remove();
+          else commentEl.remove();
+        }
+        const ccDisplay = document.getElementById('comments-count-display');
+        if (ccDisplay) ccDisplay.textContent = Math.max(0, parseInt(ccDisplay.textContent || '0') - 1);
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Comment deleted', showConfirmButton: false, timer: 2000 });
+      };
+      if (viewSocket && viewSocket.connected) {
+        viewSocket.emit('delete_comment', { comment_id: commentId, post_id: postId }, (response) => {
+          if (response && response.success) { removeViewCommentEl(); }
+        });
+      } else {
+        fetch(`/posts/${postId}/comment/${commentId}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(r => r.json()).then(data => {
+          if (data.success) { removeViewCommentEl(); }
+        }).catch(() => {});
+      }
+    }
+  });
+}
+
+// Delete post with socket + fallback
+function deletePost() {
+  Swal.fire({
+    title: 'Delete this post?',
+    text: "This cannot be undone.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e53e3e',
+    cancelButtonColor: '#718096',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const postId = {{ post.id }};
+      if (viewSocket && viewSocket.connected) {
+        viewSocket.emit('delete_post', { post_id: postId }, (response) => {
+          if (response && response.success) { window.location.href = '/posts'; }
+        });
+      } else {
+        fetch(`/posts/${postId}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(r => r.json()).then(data => {
+          if (data.success) { window.location.href = '/posts'; }
+        }).catch(() => {});
+      }
+    }
+  });
+}
+
+// Edit post modal
+var viewEditLoadedImages = [];
+var viewEditNewImages = [];
+
+function openEditPostModal() {
+  const postContent = document.getElementById(`post-content-{{ post.id }}`).innerText;
+  document.getElementById('edit-post-content').value = postContent;
+  document.getElementById('edit-post-modal').classList.remove('hidden');
+  closeAllMenus();
+  // Load existing images
+  const grid = document.getElementById('edit-images-grid');
+  grid.innerHTML = '';
+  viewEditLoadedImages = [];
+  const imgs = document.querySelectorAll('.post-images-container img');
+  imgs.forEach(img => {
+    const url = img.getAttribute('src');
+    if (url) {
+      viewEditLoadedImages.push(url);
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `<img src="${url}" class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"><button type="button" onclick="viewRemoveEditImage(${viewEditLoadedImages.length - 1})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 hidden group-hover:flex"><i class="fas fa-times"></i></button>`;
+      grid.appendChild(div);
+    }
+  });
+}
+
+function closeEditPostModal() {
+  document.getElementById('edit-post-modal').classList.add('hidden');
+  viewEditLoadedImages = [];
+  viewEditNewImages = [];
+}
+
+function viewRemoveEditImage(index) {
+  viewEditLoadedImages.splice(index, 1);
+  const grid = document.getElementById('edit-images-grid');
+  grid.innerHTML = '';
+  viewEditLoadedImages.forEach((url, i) => {
+    const div = document.createElement('div');
+    div.className = 'relative group';
+    div.innerHTML = `<img src="${url}" class="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"><button type="button" onclick="viewRemoveEditImage(${i})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 hidden group-hover:flex"><i class="fas fa-times"></i></button>`;
+    grid.appendChild(div);
+  });
+}
+
+function handleEditImageSelect(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    viewEditNewImages.push(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const grid = document.getElementById('edit-images-grid');
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg border border-green-400 dark:border-green-600"><span class="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 rounded">new</span><button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600" onclick="this.closest('.relative').remove()"><i class="fas fa-times"></i></button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function saveEditedPost(e) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const postId = {{ post.id }};
+  const content = document.getElementById('edit-post-content').value.trim();
+  const visibility = document.getElementById('edit-post-visibility').value;
+  
+  if (!content) return;
+  
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  const resetBtn = () => { submitBtn.disabled = false; submitBtn.innerHTML = 'Save Changes'; };
+
+  const doSave = (newUrls = []) => {
+    const allUrls = [...viewEditLoadedImages, ...newUrls];
+    fetch(`/posts/${postId}/edit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+      body: new URLSearchParams({ content, image_urls: JSON.stringify(allUrls), visibility })
+    })
+    .then(r => r.json()).then(d => {
+      resetBtn();
+        if (d.success) {
+        document.getElementById(`post-content-${postId}`).innerText = d.content;
+        const postEl = document.getElementById(`post-${postId}`);
+        if (postEl && d.image_urls) {
+          postEl.dataset.images = JSON.stringify(d.image_urls);
+        }
+        if (d.image_urls) {
+          const existingContainer = document.querySelector('.post-images-container');
+          if (existingContainer) {
+            if (d.image_urls.length > 0) {
+              if (d.image_urls.length === 1) {
+                existingContainer.outerHTML = `<div class="w-full post-images-container"><img src="${d.image_urls[0]}" alt="Post image" class="w-full max-h-[500px] object-cover cursor-pointer" onclick="openImageGallery(${postId}, 0)"></div>`;
+              } else {
+                let slides = d.image_urls.map((u, i) =>
+                  `<li class="splide__slide"><img src="${u}" alt="Post image ${i+1}" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery(${postId}, ${i})" loading="lazy"></li>`
+                ).join('');
+                existingContainer.outerHTML = `<div class="w-full post-images-container"><div class="splide" id="splide-view-${postId}"><div class="splide__track"><ul class="splide__list">${slides}</ul></div></div></div>`;
+                try { new Splide(document.getElementById(`splide-view-${postId}`), { type: 'loop', perPage: 1, pagination: true, arrows: true, gap: '1rem' }).mount(); } catch(e) {}
+              }
+            } else {
+              existingContainer.remove();
+            }
+          }
+        }
+        closeEditPostModal();
+        Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Post updated!', showConfirmButton: false, timer: 2000});
+      }
+    });
+  };
+
+  if (viewEditNewImages.length > 0) {
+    const fd = new FormData();
+    viewEditNewImages.forEach(f => fd.append('images', f));
+    fetch('/upload_post_image', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(res => { if (res.success) doSave(res.urls); else resetBtn(); })
+      .catch(() => resetBtn());
+  } else {
+    doSave([]);
+  }
+  } catch(ex) { console.error('saveEditedPost error:', ex); }
+}
+
+// Edit comment modal
+function openEditCommentModal(commentId) {
+  document.getElementById('edit-comment-id').value = commentId;
+  const commentContent = document.getElementById(`comment-content-${commentId}`).innerText;
+  document.getElementById('edit-comment-content').value = commentContent;
+  document.getElementById('edit-comment-modal').classList.remove('hidden');
+  closeAllMenus();
+}
+
+function closeEditCommentModal() {
+  document.getElementById('edit-comment-modal').classList.add('hidden');
+}
+
+function saveEditedComment(e) {
+  try { e.preventDefault(); } catch(ex) { return; }
+  try {
+  const commentId = document.getElementById('edit-comment-id').value;
+  const content = document.getElementById('edit-comment-content').value.trim();
+  
+  if (!content) return;
+  
+  fetch(`/posts/{{ post.id }}/comment/${commentId}/edit`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+    body: `content=${encodeURIComponent(content)}`
+  })
+  .then(r => r.json()).then(d => {
+    if (d.success) {
+      document.getElementById(`comment-content-${commentId}`).innerText = d.content;
+      closeEditCommentModal();
+      Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Comment updated!', showConfirmButton: false, timer: 2000});
+    }
+  });
+  } catch(ex) { console.error('saveEditedComment error:', ex); }
+}
+
+// Menu functions
+function togglePostMenu() {
+  closeAllMenus();
+  const menu = document.getElementById('post-menu');
+  menu.classList.toggle('hidden');
+}
+
+function toggleCommentMenu(commentId) {
+  closeAllMenus();
+  const menu = document.getElementById(`comment-menu-${commentId}`);
+  menu.classList.toggle('hidden');
+}
+
+function closeAllMenus() {
+  document.getElementById('post-menu')?.classList.add('hidden');
+  document.querySelectorAll('[id^="comment-menu-"]').forEach(menu => {
+    menu.classList.add('hidden');
+  });
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#post-menu') && !e.target.closest('[id^="comment-menu-"]') && !e.target.closest('button[onclick^="toggle"]')) {
+    closeAllMenus();
+  }
+});
+
+// Copy post link
+function copyPostLink() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Link copied!', showConfirmButton: false, timer: 2000});
+  });
+  closeAllMenus();
+}
+
+// Bookmark post
+function bookmarkPost() {
+  Swal.fire({toast: true, position: 'top-end', icon: 'info', title: 'Post saved!', showConfirmButton: false, timer: 2000});
+  closeAllMenus();
+}
+
+// Share post
+function sharePost() {
+  const url = window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: 'Check out this post!', text: document.getElementById(`post-content-{{ post.id }}`).innerText.substring(0, 100), url: url });
+  } else {
+    copyPostLink();
+  }
+}
+
+// Report post
+function reportPost() {
+  Swal.fire({
+    title: 'Report this post?',
+    input: 'textarea',
+    inputLabel: 'Reason for reporting',
+    inputPlaceholder: 'Describe why you want to report this post...',
+    showCancelButton: true,
+    confirmButtonText: 'Submit Report',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Report submitted', showConfirmButton: false, timer: 2000});
+    }
+  });
+  closeAllMenus();
+}
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+// Initialize Splide carousel if present
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof Splide !== 'undefined') {
+    document.querySelectorAll('.splide').forEach(function(el) {
+      try { new Splide(el, { type: 'loop', perPage: 1, pagination: true, arrows: true, gap: '1rem' }).mount(); } catch(e) {}
+    });
+  }
+});
+</script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+{% endblock %}

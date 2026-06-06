@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }}'s Posts - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6">
+  <div class="mb-6">
+    <a href="{{ url_for('posts.posts_feed') }}" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 mb-4 inline-flex items-center gap-2">
+      <i class="fas fa-arrow-left"></i> Back to Feed
+    </a>
+    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+      {% if user.avatar_url %}
+        <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-12 h-12 rounded-full inline-block mr-3">
+      {% endif %}
+      {{ user.username }}'s Posts
+    </h2>
+  </div>
+
+  <div class="space-y-6">
+    {% for post in posts.items %}
+      <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-4">
+          <p class="text-gray-800 dark:text-gray-200">{{ post.content }}</p>
+          {% if post.image_url %}
+            <img src="{{ post.image_url }}" class="w-full max-h-96 object-cover mt-3 rounded-lg">
+          {% endif %}
+        </div>
+        <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <span class="text-sm text-gray-500 dark:text-gray-400">{{ post.created_at.strftime('%B %d, %Y') }}</span>
+          <span class="text-sm text-gray-500 dark:text-gray-400">{{ post.likes | length }} likes</span>
+        </div>
+      </article>
+    {% else %}
+      <p class="text-gray-500 dark:text-gray-400 text-center py-12">No posts yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}Python IDE - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block content %}
+<div class="h-[calc(100vh-4rem)] flex flex-col bg-gray-900 text-white">
+  <!-- Top Bar -->
+  <div class="h-12 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 flex-shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="text-lg font-bold text-indigo-400"><i class="fab fa-python"></i> Python IDE</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="createNewFile()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition" title="New File">
+        <i class="fas fa-file-medical mr-1"></i> New
+      </button>
+      <button onclick="saveFile()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition" title="Save (Ctrl+S)">
+        <i class="fas fa-save mr-1"></i> Save
+      </button>
+      <button onclick="runCode()" class="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition" title="Run (Ctrl+Enter)">
+        <i class="fas fa-play mr-1"></i> Run
+      </button>
+      <button onclick="formatCode()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition" title="Format">
+        <i class="fas fa-align-left mr-1"></i> Format
+      </button>
+      <button onclick="toggleTheme()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Sidebar - File Explorer -->
+    <div class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
+      <div class="p-3 border-b border-gray-700 flex items-center justify-between">
+        <span class="font-semibold text-sm">EXPLORER</span>
+        <div class="flex gap-1">
+          <button onclick="createNewFile()" class="p-1 hover:bg-gray-700 rounded" title="New File"><i class="fas fa-file-plus text-xs"></i></button>
+          <button onclick="createNewFolder()" class="p-1 hover:bg-gray-700 rounded" title="New Folder"><i class="fas fa-folder-plus text-xs"></i></button>
+        </div>
+      </div>
+      <div id="file-tree" class="flex-1 overflow-y-auto p-2"></div>
+    </div>
+
+    <!-- Editor Area -->
+    <div class="flex-1 flex flex-col">
+      <!-- Tabs -->
+      <div id="tabs-bar" class="h-8 bg-gray-800 border-b border-gray-700 flex items-center overflow-x-auto">
+        <div class="tab-item px-4 py-2 bg-gray-700 text-sm flex items-center gap-2 border-r border-gray-600">
+          <span>main.py</span>
+          <button onclick="closeTab(this)" class="hover:text-red-400"><i class="fas fa-times text-xs"></i></button>
+        </div>
+      </div>
+      <!-- Monaco Editor Container -->
+      <div id="editor-container" class="flex-1 overflow-hidden"></div>
+    </div>
+
+    <!-- Right Panel - Snippets & Extensions -->
+    <div class="w-64 bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0">
+      <div class="p-3 border-b border-gray-700">
+        <span class="font-semibold text-sm">SNIPPETS</span>
+      </div>
+      <div id="snippets-list" class="flex-1 overflow-y-auto p-2"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Panel - Output Console -->
+  <div id="output-panel" class="h-48 bg-gray-800 border-t border-gray-700 flex flex-col flex-shrink-0">
+    <div class="h-8 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4">
+      <div class="flex gap-4">
+        <button class="tab-btn active text-sm" onclick="showPanel('output')">OUTPUT</button>
+        <button class="tab-btn text-sm text-gray-400 hover:text-white" onclick="showPanel('problems')">PROBLEMS</button>
+        <button class="tab-btn text-sm text-gray-400 hover:text-white" onclick="showPanel('terminal')">TERMINAL</button>
+      </div>
+      <button onclick="clearOutput()" class="text-xs text-gray-400 hover:text-white"><i class="fas fa-trash"></i> Clear</button>
+    </div>
+    <div id="output-content" class="flex-1 overflow-y-auto p-4 font-mono text-sm">
+      <div class="text-gray-400">Ready to run Python code...</div>
+    </div>
+    <div id="problems-content" class="flex-1 overflow-y-auto p-4 font-mono text-sm hidden"></div>
+    <div id="terminal-content" class="flex-1 overflow-y-auto p-4 font-mono text-sm hidden"></div>
+  </div>
+</div>
+
+<!-- Load Monaco Editor -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script>
+// IDE State
+const state = {
+  currentFile: 'main.py',
+  files: {},
+  editor: null,
+  isDark: true,
+  autoSaveTimer: null
+};
+
+// Initialize Monaco Editor
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+require(['vs/editor/editor.main'], function() {
+  state.editor = monaco.editor.create(document.getElementById('editor-container'), {
+    value: '# Welcome to Python IDE!\n# Write your code here and press Ctrl+Enter to run\n\nprint("Hello, World!")',
+    language: 'python',
+    theme: 'vs-dark',
+    automaticLayout: true,
+    fontSize: 14,
+    minimap: { enabled: true },
+    scrollBeyondLastLine: false,
+    wordWrap: 'on',
+    tabSize: 4,
+    renderWhitespace: 'selection',
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+  });
+
+  // Keyboard shortcuts
+  state.editor.addCommand(monaco.KeyCode.Enter | monaco.KeyMod.CtrlCmd, function() {
+    runCode();
+  });
+
+  state.editor.addCommand(monaco.KeyCode.KeyS | monaco.KeyMod.CtrlCmd, function() {
+    saveFile();
+  });
+
+  // Auto-save every 10 seconds
+  setInterval(saveFile, 10000);
+});
+
+// File Management
+function loadFiles() {
+  fetch('/api/ide/files')
+    .then(r => r.json())
+    .then(data => {
+      state.files = {};
+      data.files.forEach(f => { state.files[f.path] = f; });
+      renderFileTree(data.files);
+    });
+}
+
+function renderFileTree(files) {
+  const tree = document.getElementById('file-tree');
+  tree.innerHTML = '';
+  
+  files.forEach(file => {
+    const item = document.createElement('div');
+    item.className = 'flex items-center gap-2 px-2 py-1 hover:bg-gray-700 rounded cursor-pointer text-sm';
+    item.innerHTML = `<i class="fas fa-file-code text-yellow-400 text-xs"></i><span>${file.name}</span>`;
+    item.onclick = () => openFile(file.path);
+    tree.appendChild(item);
+  });
+}
+
+function openFile(path) {
+  fetch(`/api/ide/file?filename=${encodeURIComponent(path)}`)
+    .then(r => r.json())
+    .then(data => {
+      state.editor.setValue(data.content);
+      state.currentFile = path;
+      updateTab(path);
+    });
+}
+
+function createNewFile() {
+  const name = prompt('Enter file name:', 'new_file.py');
+  if (name) {
+    state.editor.setValue('');
+    state.currentFile = name;
+    updateTab(name);
+    saveFile();
+  }
+}
+
+function createNewFolder() {
+  const name = prompt('Enter folder name:', 'new_folder');
+  if (name) {
+    fetch('/api/ide/folder', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({foldername: name})
+    }).then(() => loadFiles());
+  }
+}
+
+function saveFile() {
+  const content = state.editor.getValue();
+  fetch('/api/ide/file', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({filename: state.currentFile, content: content})
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      showToast('File saved!', 'success');
+      loadFiles();
+    }
+  });
+}
+
+function updateTab(name) {
+  const tabs = document.getElementById('tabs-bar');
+  tabs.innerHTML = `<div class="tab-item px-4 py-2 bg-gray-700 text-sm flex items-center gap-2 border-r border-gray-600">
+    <span>${name}</span>
+  </div>`;
+}
+
+function closeTab(btn) {
+  // Close tab logic
+}
+
+// Code Execution
+function runCode() {
+  const code = state.editor.getValue();
+  const outputDiv = document.getElementById('output-content');
+  outputDiv.innerHTML = '<div class="text-blue-400">Running...</div>';
+  
+  fetch('/api/ide/run', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({code: code, filename: state.currentFile})
+  })
+  .then(r => r.json())
+  .then(data => {
+    let html = '';
+    if (data.output) {
+      html += `<div class="text-green-400">${escapeHtml(data.output)}</div>`;
+    }
+    if (data.errors) {
+      html += `<div class="text-red-400">${escapeHtml(data.errors)}</div>`;
+    }
+    html += `<div class="text-gray-500 mt-2">Exit code: ${data.returnCode} | Time: ${data.executionTime}</div>`;
+    outputDiv.innerHTML = html;
+  })
+  .catch(err => {
+    outputDiv.innerHTML = `<div class="text-red-400">Error: ${err.message}</div>`;
+  });
+}
+
+// Linting
+function lintCode() {
+  const code = state.editor.getValue();
+  fetch('/api/ide/lint', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({code: code})
+  })
+  .then(r => r.json())
+  .then(data => {
+    const problems = document.getElementById('problems-content');
+    if (data.issues.length === 0) {
+      problems.innerHTML = '<div class="text-green-400">No issues found!</div>';
+    } else {
+      problems.innerHTML = data.issues.map(i => 
+        `<div class="${i.severity === 'error' ? 'text-red-400' : i.severity === 'warning' ? 'text-yellow-400' : 'text-blue-400'}">
+          Line ${i.line}: ${i.message}
+        </div>`
+      ).join('');
+    }
+  });
+}
+
+// Format Code
+function formatCode() {
+  const code = state.editor.getValue();
+  fetch('/api/ide/format', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({code: code})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      state.editor.setValue(data.code);
+      showToast('Code formatted!', 'success');
+    }
+  });
+}
+
+// Load Snippets
+function loadSnippets() {
+  fetch('/api/ide/snippets')
+    .then(r => r.json())
+    .then(data => {
+      const list = document.getElementById('snippets-list');
+      list.innerHTML = '';
+      data.snippets.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'p-2 bg-gray-700 rounded mb-2 cursor-pointer hover:bg-gray-600 transition';
+        item.innerHTML = `<div class="font-semibold text-sm">${s.name}</div>`;
+        item.onclick = () => { state.editor.setValue(s.code); };
+        list.appendChild(item);
+      });
+    });
+}
+
+// Panel Toggle
+function showPanel(name) {
+  document.getElementById('output-content').classList.toggle('hidden', name !== 'output');
+  document.getElementById('problems-content').classList.toggle('hidden', name !== 'problems');
+  document.getElementById('terminal-content').classList.toggle('hidden', name !== 'terminal');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function clearOutput() {
+  document.getElementById('output-content').innerHTML = '<div class="text-gray-400">Output cleared.</div>';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showToast(msg, type) {
+  Swal.fire({toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 2000});
+}
+
+function toggleTheme() {
+  state.isDark = !state.isDark;
+  monaco.editor.setTheme(state.isDark ? 'vs-dark' : 'vs');
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  loadFiles();
+  loadSnippets();
+});
+</script>
+{% endblock %}

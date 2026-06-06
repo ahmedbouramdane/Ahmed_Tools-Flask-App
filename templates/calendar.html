@@ -1,96 +1,127 @@
 {% extends "base.html" %}
+{% block title %}Calendar - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
-<h2 class="text-3xl font-bold text-gray-800 mb-6">My Calendar</h2>
-<div id="calendar" class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100"></div>
-
-<!-- Custom Event Modal -->
-<div id="event-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0">
-  <div id="event-modal" class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-all duration-300">
-    <!-- Header -->
-    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-      <h3 id="event-modal-title" class="text-xl font-bold text-gray-800 dark:text-white">New Event</h3>
-      <button type="button" id="close-event-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition focus:outline-none">
-        <i class="fas fa-times text-xl"></i>
-      </button>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=calendar-premium-2">
+<div class="calendar-shell">
+  <section class="calendar-hero">
+    <div>
+      <p class="calendar-kicker">Schedule</p>
+      <h2>My Calendar</h2>
+      <p class="calendar-subtitle">Plan meetings, focus time, reminders, repeats, attachments, and quick follow-ups in one polished workspace.</p>
     </div>
-    <!-- Body -->
-    <div class="p-6 overflow-y-auto max-h-[70vh] space-y-4">
-      <form id="event-form">
-        <input type="hidden" id="event-id">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Title</label>
-          <input type="text" id="event-title" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Event title">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</label>
-          <textarea id="event-desc" rows="3" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Details..."></textarea>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Location</label>
-          <input type="text" id="event-location" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Location">
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Start</label>
-            <input type="datetime-local" id="event-start" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">End</label>
-            <input type="datetime-local" id="event-end" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
-          </div>
-        </div>
-        
-        <div class="flex items-center gap-2 mt-2">
-          <input type="checkbox" id="event-allDay" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">All day event</label>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Color</label>
-             <input type="color" id="event-color" class="w-full h-10 rounded-xl cursor-pointer border-none p-0 bg-transparent">
-          </div>
-          <div>
-             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Repeat</label>
-             <select id="event-repeat" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
-               <option value="none">No repeat</option>
-               <option value="daily">Daily</option>
-               <option value="weekly">Weekly</option>
-               <option value="monthly">Monthly</option>
-             </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Reminder (mins before)</label>
-          <input type="number" id="event-reminder" value="30" min="0" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
-        </div>
-
-        <!-- Attachments & Camera -->
-        <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Attachments</label>
-          <div class="flex gap-2">
-            <!-- File Upload -->
-            <label class="cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
-              <i class="fas fa-image"></i> Browse
-              <input type="file" id="event-files" multiple accept="image/*" class="hidden">
-            </label>
-            <!-- Camera Capture -->
-            <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
-              <i class="fas fa-camera"></i> Take Photo
-              <input type="file" id="event-camera" accept="image/*" capture="environment" class="hidden">
-            </label>
-          </div>
-          <p class="text-xs text-gray-500 mt-2 hidden" id="selected-files-text"></p>
-          <div id="existing-attachments" class="mt-3 space-y-2"></div>
-        </div>
-      </form>
+    <div class="calendar-hero-actions">
+      <button type="button" id="calendar-new-event" class="calendar-primary-btn"><i class="fas fa-plus"></i><span>New event</span></button>
+      <button type="button" id="calendar-print" class="calendar-icon-btn" title="Print calendar" aria-label="Print calendar"><i class="fas fa-print"></i></button>
+      <button type="button" id="calendar-export" class="calendar-icon-btn" title="Export .ics" aria-label="Export .ics"><i class="fas fa-file-export"></i></button>
+      <label class="calendar-icon-btn" title="Import .ics" aria-label="Import .ics"><i class="fas fa-file-import"></i><input type="file" id="calendar-import" accept=".ics,text/calendar" hidden></label>
     </div>
-    <!-- Footer -->
-    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3">
-      <button type="button" id="cancel-event-btn" class="px-5 py-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium transition">Cancel</button>
-      <button type="button" id="save-event-btn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow font-medium transition">Save Event</button>
+  </section>
+
+  <section class="calendar-board">
+    <aside class="calendar-side-panel">
+      <div class="mini-date-card">
+        <span id="calendar-today-weekday">Today</span>
+        <strong id="calendar-today-number">--</strong>
+        <small id="calendar-today-month">--</small>
+      </div>
+
+      <div class="calendar-panel-section">
+        <label class="calendar-search-label" for="calendar-search">Search</label>
+        <div class="calendar-search-box"><i class="fas fa-search"></i><input type="search" id="calendar-search" placeholder="Title, place, notes"></div>
+      </div>
+
+      <div class="calendar-panel-section">
+        <div class="calendar-panel-title">Calendars</div>
+        <label class="calendar-check-row"><input type="checkbox" class="calendar-color-filter" value="work" checked><span class="dot work"></span> Work</label>
+        <label class="calendar-check-row"><input type="checkbox" class="calendar-color-filter" value="personal" checked><span class="dot personal"></span> Personal</label>
+        <label class="calendar-check-row"><input type="checkbox" class="calendar-color-filter" value="travel" checked><span class="dot travel"></span> Travel</label>
+        <label class="calendar-check-row"><input type="checkbox" class="calendar-color-filter" value="focus" checked><span class="dot focus"></span> Focus</label>
+        <label class="calendar-check-row"><input type="checkbox" class="calendar-color-filter" value="other" checked><span class="dot other"></span> Other</label>
+      </div>
+
+      <div class="calendar-panel-section">
+        <div class="calendar-panel-title">Today agenda</div>
+        <div id="today-agenda" class="today-agenda empty">No events today</div>
+      </div>
+
+      <div class="calendar-panel-section calendar-hints">
+        <div class="calendar-panel-title">Smart tools</div>
+        <button type="button" id="calendar-focus-time"><i class="fas fa-bullseye"></i> Add focus time</button>
+        <button type="button" id="calendar-copy-link"><i class="fas fa-link"></i> Copy calendar link</button>
+      </div>
+    </aside>
+
+    <div class="calendar-main-panel">
+      <div class="calendar-topbar">
+        <div class="calendar-nav-group">
+          <button type="button" id="calendar-prev" class="calendar-icon-btn" title="Previous" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
+          <button type="button" id="calendar-next" class="calendar-icon-btn" title="Next" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+          <button type="button" id="calendar-today" class="calendar-text-btn">Today</button>
+        </div>
+        <h3 id="calendar-current-title">Calendar</h3>
+        <div class="calendar-view-tabs" role="tablist" aria-label="Calendar view">
+          <button type="button" data-view="dayGridMonth" class="active">Month</button>
+          <button type="button" data-view="timeGridWeek">Week</button>
+          <button type="button" data-view="timeGridDay">Day</button>
+          <button type="button" data-view="listWeek">Agenda</button>
+        </div>
+      </div>
+      <div id="calendar" class="calendar-canvas"></div>
+    </div>
+  </section>
+</div>
+
+<div id="event-modal-backdrop" class="calendar-modal-backdrop hidden opacity-0">
+  <div id="event-modal" class="calendar-modal scale-95" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
+    <div class="calendar-modal-header">
+      <div><p id="event-modal-mode">Event</p><h3 id="event-modal-title">New event</h3></div>
+      <button type="button" id="close-event-modal" class="calendar-icon-btn" title="Close" aria-label="Close"><i class="fas fa-times"></i></button>
+    </div>
+
+    <form id="event-form" class="calendar-event-form">
+      <input type="hidden" id="event-id">
+      <div class="calendar-form-grid full">
+        <label class="calendar-field full"><span>Title</span><input type="text" id="event-title" required placeholder="Add a title"></label>
+        <label class="calendar-field full"><span>Location</span><input type="text" id="event-location" placeholder="Room, address, or online link"></label>
+        <label class="calendar-field full"><span>Description</span><textarea id="event-desc" rows="4" placeholder="Agenda, notes, attendees, or preparation details"></textarea></label>
+      </div>
+
+      <div class="calendar-form-grid">
+        <label class="calendar-field"><span>Start</span><input type="datetime-local" id="event-start" required></label>
+        <label class="calendar-field"><span>End</span><input type="datetime-local" id="event-end"></label>
+      </div>
+
+      <div class="calendar-inline-row">
+        <label class="calendar-switch"><input type="checkbox" id="event-allDay"><span></span> All day</label>
+        <label class="calendar-switch"><input type="checkbox" id="event-busy" checked><span></span> Show busy</label>
+      </div>
+
+      <div class="calendar-form-grid">
+        <label class="calendar-field"><span>Calendar</span><select id="event-category"><option value="work" data-color="#2563eb">Work</option><option value="personal" data-color="#7c3aed">Personal</option><option value="travel" data-color="#0891b2">Travel</option><option value="focus" data-color="#059669">Focus</option><option value="other" data-color="#ea580c">Other</option></select></label>
+        <label class="calendar-field"><span>Color</span><input type="color" id="event-color" value="#2563eb"></label>
+      </div>
+
+      <div class="calendar-form-grid">
+        <label class="calendar-field"><span>Repeat</span><select id="event-repeat"><option value="none">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+        <label class="calendar-field"><span>Reminder</span><select id="event-reminder"><option value="0">At time of event</option><option value="5">5 minutes before</option><option value="10">10 minutes before</option><option value="15">15 minutes before</option><option value="30">30 minutes before</option><option value="60">1 hour before</option><option value="1440">1 day before</option></select></label>
+      </div>
+
+      <div class="calendar-attachments">
+        <div class="calendar-panel-title">Attachments</div>
+        <div class="calendar-attachment-actions">
+          <label><i class="fas fa-paperclip"></i> Browse<input type="file" id="event-files" multiple class="hidden"></label>
+          <label><i class="fas fa-camera"></i> Camera<input type="file" id="event-camera" accept="image/*" capture="environment" class="hidden"></label>
+        </div>
+        <p id="selected-files-text" class="calendar-selected-files hidden"></p>
+        <div id="existing-attachments" class="calendar-attachment-list"></div>
+      </div>
+    </form>
+
+    <div class="calendar-modal-footer">
+      <button type="button" id="delete-event-btn" class="calendar-danger-btn hidden"><i class="fas fa-trash"></i> Delete</button>
+      <div class="calendar-footer-spacer"></div>
+      <button type="button" id="cancel-event-btn" class="calendar-text-btn">Cancel</button>
+      <button type="button" id="save-event-btn" class="calendar-primary-btn"><i class="fas fa-save"></i> Save</button>
     </div>
   </div>
 </div>

@@ -60,10 +60,25 @@ TABLES = {
             ("completed", "BOOLEAN DEFAULT 0"),
             ("priority", "VARCHAR(10) DEFAULT 'medium'"),
             ("due_date", "DATETIME"),
+            ("category", "VARCHAR(50) DEFAULT ''"),
+            ("tags", "TEXT DEFAULT ''"),
+            ("is_my_day", "BOOLEAN DEFAULT 0"),
+            ("is_important", "BOOLEAN DEFAULT 0"),
             ("created_at", "DATETIME"),
             ("updated_at", "DATETIME"),
             ("user_id", "INTEGER NOT NULL REFERENCES user(id)"),
         ]
+    },
+    "task_share": {
+        "columns": [
+            ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+            ("task_id", "INTEGER NOT NULL REFERENCES task(id)"),
+            ("shared_by_id", "INTEGER NOT NULL REFERENCES user(id)"),
+            ("shared_with_id", "INTEGER NOT NULL REFERENCES user(id)"),
+            ("permission", "VARCHAR(20) DEFAULT 'view'"),
+            ("shared_at", "DATETIME"),
+        ],
+        "unique": [("task_id", "shared_with_id")],
     },
     "event": {
         "columns": [

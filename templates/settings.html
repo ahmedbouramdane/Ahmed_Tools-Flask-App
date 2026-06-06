@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Settings - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-8">
   <h2 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -7,25 +8,44 @@
 
   <form method="POST" action="{{ url_for('settings.save_settings') }}">
 
+    <!-- ==================== PROFILE ==================== -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+        <i class="fas fa-user text-indigo-600"></i> Profile
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block font-medium text-gray-800 dark:text-white mb-2">Full Name</label>
+          <input type="text" name="full_name" value="{{ current_user.full_name or '' }}"
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
+                        bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+                        focus:ring-2 focus:ring-indigo-500 outline-none"
+                 placeholder="Your display name">
+        </div>
+        <div>
+          <label class="block font-medium text-gray-800 dark:text-white mb-2">Username</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500 dark:text-gray-400">/profile/</span>
+            <input type="text" value="{{ current_user.username }}" disabled
+                   class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl
+                          bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm cursor-not-allowed">
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Username cannot be changed after creation.</p>
+        </div>
+        <div>
+          <label class="block font-medium text-gray-800 dark:text-white mb-2">Email</label>
+          <input type="email" value="{{ current_user.email }}" disabled
+                 class="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl
+                        bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-sm cursor-not-allowed">
+        </div>
+      </div>
+    </div>
+
     <!-- ==================== APPEARANCE ==================== -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
         <i class="fas fa-paint-brush text-indigo-600"></i> Appearance
       </h3>
-
-      <!-- Theme Selection -->
-      <div class="mb-6">
-        <label class="block font-medium text-gray-800 dark:text-white mb-2">Theme</label>
-        <select name="theme" id="theme-select"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
-                       bg-white dark:bg-gray-700 text-gray-800 dark:text-white
-                       focus:ring-2 focus:ring-indigo-500 outline-none">
-          <option value="light" {{ 'selected' if current_user.theme == 'light' else '' }}>Light</option>
-          <option value="dark" {{ 'selected' if current_user.theme == 'dark' else '' }}>Dark</option>
-          <option value="auto" {{ 'selected' if current_user.theme == 'auto' else '' }}>Auto (System)</option>
-        </select>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose your preferred theme</p>
-      </div>
 
       <!-- Font Family -->
       <div>
@@ -134,30 +154,6 @@
 </div>
 
 <script>
-  const themeSelect = document.getElementById('theme-select');
-
-  function updateTheme(theme) {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else if (theme === 'light') {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      localStorage.setItem('theme', 'auto');
-    }
-  }
-
-  themeSelect?.addEventListener('change', function() {
-    updateTheme(this.value);
-  });
-
   // Font preview
   const fontSelect = document.getElementById('font-select');
   fontSelect?.addEventListener('change', function() {

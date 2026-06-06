@@ -20,6 +20,22 @@ online_users = {}
 def user_chat():
     return render_template("user_chat.html")
 
+
+@user_chat_bp.route("/chat/start/<int:user_id>")
+@login_required
+def start_chat(user_id):
+    """Start a chat with a specific user"""
+    if user_id == current_user.id:
+        return redirect(url_for('user_chat.user_chat'))
+    
+    # Check if user exists
+    other_user = User.query.get(user_id)
+    if not other_user:
+        abort(404)
+    
+    # Redirect to user chat with that user selected
+    return redirect(url_for('user_chat.user_chat') + f'?chat={user_id}')
+
 # ─── Conversations (unified: users + groups) ────────────────────────────────
 
 @user_chat_bp.route("/user_chat/conversations")
@@ -35,10 +51,25 @@ def get_conversations():
         WHERE sender_id = :uid OR receiver_id = :uid
     """), {"uid": uid}).fetchall()
 
+    other_ids = [row[0] for row in rows]
+
+    # Batch-load all DM users in one query
+    users_map = {}
+    if other_ids:
+        for u in User.query.filter(User.id.in_(other_ids)).all():
+            users_map[u.id] = u
+
+    # Batch-load unread counts per sender
+    unread_counts = dict(db.session.query(
+        UserMessage.sender_id, db.func.count(UserMessage.id)
+    ).filter(
+        UserMessage.receiver_id == uid,
+        UserMessage.is_read == False
+    ).group_by(UserMessage.sender_id).all())
+
     dm_list = []
-    for row in rows:
-        other_id = row[0]
-        other = User.query.get(other_id)
+    for other_id in other_ids:
+        other = users_map.get(other_id)
         if not other:
             continue
         last_msg = UserMessage.query.filter(
@@ -46,15 +77,7 @@ def get_conversations():
             ((UserMessage.sender_id == other_id) & (UserMessage.receiver_id == uid))
         ).order_by(UserMessage.created_at.desc()).first()
 
-        unread = UserMessage.query.filter(
-            UserMessage.sender_id == other_id,
-            UserMessage.receiver_id == uid,
-            UserMessage.is_read == False
-        ).count()
-
-        last_content = last_msg.content if last_msg else ""
-        if len(last_content) > 80:
-            last_content = last_content[:80] + "..."
+        last_content = last_msg.content[:80] + "..." if last_msg and len(last_msg.content) > 80 else (last_msg.content if last_msg else "")
 
         dm_list.append({
             "type": "user",
@@ -64,7 +87,7 @@ def get_conversations():
             "last_message": last_content,
             "last_message_time": last_msg.created_at.isoformat() if last_msg else "",
             "last_message_sender": "You" if last_msg and last_msg.sender_id == uid else (other.username if last_msg else ""),
-            "unread": unread,
+            "unread": unread_counts.get(other_id, 0),
             "is_online": other_id in online_users
         })
 
@@ -74,11 +97,15 @@ def get_conversations():
     group_list = []
     if group_ids:
         groups = ChatGroup.query.filter(ChatGroup.id.in_(group_ids)).all()
+
+        # Batch-load member counts for all groups (avoids lazy `len(g.members)`)
+        member_counts = dict(db.session.query(
+            GroupMember.group_id, db.func.count(GroupMember.id)
+        ).filter(GroupMember.group_id.in_(group_ids)).group_by(GroupMember.group_id).all())
+
         for g in groups:
             last_msg = GroupMessage.query.filter_by(group_id=g.id).order_by(GroupMessage.created_at.desc()).first()
-            last_content = last_msg.content if last_msg else ""
-            if len(last_content) > 80:
-                last_content = last_content[:80] + "..."
+            last_content = last_msg.content[:80] + "..." if last_msg and len(last_msg.content) > 80 else (last_msg.content if last_msg else "")
             sender_name = ""
             if last_msg and last_msg.sender:
                 sender_name = "You" if last_msg.sender_id == uid else last_msg.sender.username
@@ -92,7 +119,7 @@ def get_conversations():
                 "last_message_time": last_msg.created_at.isoformat() if last_msg else g.created_at.isoformat(),
                 "last_message_sender": sender_name,
                 "unread": 0,
-                "member_count": len(g.members)
+                "member_count": member_counts.get(g.id, 0)
             })
 
     conversations = dm_list + group_list
@@ -462,99 +489,364 @@ def get_online_users():
 
 @socketio.on('join')
 def on_join(data):
-    room = data['room']
-    join_room(room)
+    try:
+        room = data.get('room')
+        if not room:
+            return {'success': False, 'error': 'Room required'}
+        join_room(room)
+        return {'success': True, 'message': 'Joined room successfully'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('go_online')
 def handle_go_online():
-    uid = current_user.id
-    sid = request.sid
-    if uid not in online_users:
-        online_users[uid] = set()
-    online_users[uid].add(sid)
-    emit('user_online', {'user_id': uid}, broadcast=True)
+    try:
+        uid = current_user.id
+        sid = request.sid
+        if uid not in online_users:
+            online_users[uid] = set()
+        online_users[uid].add(sid)
+        # Broadcast user is online
+        emit('user_online', {
+            'user_id': uid,
+            'username': current_user.username,
+            'avatar_url': current_user.avatar_url or '',
+            'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+        }, broadcast=True, skip_sid=sid)
+        # Notify user of current online users count
+        return {'success': True, 'online_count': len(online_users)}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    uid = current_user.id
-    sid = request.sid
-    if uid in online_users:
-        online_users[uid].discard(sid)
-        if not online_users[uid]:
-            del online_users[uid]
-            emit('user_offline', {'user_id': uid}, broadcast=True)
+    try:
+        uid = current_user.id
+        sid = request.sid
+        if uid in online_users:
+            online_users[uid].discard(sid)
+            if not online_users[uid]:
+                del online_users[uid]
+                # Broadcast user is offline
+                emit('user_offline', {
+                    'user_id': uid,
+                    'username': current_user.username,
+                    'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+                }, broadcast=True)
+    except Exception:
+        pass
 
 @socketio.on('send_message')
-def handle_send_message(data):
-    receiver_id = data['receiver_id']
-    content = data.get('content', '')
-    attachment_url = data.get('attachment_url')
-    attachment_type = data.get('attachment_type')
+def handle_send_message(data, callback=None):
+    try:
+        receiver_id = data.get('receiver_id')
+        content = (data.get('content') or '').strip()
+        attachment_url = data.get('attachment_url')
+        attachment_type = data.get('attachment_type')
 
-    message = UserMessage(
-        sender_id=current_user.id, receiver_id=receiver_id,
-        content=content, attachment_url=attachment_url,
-        attachment_type=attachment_type
-    )
-    db.session.add(message)
-    db.session.commit()
+        if not receiver_id or (not content and not attachment_url):
+            if callback:
+                callback({'success': False, 'error': 'Content or attachment required'})
+            return
 
-    payload = {
-        'id': message.id, 'content': content,
-        'attachment_url': attachment_url, 'attachment_type': attachment_type,
-        'sender_id': current_user.id, 'sender_name': current_user.username,
-        'created_at': message.created_at.isoformat()
-    }
+        # Prevent self-messaging
+        if receiver_id == current_user.id:
+            if callback:
+                callback({'success': False, 'error': 'Cannot message yourself'})
+            return
 
-    emit('receive_message', payload, room=f"user_{receiver_id}")
-    emit('receive_message', payload, room=f"user_{current_user.id}")
-    # Real-time unread badge update
-    emit('unread_update', {'user_id': receiver_id}, room=f"user_{receiver_id}")
+        receiver = User.query.get(receiver_id)
+        if not receiver:
+            if callback:
+                callback({'success': False, 'error': 'Receiver not found'})
+            return
+
+        message = UserMessage(
+            sender_id=current_user.id, 
+            receiver_id=receiver_id,
+            content=content, 
+            attachment_url=attachment_url,
+            attachment_type=attachment_type
+        )
+        db.session.add(message)
+        db.session.commit()
+
+        payload = {
+            'id': message.id, 
+            'content': content,
+            'attachment_url': attachment_url, 
+            'attachment_type': attachment_type,
+            'sender_id': current_user.id, 
+            'sender_name': current_user.username,
+            'sender_avatar': current_user.avatar_url or '',
+            'receiver_id': receiver_id,
+            'created_at': message.created_at.isoformat(),
+            'is_read': False
+        }
+
+        # Send to both parties
+        emit('receive_message', payload, room=f"user_{receiver_id}")
+        emit('receive_message', payload, room=f"user_{current_user.id}")
+        
+        # Trigger unread update
+        emit('unread_update', {'user_id': receiver_id}, room=f"user_{receiver_id}")
+        
+        # Send notification if receiver has notifications enabled
+        if receiver.notifications_enabled and receiver_id in online_users:
+            emit('notification', {
+                'type': 'message',
+                'title': f"New message from {current_user.username}",
+                'body': content[:100] if content else 'Sent an attachment',
+                'from_user_id': current_user.id,
+                'from_user_name': current_user.username,
+                'from_user_avatar': current_user.avatar_url or '',
+                'sound_url': receiver.notification_sound_url if receiver.notification_sound_enabled else None
+            }, room=f"user_{receiver_id}")
+        
+        # Acknowledge success
+        if callback:
+            callback({'success': True, 'message_id': message.id})
+    
+    except Exception as e:
+        if callback:
+            callback({'success': False, 'error': str(e)})
 
 @socketio.on('typing')
 def handle_typing(data):
-    receiver_id = data.get('receiver_id')
-    if receiver_id:
-        emit('user_typing', {'sender_id': current_user.id, 'sender_name': current_user.username}, room=f"user_{receiver_id}")
+    try:
+        receiver_id = data.get('receiver_id')
+        if not receiver_id:
+            return
+        
+        emit('user_typing', {
+            'sender_id': current_user.id,
+            'sender_name': current_user.username,
+            'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+        }, room=f"user_{receiver_id}", skip_sid=request.sid)
+        
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('stop_typing')
 def handle_stop_typing(data):
-    receiver_id = data.get('receiver_id')
-    if receiver_id:
-        emit('user_stop_typing', {'sender_id': current_user.id}, room=f"user_{receiver_id}")
+    try:
+        receiver_id = data.get('receiver_id')
+        if not receiver_id:
+            return
+        
+        emit('user_stop_typing', {
+            'sender_id': current_user.id,
+            'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+        }, room=f"user_{receiver_id}", skip_sid=request.sid)
+        
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@socketio.on('mark_as_read')
+def handle_mark_as_read(data):
+    try:
+        sender_id = data.get('sender_id')
+        if not sender_id:
+            return {'success': False, 'error': 'Sender ID required'}
+        
+        # Mark all messages from sender as read
+        unread = UserMessage.query.filter(
+            UserMessage.sender_id == sender_id,
+            UserMessage.receiver_id == current_user.id,
+            UserMessage.is_read == False
+        ).update({UserMessage.is_read: True})
+        
+        if unread:
+            db.session.commit()
+            # Notify sender that messages were read
+            emit('messages_read', {
+                'reader_id': current_user.id,
+                'reader_name': current_user.username
+            }, room=f"user_{sender_id}")
+        
+        return {'success': True, 'marked': unread}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('edit_message')
 def handle_edit_message(data):
-    msg_id = data.get('id')
-    new_content = data.get('content')
-    message = UserMessage.query.get(msg_id)
-    if message and message.sender_id == current_user.id:
+    try:
+        msg_id = data.get('id')
+        new_content = (data.get('content') or '').strip()
+        
+        if not msg_id or not new_content:
+            return {'success': False, 'error': 'Message ID and content required'}
+        
+        message = UserMessage.query.get(msg_id)
+        if not message:
+            return {'success': False, 'error': 'Message not found'}
+        
+        if message.sender_id != current_user.id:
+            return {'success': False, 'error': 'Unauthorized'}
+        
         message.content = new_content
+        message.edited_at = __import__('datetime').datetime.utcnow()
         db.session.commit()
-        payload = {'id': message.id, 'content': new_content}
+        
+        payload = {
+            'id': message.id,
+            'content': new_content,
+            'edited_at': message.edited_at.isoformat() if hasattr(message, 'edited_at') else None
+        }
+        
         emit('message_edited', payload, room=f"user_{message.receiver_id}")
         emit('message_edited', payload, room=f"user_{current_user.id}")
+        
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('delete_message')
 def handle_delete_message(data):
-    msg_id = data.get('id')
-    message = UserMessage.query.get(msg_id)
-    if message and message.sender_id == current_user.id:
+    try:
+        msg_id = data.get('id')
+        
+        if not msg_id:
+            return {'success': False, 'error': 'Message ID required'}
+        
+        message = UserMessage.query.get(msg_id)
+        if not message:
+            return {'success': False, 'error': 'Message not found'}
+        
+        if message.sender_id != current_user.id:
+            return {'success': False, 'error': 'Unauthorized'}
+        
         receiver_id = message.receiver_id
         db.session.delete(message)
         db.session.commit()
+        
         payload = {'id': msg_id}
         emit('message_deleted', payload, room=f"user_{receiver_id}")
         emit('message_deleted', payload, room=f"user_{current_user.id}")
+        
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('group_join')
 def handle_group_join(data):
-    group_id = data.get('group_id')
-    if group_id:
+    try:
+        group_id = data.get('group_id')
+        if not group_id:
+            return {'success': False, 'error': 'Group ID required'}
+        
+        # Verify membership
+        membership = GroupMember.query.filter_by(
+            group_id=group_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not membership:
+            return {'success': False, 'error': 'Not a member of this group'}
+        
         join_room(f"group_{group_id}")
+        
+        # Notify group that user joined
+        emit('user_joined_group', {
+            'group_id': group_id,
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+        }, room=f"group_{group_id}", skip_sid=request.sid)
+        
+        return {'success': True, 'message': 'Joined group'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @socketio.on('group_leave')
 def handle_group_leave(data):
-    group_id = data.get('group_id')
-    if group_id:
+    try:
+        group_id = data.get('group_id')
+        if not group_id:
+            return {'success': False, 'error': 'Group ID required'}
+        
         leave_room(f"group_{group_id}")
+        
+        # Notify group that user left
+        emit('user_left_group', {
+            'group_id': group_id,
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+        }, room=f"group_{group_id}")
+        
+        return {'success': True, 'message': 'Left group'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@socketio.on('send_group_message')
+def handle_send_group_message(data, callback=None):
+    try:
+        group_id = data.get('group_id')
+        content = (data.get('content') or '').strip()
+        attachment_url = data.get('attachment_url')
+        attachment_type = data.get('attachment_type')
+        
+        if not group_id or (not content and not attachment_url):
+            if callback:
+                callback({'success': False, 'error': 'Content or attachment required'})
+            return
+        
+        # Verify membership
+        membership = GroupMember.query.filter_by(
+            group_id=group_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not membership:
+            if callback:
+                callback({'success': False, 'error': 'Not a member of this group'})
+            return
+        
+        msg = GroupMessage(
+            group_id=group_id,
+            sender_id=current_user.id,
+            content=content,
+            attachment_url=attachment_url,
+            attachment_type=attachment_type
+        )
+        db.session.add(msg)
+        db.session.commit()
+        
+        payload = {
+            'id': msg.id,
+            'group_id': group_id,
+            'sender_id': current_user.id,
+            'sender_name': current_user.username,
+            'sender_avatar': current_user.avatar_url or '',
+            'content': content,
+            'attachment_url': attachment_url,
+            'attachment_type': attachment_type,
+            'created_at': msg.created_at.isoformat()
+        }
+        
+        emit('group_message', payload, room=f"group_{group_id}")
+        
+        # Send notification to group members
+        group = ChatGroup.query.get(group_id)
+        if group:
+            for member in group.members:
+                if member.user_id != current_user.id and member.user_id in online_users:
+                    user = User.query.get(member.user_id)
+                    if user and user.notifications_enabled:
+                        emit('notification', {
+                            'type': 'group_message',
+                            'title': f"{current_user.username} in {group.name}",
+                            'body': content[:100] if content else 'Sent an attachment',
+                            'from_user_id': current_user.id,
+                            'from_group_id': group_id,
+                            'sound_url': user.notification_sound_url if user.notification_sound_enabled else None
+                        }, room=f"user_{member.user_id}")
+        
+        if callback:
+            callback({'success': True, 'message_id': msg.id})
+    except Exception as e:
+        if callback:
+            callback({'success': False, 'error': str(e)})

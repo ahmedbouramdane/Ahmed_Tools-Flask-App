@@ -200,6 +200,7 @@ class DesignEditorState {
     this._emit('snapEnabled', this._data.snapEnabled, null);
     this._emit('canvas', this._data.canvas, null);
     this._emit('activeTool', this._data.activeTool, null);
+    this._emit('projectMeta', this._data.projectMeta, null);
     this._emit('*', 'deserialized', null);
   }
 }

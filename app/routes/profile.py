@@ -13,7 +13,7 @@ def profile():
 @profile_bp.route("/profile/update", methods=["POST"])
 @login_required
 def update_profile():
-    username = request.form.get("username")
+    full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email")
     bio = request.form.get("bio", "")
     avatar_url = request.form.get("avatar_url", current_user.avatar_url)
@@ -25,13 +25,8 @@ def update_profile():
     twitter = request.form.get("twitter_url", current_user.twitter_url)
     website = request.form.get("website_url", current_user.website_url)
 
-    if not username or not email:
-        flash("Username and email are required.", "danger")
-        return redirect(url_for("profile.profile"))
-
-    existing_user = User.query.filter(User.username == username, User.id != current_user.id).first()
-    if existing_user:
-        flash("Username taken.", "danger")
+    if not email:
+        flash("Email is required.", "danger")
         return redirect(url_for("profile.profile"))
 
     existing_email = User.query.filter(User.email == email, User.id != current_user.id).first()
@@ -39,7 +34,7 @@ def update_profile():
         flash("Email already in use.", "danger")
         return redirect(url_for("profile.profile"))
 
-    current_user.username = username
+    current_user.full_name = full_name
     current_user.email = email
     current_user.bio = bio
     current_user.avatar_url = avatar_url

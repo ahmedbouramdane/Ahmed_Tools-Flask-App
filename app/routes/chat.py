@@ -16,7 +16,6 @@ CANDIDATE_MODELS = [
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-001",
     "gemini-1.5-pro",
     "gemini-1.0-pro",
 ]
@@ -68,6 +67,12 @@ def new_chat():
     chat = Chat(user_id=current_user.id)
     db.session.add(chat)
     db.session.commit()
+    # If request comes from AJAX, return JSON to avoid a full-page redirect
+    if request.headers.get("X-Requested-With", "") == "XMLHttpRequest":
+        return jsonify({
+            "chat_id": chat.id,
+            "url": url_for("chat.chat_view", chat_id=chat.id)
+        })
     flash("New chat created.", "success")
     return redirect(url_for("chat.chat_view", chat_id=chat.id))
 
@@ -78,8 +83,36 @@ def chat_view(chat_id):
     if chat.user_id != current_user.id:
         abort(403)
     chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.created_at.desc()).all()
-    messages = ChatMessage.query.filter_by(chat_id=chat.id).order_by(ChatMessage.created_at).all()
+    messages = ChatMessage.query.filter_by(chat_id=chat.id).order_by(ChatMessage.created_at.desc()).limit(6).all()
+    messages.reverse()
     return render_template("chat.html", chats=chats, current_chat=chat, messages=messages)
+
+@chat_bp.route("/chat/<int:chat_id>/messages")
+@login_required
+def chat_messages(chat_id):
+    chat = Chat.query.get_or_404(chat_id)
+    if chat.user_id != current_user.id:
+        abort(403)
+    before_id = request.args.get('before', type=int)
+    limit = min(request.args.get('limit', 6, type=int), 30)
+
+    q = ChatMessage.query.filter_by(chat_id=chat.id)
+    if before_id:
+        before_msg = ChatMessage.query.get(before_id)
+        if before_msg:
+            q = q.filter(ChatMessage.created_at < before_msg.created_at)
+    total = q.count()
+    messages = q.order_by(ChatMessage.created_at.desc()).limit(limit).all()
+    messages.reverse()
+
+    return jsonify({
+        'messages': [{
+            'id': m.id, 'role': m.role, 'content': m.content,
+            'created_at': m.created_at.isoformat()
+        } for m in messages],
+        'has_more': total > limit
+    })
+
 
 @chat_bp.route("/chat/<int:chat_id>/send", methods=["POST"])
 @login_required
@@ -87,7 +120,12 @@ def chat_send(chat_id):
     chat = Chat.query.get_or_404(chat_id)
     if chat.user_id != current_user.id:
         abort(403)
-    user_message = request.form.get("message", "").strip()
+    # Accept form-encoded or JSON payloads for flexibility
+    if request.is_json:
+        payload = request.get_json()
+        user_message = (payload.get('message') or '').strip()
+    else:
+        user_message = (request.form.get("message", "") or '').strip()
     if not user_message:
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify({"error": "Message empty"}), 400
@@ -119,7 +157,7 @@ def chat_send(chat_id):
         try:
             available = genai.list_models()
             for m in available:
-                if 'generateContent' in m.supported_generation_methods:
+                if 'generateContent' in getattr(m, 'supported_generation_methods', []):
                     try:
                         ai_text = try_generate_with_model(m.name, history, user_message)
                         break
@@ -128,21 +166,32 @@ def chat_send(chat_id):
         except Exception as list_err:
             last_error = str(list_err)
     if ai_text is None:
-        if "quota" in last_error.lower() or "rate limit" in last_error.lower():
+        if last_error and ("quota" in last_error.lower() or "rate limit" in last_error.lower() or "429" in last_error.lower()):
             ai_text = "⚠️ You've reached the free API quota. Please wait and try again."
         else:
-            ai_text = f"❌ AI temporarily unavailable. Error: {last_error}"
+            ai_text = f"❌ AI temporarily unavailable. Error: {last_error or 'Unknown error'}"
 
     msg_ai = ChatMessage(role="assistant", content=ai_text, chat_id=chat.id)
     db.session.add(msg_ai)
 
     if chat.title == "New Chat":
-        chat.title = user_message[:50] or "Chat"
+        try:
+            title_model = genai.GenerativeModel("gemini-2.0-flash-lite")
+            title_resp = title_model.generate_content(
+                f"Summarize this message in 3-5 words as a chat title, be concise, respond only with the title:\n\n{user_message}"
+            )
+            generated = title_resp.text.strip().strip('"\'')
+            if generated:
+                chat.title = generated[:60]
+            else:
+                chat.title = user_message[:50] or "Chat"
+        except Exception:
+            chat.title = user_message[:50] or "Chat"
 
     db.session.commit()
 
     # If AJAX request, return JSON with message details
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+    if request.headers.get("X-Requested-With", "") == "XMLHttpRequest":
         return jsonify({
             "user_message": {
                 "id": msg_user.id,
@@ -153,7 +202,8 @@ def chat_send(chat_id):
                 "id": msg_ai.id,
                 "content": msg_ai.content,
                 "created_at": msg_ai.created_at.strftime("%H:%M")
-            }
+            },
+            "chat_title": chat.title
         })
 
     return redirect(url_for("chat.chat_view", chat_id=chat.id))
@@ -163,9 +213,13 @@ def chat_send(chat_id):
 def chat_delete(chat_id):
     chat = Chat.query.get_or_404(chat_id)
     if chat.user_id != current_user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Forbidden'}), 403
         abort(403)
     db.session.delete(chat)
     db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True})
     flash("Chat deleted.", "info")
     return redirect(url_for("chat.chat_list"))
 

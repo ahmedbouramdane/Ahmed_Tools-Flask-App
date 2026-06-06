@@ -26,14 +26,14 @@ def create_app():
     app = Flask(__name__,
                 template_folder=os.path.join(root_dir, 'templates'),
                 static_folder=os.path.join(root_dir, 'static'))
-    mail.init_app(app)
     app.config.from_object(Config)
+    mail.init_app(app)
 
     db.init_app(app)
     login_manager.init_app(app)
     migrate = Migrate(app, db)
     oauth = OAuth(app)
-    socketio.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
     app.socketio = socketio
 
     google = None
@@ -55,6 +55,9 @@ def create_app():
     # Register SocketIO namespaces
     from .terminal_handler import TerminalNamespace
     socketio.on_namespace(TerminalNamespace('/terminal'))
+    
+    # Register posts socket handlers (must be after socketio.init_app)
+    from .socket_handlers import posts_ns
 
     # Register blueprints
     from .routes.auth import auth_bp
@@ -68,6 +71,8 @@ def create_app():
     from .routes.user_chat import user_chat_bp
     from .routes.group_chat import group_chat_bp
     from .routes.tools import tools_bp
+    from .routes.posts import posts_bp
+    from .routes.ide import ide_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -80,6 +85,8 @@ def create_app():
     app.register_blueprint(user_chat_bp)
     app.register_blueprint(group_chat_bp)
     app.register_blueprint(tools_bp)
+    app.register_blueprint(posts_bp)
+    app.register_blueprint(ide_bp)
 
     # User loader
     @login_manager.user_loader

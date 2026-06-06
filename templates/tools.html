@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Tools - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto">
   <div class="mb-4 sm:mb-6">
@@ -233,8 +234,15 @@ function toggleToolFullscreen(el) {
   if (!el) return;
   if (document.fullscreenElement) {
     document.exitFullscreen();
+    el.classList.remove('tool-fullscreen-active');
+  } else if (el.requestFullscreen) {
+    el.requestFullscreen().then(function() {
+      el.classList.add('tool-fullscreen-active');
+    }).catch(function() {
+      el.classList.toggle('tool-fullscreen-active');
+    });
   } else {
-    el.requestFullscreen?.().catch(function(){});
+    el.classList.toggle('tool-fullscreen-active');
   }
 }
 
@@ -462,6 +470,228 @@ function imageUploadWorkspace(operation, extraFields, onSubmit) {
   return processImage;
 }
 
+function ensureImageToolStyles() {
+  if (document.getElementById('image-tool-styles')) return;
+  var style = document.createElement('style');
+  style.id = 'image-tool-styles';
+  style.innerHTML = `
+    .img-tool-overlay { position: absolute; border: 2px dashed rgba(59,130,246,0.95); background: rgba(59,130,246,0.12); border-radius: 16px; box-sizing: border-box; pointer-events: auto; transition: border-color .2s, background .2s; }
+    .img-tool-overlay.active { border-color: rgba(16,185,129,0.95); background: rgba(16,185,129,0.16); }
+    .img-tool-handle { position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; background: #2563eb; box-shadow: 0 0 0 1px rgba(0,0,0,0.25); cursor: pointer; }
+    .img-tool-handle[data-handle="se"] { right: -9px; bottom: -9px; cursor: se-resize; }
+    .img-tool-handle[data-handle="e"] { right: -9px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+    .img-tool-handle[data-handle="s"] { left: 50%; bottom: -9px; transform: translateX(-50%); cursor: s-resize; }
+    .ck-image-tool-panel { display: flex; flex-direction: column; gap: 1rem; }
+    .ck-image-tool-info { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.75rem; }
+    .ck-image-tool-chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 0.9rem; border-radius: 14px; background: rgba(15,23,42,0.95); color: #f8fafc; border: 1px solid rgba(148,163,184,0.18); font-size: 0.85rem; }
+    .ck-image-tool-bar { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.75rem; }
+    .ck-image-tool-bar button, .ck-image-tool-bar label { border-radius: 999px; font-size: 0.86rem; }
+    .ck-image-tool-bar button { border: none; padding: 0.72rem 1rem; background: #2563eb; color: #fff; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+    .ck-image-tool-bar button:hover { transform: translateY(-1px); background: #1d4ed8; }
+    .ck-image-tool-bar label { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.72rem 1rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(148,163,184,0.18); color: #f8fafc; cursor: pointer; }
+    .ck-image-tool-bar input[type="checkbox"] { accent-color: #38bdf8; }
+  `;
+  document.head.appendChild(style);
+}
+
+function setupResizeOverlay(processImage, state) {
+  ensureImageToolStyles();
+  var origPreview = document.getElementById('orig-preview');
+  var previewContainer = origPreview.closest('.relative');
+  if (!origPreview || !previewContainer) return;
+  previewContainer.style.position = 'relative';
+
+  var overlay = document.getElementById('resize-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'resize-overlay';
+    overlay.className = 'img-tool-overlay active';
+    overlay.innerHTML = '<div class="img-tool-handle" data-handle="se"></div>';
+    previewContainer.appendChild(overlay);
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function updateOverlay() {
+    var rect = origPreview.getBoundingClientRect();
+    if (!rect.width || !rect.height || !origPreview.naturalWidth || !origPreview.naturalHeight) return;
+    var scaleX = rect.width / origPreview.naturalWidth;
+    var scaleY = rect.height / origPreview.naturalHeight;
+    state.displayScaleX = scaleX;
+    state.displayScaleY = scaleY;
+    state.boxWidth = clamp(state.width * scaleX, 40, rect.width);
+    state.boxHeight = clamp(state.height * scaleY, 40, rect.height);
+    overlay.style.width = state.boxWidth + 'px';
+    overlay.style.height = state.boxHeight + 'px';
+    overlay.style.left = '0px';
+    overlay.style.top = '0px';
+    document.getElementById('resize-display-w').textContent = state.width + ' px';
+    document.getElementById('resize-display-h').textContent = state.height + ' px';
+  }
+
+  function syncStateFromScale() {
+    var newScale = parseInt(document.getElementById('resize-scale').value, 10) || 100;
+    var keep = document.getElementById('keep-ratio').checked;
+    state.width = Math.max(20, Math.round(origPreview.naturalWidth * newScale / 100));
+    if (keep) {
+      state.height = Math.max(20, Math.round(state.width / state.aspectRatio));
+    } else {
+      state.height = Math.max(20, Math.round(origPreview.naturalHeight * newScale / 100));
+    }
+    state.keepRatio = keep;
+    updateOverlay();
+  }
+
+  origPreview.addEventListener('load', function() {
+    state.width = origPreview.naturalWidth;
+    state.height = origPreview.naturalHeight;
+    state.aspectRatio = origPreview.naturalWidth / origPreview.naturalHeight || 1;
+    syncStateFromScale();
+    processImage();
+  });
+
+  document.getElementById('resize-scale').addEventListener('input', function() {
+    syncStateFromScale();
+    clearTimeout(state.timer);
+    state.timer = setTimeout(processImage, 250);
+  });
+
+  document.getElementById('keep-ratio').addEventListener('change', function() {
+    syncStateFromScale();
+    clearTimeout(state.timer);
+    state.timer = setTimeout(processImage, 250);
+  });
+
+  document.getElementById('resize-reset').addEventListener('click', function() {
+    state.width = origPreview.naturalWidth;
+    state.height = origPreview.naturalHeight;
+    state.keepRatio = true;
+    document.getElementById('keep-ratio').checked = true;
+    syncStateFromScale();
+    processImage();
+  });
+}
+
+function setupCropOverlay(processImage, state) {
+  ensureImageToolStyles();
+  var origPreview = document.getElementById('orig-preview');
+  var previewContainer = origPreview.closest('.relative');
+  if (!origPreview || !previewContainer) return;
+  previewContainer.style.position = 'relative';
+
+  var overlay = document.getElementById('crop-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'crop-overlay';
+    overlay.className = 'img-tool-overlay active';
+    overlay.innerHTML = '<div class="img-tool-handle" data-handle="se"></div>';
+    previewContainer.appendChild(overlay);
+  }
+
+  var dragState = null;
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function updateCropState() {
+    var rect = origPreview.getBoundingClientRect();
+    if (!rect.width || !rect.height || !origPreview.naturalWidth || !origPreview.naturalHeight) return;
+    state.displayWidth = rect.width;
+    state.displayHeight = rect.height;
+    var scaleX = origPreview.naturalWidth / rect.width;
+    var scaleY = origPreview.naturalHeight / rect.height;
+    state.left = Math.round(state.x * scaleX);
+    state.top = Math.round(state.y * scaleY);
+    state.right = Math.round((state.x + state.w) * scaleX);
+    state.bottom = Math.round((state.y + state.h) * scaleY);
+    document.getElementById('crop-display-left').textContent = state.left;
+    document.getElementById('crop-display-top').textContent = state.top;
+    document.getElementById('crop-display-right').textContent = state.right;
+    document.getElementById('crop-display-bottom').textContent = state.bottom;
+  }
+
+  function updateOverlay() {
+    overlay.style.left = state.x + 'px';
+    overlay.style.top = state.y + 'px';
+    overlay.style.width = state.w + 'px';
+    overlay.style.height = state.h + 'px';
+    updateCropState();
+  }
+
+  function resetCrop() {
+    var rect = origPreview.getBoundingClientRect();
+    state.x = 20;
+    state.y = 20;
+    state.w = Math.max(80, rect.width - 40);
+    state.h = Math.max(80, rect.height - 40);
+    updateOverlay();
+    processImage();
+  }
+
+  origPreview.addEventListener('load', function() {
+    state.displayWidth = origPreview.clientWidth;
+    state.displayHeight = origPreview.clientHeight;
+    state.naturalWidth = origPreview.naturalWidth;
+    state.naturalHeight = origPreview.naturalHeight;
+    resetCrop();
+  });
+
+  overlay.addEventListener('pointerdown', function(e) {
+    e.preventDefault();
+    var rect = overlay.getBoundingClientRect();
+    var handle = e.target.dataset.handle;
+    dragState = {
+      type: handle === 'se' ? 'resize' : 'move',
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: state.x,
+      startTop: state.y,
+      startW: state.w,
+      startH: state.h
+    };
+    overlay.classList.add('active');
+  });
+
+  window.addEventListener('pointermove', function(e) {
+    if (!dragState) return;
+    var dx = e.clientX - dragState.startX;
+    var dy = e.clientY - dragState.startY;
+    if (dragState.type === 'move') {
+      state.x = clamp(dragState.startLeft + dx, 0, state.displayWidth - state.w);
+      state.y = clamp(dragState.startTop + dy, 0, state.displayHeight - state.h);
+    } else {
+      state.w = clamp(dragState.startW + dx, 40, state.displayWidth - state.x);
+      state.h = clamp(dragState.startH + dy, 40, state.displayHeight - state.y);
+    }
+    updateOverlay();
+    clearTimeout(state.timer);
+    state.timer = setTimeout(processImage, 200);
+  });
+
+  window.addEventListener('pointerup', function() {
+    if (dragState) {
+      dragState = null;
+      overlay.classList.remove('active');
+    }
+  });
+
+  document.getElementById('crop-reset').addEventListener('click', function() {
+    resetCrop();
+  });
+
+  document.getElementById('crop-center').addEventListener('click', function() {
+    var rect = origPreview.getBoundingClientRect();
+    state.w = Math.max(80, rect.width * 0.6);
+    state.h = Math.max(80, rect.height * 0.6);
+    state.x = Math.round((rect.width - state.w) / 2);
+    state.y = Math.round((rect.height - state.h) / 2);
+    updateOverlay();
+    processImage();
+  });
+}
+
 window.tool_image_remove_bg = function() { imageUploadWorkspace('remove_bg'); };
 window.tool_image_compress = function() {
   var _reprocess = imageUploadWorkspace('compress', '<div class="flex items-center gap-3"><label class="text-sm text-gray-600 dark:text-gray-400">Quality:</label><input type="range" id="quality-range" min="10" max="100" value="60" class="flex-1"><span id="quality-val" class="text-sm font-medium text-gray-700 dark:text-gray-300">60%</span></div>', function(fd) {
@@ -477,15 +707,13 @@ window.tool_image_compress = function() {
   }
 };
 window.tool_image_resize = function() {
-  var _reprocess = imageUploadWorkspace('resize', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Width (px)</label><input type="number" id="resize-w" value="800" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Height (px)</label><input type="number" id="resize-h" value="600" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div><label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><input type="checkbox" id="keep-ratio" checked> Keep aspect ratio</label>', function(fd) {
-    fd.append('width', document.getElementById('resize-w').value);
-    fd.append('height', document.getElementById('resize-h').value);
-    fd.append('keep_ratio', document.getElementById('keep-ratio').checked ? 'true' : 'false');
+  var resizeState = { width: 800, height: 600, aspectRatio: 1, keepRatio: true, timer: null };
+  var _reprocess = imageUploadWorkspace('resize', '<div class="ck-image-tool-panel"><div class="space-y-2"><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Resize scale</label><input type="range" id="resize-scale" min="10" max="200" value="100" class="w-full"></div><div class="ck-image-tool-info"><span class="ck-image-tool-chip"><strong id="resize-display-w">800 px</strong> width</span><span class="ck-image-tool-chip"><strong id="resize-display-h">600 px</strong> height</span></div><div class="ck-image-tool-bar"><label><input type="checkbox" id="keep-ratio" checked> Keep aspect ratio</label><button id="resize-reset" type="button">Reset size</button></div></div>', function(fd) {
+    fd.append('width', resizeState.width);
+    fd.append('height', resizeState.height);
+    fd.append('keep_ratio', resizeState.keepRatio ? 'true' : 'false');
   });
-  ['resize-w','resize-h','keep-ratio'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('input change', function() { if (_imageCurrentFile) setTimeout(_reprocess, 300); });
-  });
+  setupResizeOverlay(_reprocess, resizeState);
 };
 window.tool_image_convert = function() {
   var _reprocess = imageUploadWorkspace('convert', '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Format</label><select id="convert-format" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="gif">GIF</option><option value="bmp">BMP</option></select></div>', function(fd) {
@@ -509,27 +737,28 @@ window.tool_image_filters = function() {
   if (fs) fs.addEventListener('change', function() { if (_imageCurrentFile) _reprocess(); });
 };
 window.tool_image_crop = function() {
-  var _reprocess = imageUploadWorkspace('crop', '<div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Left</label><input type="number" id="crop-left" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Top</label><input type="number" id="crop-top" value="0" min="0" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Right</label><input type="number" id="crop-right" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><div><label class="text-xs font-medium text-gray-600 dark:text-gray-400">Bottom</label><input type="number" id="crop-bottom" value="1000" min="1" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div></div>', function(fd) {
-    fd.append('left', document.getElementById('crop-left').value);
-    fd.append('top', document.getElementById('crop-top').value);
-    fd.append('right', document.getElementById('crop-right').value);
-    fd.append('bottom', document.getElementById('crop-bottom').value);
+  var cropState = { x: 0, y: 0, w: 0, h: 0, displayWidth: 0, displayHeight: 0, naturalWidth: 0, naturalHeight: 0, left: 0, top: 0, right: 0, bottom: 0, timer: null };
+  var _reprocess = imageUploadWorkspace('crop', '<div class="ck-image-tool-panel"><div class="grid grid-cols-2 gap-3"><div class="ck-image-tool-chip"><strong>Left</strong> <span id="crop-display-left">0</span></div><div class="ck-image-tool-chip"><strong>Top</strong> <span id="crop-display-top">0</span></div><div class="ck-image-tool-chip"><strong>Right</strong> <span id="crop-display-right">0</span></div><div class="ck-image-tool-chip"><strong>Bottom</strong> <span id="crop-display-bottom">0</span></div></div><div class="ck-image-tool-bar"><button id="crop-reset" type="button">Reset crop</button><button id="crop-center" type="button">Center crop</button></div></div>', function(fd) {
+    fd.append('left', cropState.left);
+    fd.append('top', cropState.top);
+    fd.append('right', cropState.right);
+    fd.append('bottom', cropState.bottom);
   });
-  ['crop-left','crop-top','crop-right','crop-bottom'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('input', function() { if (_imageCurrentFile) setTimeout(_reprocess, 300); });
-  });
+  setupCropOverlay(_reprocess, cropState);
 };
 window.tool_image_to_pdf = function() { imageUploadWorkspace('to_pdf'); };
 
 window.tool_image_canva = function() {
   var ws = document.getElementById('tool-workspace');
-  ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
-    '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-paint-brush mr-1"></i> Design Editor</span>' +
-    '<span class="flex-1"></span>' +
-    '<button onclick="toggleToolFullscreen()" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+  ws.innerHTML = '<div class="flex flex-col gap-3 mb-3">' +
+    '<div class="flex items-center gap-2">' +
+      '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-paint-brush mr-1"></i> Design Editor</span>' +
+      '<span class="flex-1"></span>' +
+      '<button onclick="toggleToolFullscreen()" class="tool-fullscreen-btn px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+    '</div>' +
+    '<div class="text-xs text-gray-500 dark:text-gray-400">Quick tips: double-click text to edit, drag handles to resize, use the select tool for easy repositioning, and choose a background from the Templates tab.</div>' +
   '</div>' +
-  '<div id="de-mount" class="min-h-[500px]"></div>';
+  '<div id="de-mount" class="w-full" style="min-height: calc(100vh - 220px); height: calc(100vh - 220px);"></div>';
 
   // Load CSS
   if (!document.querySelector('link[href*="design-editor/style.css"]')) {
@@ -561,6 +790,11 @@ window.tool_image_canva = function() {
     if (idx >= scripts.length) {
       _deEditor = new DesignEditor('de-mount');
       _deEditor.init();
+      var params = new URLSearchParams(window.location.search);
+      var projectId = params.get('project_id');
+      if (projectId) {
+        _deEditor.loadSharedProject(projectId);
+      }
       return;
     }
     var s = document.createElement('script');
@@ -1373,7 +1607,7 @@ window.tool_math_latex = function() {
       '<button id="latex-copy-image" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition" title="Copy as image to clipboard"><i class="fas fa-image"></i> Copy Image</button>' +
       '<button id="latex-pdf-btn" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition" title="Download as PDF"><i class="fas fa-file-pdf"></i> Download PDF</button>' +
       '<span class="flex-1"></span>' +
-      '<button onclick="toggleToolFullscreen()" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+      '<button onclick="toggleToolFullscreen()" class="tool-fullscreen-btn px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
       '<label class="flex items-center gap-1 text-[10px] text-gray-400"><input type="checkbox" id="latex-autorender" checked> Auto-render</label>' +
     '</div>' +
     // Toolbar categories
@@ -1814,7 +2048,7 @@ window.tool_math_calculator = function() {
   ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
     '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-calculator mr-1"></i> Ahmed Calculator</span>' +
     '<span class="flex-1"></span>' +
-    '<button onclick="toggleToolFullscreen()" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+    '<button onclick="toggleToolFullscreen()" class="tool-fullscreen-btn px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
   '</div>' +
   '<div id="ahmed-calc-mount"></div>';
 
@@ -1878,5 +2112,12 @@ window.tool_math_calculator = function() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 renderToolGrid();
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('tool') === 'canva' && params.get('project_id')) {
+    var designTool = TOOLS.image.find(function(t) { return t.id === 'canva'; });
+    if (designTool) openTool(designTool);
+  }
+})();
 </script>
 {% endblock %}

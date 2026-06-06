@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Admin Knowledge - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+        <i class="fas fa-shield-halved text-indigo-600"></i> Admin Knowledge
+      </h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Add PDFs, URLs, and notes that the AI Chat can use as context.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Add knowledge</h3>
+
+      <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+          <select name="kind" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+            <option value="text">Text</option>
+            <option value="url">URL</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title (optional)</label>
+          <input name="title" type="text" placeholder="e.g., Company policy / FAQ"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text</label>
+          <textarea name="content" rows="6" placeholder="Paste instructions, FAQs, product info..."
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+          <p class="text-xs text-gray-400 mt-1">Used when Type = Text.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL</label>
+          <input name="url" type="url" placeholder="https://example.com/page"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+          <p class="text-xs text-gray-400 mt-1">Used when Type = URL.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PDF</label>
+          <input name="pdf" type="file" accept="application/pdf"
+                 class="w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-gray-700 dark:file:text-gray-200">
+          <p class="text-xs text-gray-400 mt-1">Used when Type = PDF.</p>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow transition">
+          <i class="fas fa-plus mr-2"></i> Save
+        </button>
+      </form>
+    </div>
+
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Latest items</h3>
+        <p class="text-xs text-gray-400">Showing last 50</p>
+      </div>
+
+      {% if items %}
+        <div class="space-y-3">
+          {% for item in items %}
+            <div class="border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/60 dark:bg-gray-900/30">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 font-semibold">
+                      {{ item.kind|upper }}
+                    </span>
+                    <span class="font-semibold text-gray-800 dark:text-white truncate">{{ item.title or "Untitled" }}</span>
+                  </div>
+                  <div class="text-xs text-gray-400 mt-1">
+                    {{ item.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% if item.created_by %} · by {{ item.created_by.username }}{% endif %}
+                  </div>
+                  {% if item.source_url %}
+                    <div class="mt-2 text-sm">
+                      <a class="text-indigo-600 dark:text-indigo-400 hover:underline break-all" href="{{ item.source_url }}" target="_blank">
+                        {{ item.source_url }}
+                      </a>
+                    </div>
+                  {% endif %}
+                  {% if item.file_path %}
+                    <div class="mt-2 text-sm">
+                      <a class="text-indigo-600 dark:text-indigo-400 hover:underline" href="{{ item.file_path }}" target="_blank">
+                        <i class="fas fa-file-pdf mr-1"></i> Open PDF
+                      </a>
+                    </div>
+                  {% endif %}
+                  {% if item.content_text %}
+                    <details class="mt-3">
+                      <summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-300">Preview extracted text</summary>
+                      <pre class="mt-2 whitespace-pre-wrap text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 max-h-64 overflow-auto">{{ item.content_text[:3000] }}{% if item.content_text|length > 3000 %}…{% endif %}</pre>
+                    </details>
+                  {% endif %}
+                </div>
+
+                <form method="POST" action="{{ url_for('admin.knowledge_delete', item_id=item.id) }}">
+                  <button type="submit" class="text-red-500 hover:text-red-700 p-2" title="Delete">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-gray-500 dark:text-gray-400">No knowledge items yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+

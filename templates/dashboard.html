@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% block title %}Dashboard - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
 <style>
   .stat-card-modern {
@@ -285,7 +285,7 @@
         {% set hour = now.hour %}
         {% if hour < 12 %}Good Morning{% elif hour < 17 %}Good Afternoon{% else %}Good Evening{% endif %},
         {% else %}Welcome{% endif %}
-        {{ current_user.username }}!
+        {{ current_user.full_name or current_user.username }}!
       </h1>
       <p class="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
         <i class="far fa-calendar-alt"></i>
@@ -522,47 +522,51 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (function() {
-  // --- Counter Animation ---
-  const counters = document.querySelectorAll('.counter');
-  if (counters.length) {
-    const animateCounter = (el) => {
-      const target = parseInt(el.dataset.target, 10);
-      if (target === 0) { el.textContent = '0'; return; }
-      const duration = 1200;
-      const start = performance.now();
-      const step = (now) => {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        el.textContent = Math.round(eased * target);
-        if (progress < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    };
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          animateCounter(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.5 });
-    counters.forEach(c => observer.observe(c));
+  if (typeof anime === 'undefined') { return; }
+  var isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // --- Entrance stagger for stat cards ---
+  if (!isReduced) {
+    var statCards = document.querySelectorAll('.stat-card-modern');
+    if (statCards.length) {
+      anime({ targets: statCards, opacity: [0, 1], translateY: [30, 0], duration: 600, delay: function(el, i) { return i * 100; }, easing: 'easeOutExpo' });
+    }
+    var chartCards = document.querySelectorAll('.dashboard-card');
+    if (chartCards.length) {
+      anime({ targets: chartCards, opacity: [0, 1], translateY: [20, 0], duration: 500, delay: function(el, i) { return 400 + i * 100; }, easing: 'easeOutExpo' });
+    }
+    var ctaBanner = document.querySelector('.welcome-cta');
+    if (ctaBanner) { anime({ targets: ctaBanner, opacity: [0, 1], scale: [0.96, 1], duration: 600, delay: 700, easing: 'easeOutExpo' }); }
+  } else {
+    document.querySelectorAll('.stat-card-modern, .dashboard-card, .welcome-cta').forEach(function(el) { el.style.opacity = '1'; });
   }
 
+  // --- Counter Animation with anime.js ---
+  var counterObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      counterObserver.unobserve(entry.target);
+      var el = entry.target;
+      var target = parseInt(el.getAttribute('data-target'), 10);
+      if (!target || target === 0) { el.textContent = target; return; }
+      anime({ targets: el, innerHTML: [0, target], duration: 1200, easing: 'easeOutCubic', round: 1, update: function() { el.textContent = Math.round(el.innerHTML); } });
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('.counter').forEach(function(c) { counterObserver.observe(c); });
+
   // --- Chart Colors (dark-aware) ---
-  const isDark = document.documentElement.classList.contains('dark');
-  const textColor = isDark ? '#94a3b8' : '#64748b';
-  const gridColor = isDark ? '#334155' : '#e2e8f0';
+  var isDark = document.documentElement.classList.contains('dark');
+  var textColor = isDark ? '#94a3b8' : '#64748b';
+  var gridColor = isDark ? '#334155' : '#e2e8f0';
 
   function createGradient(ctx, colors) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-    colors.forEach((c, i) => gradient.addColorStop(i / (colors.length - 1), c));
+    var gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    colors.forEach(function(c, i) { gradient.addColorStop(i / (colors.length - 1), c); });
     return gradient;
   }
 
   // 1. Tasks Donut Chart
-  const donutCtx = document.getElementById('tasksDonutChart');
+  var donutCtx = document.getElementById('tasksDonutChart');
   if (donutCtx) {
     new Chart(donutCtx, {
       type: 'doughnut',
@@ -586,7 +590,7 @@
             borderColor: gridColor,
             borderWidth: 1,
             callbacks: {
-              label: ctx => ` ${ctx.label}: ${ctx.parsed} task${ctx.parsed !== 1 ? 's' : ''}`
+              label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.parsed + ' task' + (ctx.parsed !== 1 ? 's' : ''); }
             }
           }
         },
@@ -596,7 +600,7 @@
   }
 
   // 2. Priority Bar Chart
-  const priorityCtx = document.getElementById('priorityChart');
+  var priorityCtx = document.getElementById('priorityChart');
   if (priorityCtx) {
     new Chart(priorityCtx, {
       type: 'bar',
@@ -627,7 +631,7 @@
             borderColor: gridColor,
             borderWidth: 1,
             callbacks: {
-              label: ctx => ` ${ctx.parsed} pending task${ctx.parsed !== 1 ? 's' : ''}`
+              label: function(ctx) { return ' ' + ctx.parsed + ' pending task' + (ctx.parsed !== 1 ? 's' : ''); }
             }
           }
         },
@@ -648,9 +652,9 @@
   }
 
   // 3. Weekly Activity Line Chart
-  const activityCtx = document.getElementById('activityChart');
+  var activityCtx = document.getElementById('activityChart');
   if (activityCtx) {
-    const grad = activityCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+    var grad = activityCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
     grad.addColorStop(0, isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(236, 72, 153, 0.2)');
     grad.addColorStop(1, 'rgba(236, 72, 153, 0)');
 
@@ -686,7 +690,7 @@
             borderColor: gridColor,
             borderWidth: 1,
             callbacks: {
-              label: ctx => ` ${ctx.parsed} task${ctx.parsed !== 1 ? 's' : ''} created`
+              label: function(ctx) { return ' ' + ctx.parsed + ' task' + (ctx.parsed !== 1 ? 's' : '') + ' created'; }
             }
           }
         },
@@ -706,6 +710,22 @@
       }
     });
   }
+
+  // --- Micro-interactions: stat card hover with anime.js ---
+  document.querySelectorAll('.stat-card-modern').forEach(function(card) {
+    card.addEventListener('mouseenter', function() {
+      var icon = this.querySelector('.stat-icon-modern');
+      var number = this.querySelector('.stat-number');
+      if (icon) { anime({ targets: icon, scale: [1, 1.12], duration: 300, easing: 'easeOutQuad' }); }
+      if (number) { anime({ targets: number, scale: [1, 1.04], duration: 300, easing: 'easeOutQuad' }); }
+    });
+    card.addEventListener('mouseleave', function() {
+      var icon = this.querySelector('.stat-icon-modern');
+      var number = this.querySelector('.stat-number');
+      if (icon) { anime({ targets: icon, scale: [1.12, 1], duration: 300, easing: 'easeOutQuad' }); }
+      if (number) { anime({ targets: number, scale: [1.04, 1], duration: 300, easing: 'easeOutQuad' }); }
+    });
+  });
 })();
 </script>
 {% endblock %}

@@ -1,3 +1,5 @@
+import re
+from urllib.parse import urljoin, urlparse
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session, current_app
 from flask_login import current_user, login_user, logout_user
 from app.models import User
@@ -7,60 +9,125 @@ from datetime import datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)
 
+
+def is_safe_url(target):
+    host_url = request.host_url
+    redirect_url = urljoin(host_url, target)
+    return urlparse(redirect_url).scheme in ('http', 'https') and urlparse(host_url).netloc == urlparse(redirect_url).netloc
+
 VERIFY_EMAIL = True   # Enable email verification
+
+
+def sanitize_username(full_name):
+    s = full_name.strip().lower()
+    s = re.sub(r'\s+', '_', s)
+    s = re.sub(r'[^a-z0-9_]', '', s)
+    s = re.sub(r'_+', '_', s).strip('_')
+    if not s or not s[0].isalpha():
+        s = 'user_' + (s if s else '')
+    return s[:30]
+
+
+def generate_unique_username(full_name):
+    base = sanitize_username(full_name)
+    if not base:
+        base = 'user'
+    if not User.query.filter_by(username=base).first():
+        return base
+    counter = 1
+    while True:
+        candidate = f"{base}{counter}"
+        if not User.query.filter_by(username=candidate).first():
+            return candidate
+        counter += 1
+
+
+USERNAME_PATTERN = re.compile(r'^[a-z][a-z0-9_]{2,29}$')
+
+def validate_username(username):
+    if not USERNAME_PATTERN.match(username):
+        return False
+    return True
+
+
+def send_verification_email_async(app, email, code, name):
+    with app.app_context():
+        try:
+            msg = Message("Your Verification Code", recipients=[email], sender=app.config.get("MAIL_DEFAULT_SENDER"))
+            msg.body = f"Hello {name},\n\nYour verification code is: {code}\n\nIt will expire in 10 minutes."
+            mail.send(msg)
+            app.logger.info(f"Verification email sent to {email}")
+        except Exception as e:
+            app.logger.error(f"Failed to send verification email to {email}: {e}")
+
+def send_verification_code(user):
+    import random, threading
+    code = f"{random.randint(0, 999999):06d}"
+    user.verification_code = code
+    user.verification_code_expires = datetime.utcnow() + timedelta(minutes=10)
+    user.email_verified = False
+    db.session.commit()
+
+    if current_app.config.get("MAIL_USERNAME"):
+        app = current_app._get_current_object()
+        t = threading.Thread(target=send_verification_email_async, args=(app, user.email, code, user.username or user.full_name))
+        t.daemon = True
+        t.start()
+        return {"sent": True, "code": code, "error": None}
+    else:
+        return {"sent": False, "code": code, "error": "Email not configured"}
 
 @auth_bp.route("/")
 def index():
-    return render_template("index.html")
+    if current_user.is_authenticated and current_user.email_verified:
+        return redirect(url_for("dashboard.dashboard"))
+    return render_template("index.html", google_enabled=bool(current_app.google))
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard.dashboard"))
+    next_page = request.args.get("next")
     if request.method == "POST":
-        username = request.form.get("username")
+        full_name = request.form.get("full_name", "").strip()
+        username = request.form.get("username", "").strip().lower()
         email = request.form.get("email")
         password = request.form.get("password")
         confirm = request.form.get("confirm_password")
-        if not username or not email or not password:
-            flash("All fields are required.", "danger")
+        next_page = request.form.get("next") or next_page
+
+        if not full_name or not email or not password:
+            flash("Full name, email, and password are required.", "danger")
         elif password != confirm:
             flash("Passwords do not match.", "danger")
+        elif not username:
+            flash("Username is required.", "danger")
+        elif not validate_username(username):
+            flash("Username must start with a letter and contain only lowercase letters, numbers, and underscores (3-30 chars).", "danger")
         elif User.query.filter_by(username=username).first():
             flash("Username already taken.", "danger")
         elif User.query.filter_by(email=email).first():
             flash("Email already registered.", "danger")
         else:
-            user = User(username=username, email=email)
+            user = User(username=username, full_name=full_name, email=email)
             user.set_password(password)
-            if VERIFY_EMAIL and current_app.config.get("MAIL_USERNAME"):
-                # Generate verification code
-                import random
-                user.verification_code = str(random.randint(100000, 999999))
-                user.verification_code_expires = datetime.utcnow() + timedelta(minutes=10)
-                user.email_verified = False
+            if VERIFY_EMAIL:
                 db.session.add(user)
                 db.session.commit()
-                
-                try:
-                    msg = Message("Your Verification Code", recipients=[user.email], sender=current_app.config.get("MAIL_DEFAULT_SENDER"))
-                    msg.body = f"Hello {user.username},\n\nYour verification code is: {user.verification_code}\n\nIt will expire in 10 minutes."
-                    mail.send(msg)
-                    flash("Account created. A verification code was sent to your email.", "success")
-                except Exception as e:
-                    print(f"\n{'='*50}\n[LOCAL DEV] FAILED TO SEND EMAIL!\nVerification code for {user.email} is: {user.verification_code}\n{'='*50}\n")
-                    flash(f"Account created! (Email sending failed). Your verification code is: {user.verification_code}", "warning")
-                    
+                result = send_verification_code(user)
+                session['verify_email_sent'] = result["sent"]
+                session['verify_code'] = result["code"]
                 return redirect(url_for("auth.verify", user_id=user.id))
             else:
-                # Skip verification – mark as verified
                 user.email_verified = True
                 db.session.add(user)
                 db.session.commit()
                 login_user(user)
                 flash("Account created! You are now logged in.", "success")
+                if next_page and is_safe_url(next_page):
+                    return redirect(next_page)
                 return redirect(url_for("dashboard.dashboard"))
-    return render_template("register.html")
+    return render_template("register.html", next_page=next_page, google_enabled=bool(current_app.google))
 
 @auth_bp.route("/verify/<int:user_id>", methods=["GET", "POST"])
 def verify(user_id):
@@ -69,6 +136,10 @@ def verify(user_id):
     user = User.query.get_or_404(user_id)
     if user.email_verified:
         return redirect(url_for("auth.login"))
+    
+    dev_code = session.pop('verify_code', None)
+    session.pop('verify_email_sent', None)
+    
     if request.method == "POST":
         code = request.form.get("code", "").strip()
         if user.verification_code == code and user.verification_code_expires > datetime.utcnow():
@@ -80,27 +151,60 @@ def verify(user_id):
             return redirect(url_for("auth.login"))
         else:
             flash("Invalid or expired code.", "danger")
-    return render_template("verify.html", user=user)
+    
+    return render_template("verify.html", user=user, dev_code=dev_code)
+
+@auth_bp.route("/api/verify/<int:user_id>/resend", methods=["POST"])
+def resend_verification(user_id):
+    if not VERIFY_EMAIL:
+        return {"error": "Verification disabled"}, 400
+    user = User.query.get_or_404(user_id)
+    if user.email_verified:
+        return {"error": "Email already verified", "redirect": url_for("auth.login")}, 400
+    result = send_verification_code(user)
+    return {"sent": result["sent"], "code": result["code"], "message": "Verification code sent to your email." if result["sent"] else "Could not send email.", "error": result.get("error")}
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard.dashboard"))
+    next_page = request.args.get("next")
     if request.method == "POST":
-        username = request.form.get("username")
+        credential = request.form.get("username", "").strip()
         password = request.form.get("password")
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
-            if VERIFY_EMAIL and not user.email_verified:
-                flash("Please verify your email before logging in.", "warning")
-                return redirect(url_for("auth.verify", user_id=user.id))
-            login_user(user)
-            flash(f"Welcome back, {user.username}!", "success")
-            next_page = request.args.get("next")
-            return redirect(next_page or url_for("dashboard.dashboard"))
+        next_page = request.form.get("next") or next_page
+        
+        is_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if not credential or not password:
+            msg = "Please enter both email/username and password."
+            if is_json:
+                return {"success": False, "error": msg}, 400
+            flash(msg, "danger")
         else:
-            flash("Invalid credentials.", "danger")
-    return render_template("login.html")
+            user = User.query.filter(
+                (User.email == credential) | (User.username == credential)
+            ).first()
+            if user and user.check_password(password):
+                if VERIFY_EMAIL and not user.email_verified:
+                    msg = "Please verify your email before logging in."
+                    verify_url = url_for("auth.verify", user_id=user.id)
+                    if is_json:
+                        return {"success": False, "redirect": verify_url, "error": msg}
+                    flash(msg, "warning")
+                    return redirect(verify_url)
+                login_user(user)
+                display_name = user.full_name or user.username
+                target = next_page if next_page and is_safe_url(next_page) else url_for("dashboard.dashboard")
+                if is_json:
+                    return {"success": True, "redirect": target, "name": display_name}
+                flash(f"Welcome back, {display_name}!", "success")
+                return redirect(target)
+            else:
+                if is_json:
+                    return {"success": False, "error": "Invalid credentials."}, 401
+                flash("Invalid credentials.", "danger")
+    return render_template("login.html", next_page=next_page, google_enabled=bool(current_app.google))
 
 @auth_bp.route("/logout")
 def logout():
@@ -126,30 +230,21 @@ def authorized_google():
     email = user_info['email']
     name = user_info.get('name', email.split('@')[0])
     picture = user_info.get('picture', '')
-    
-    # Check if user exists
+
     user = User.query.filter_by(email=email).first()
     if user:
-        # Update info if needed
         if not user.avatar_url and picture:
             user.avatar_url = picture
-        if not user.username:
-            user.username = name.replace(' ', '_').lower()
+        if not user.full_name:
+            user.full_name = name
     else:
-        # Create new user
-        username = name.replace(' ', '_').lower()
-        # Ensure unique username
-        base_username = username
-        counter = 1
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-        
-        user = User(username=username, email=email, avatar_url=picture, email_verified=True)
-        user.set_password('')  # No password for OAuth users
+        username = generate_unique_username(name)
+        user = User(username=username, full_name=name, email=email, avatar_url=picture, email_verified=True)
+        user.set_password('')
         db.session.add(user)
-    
+
     db.session.commit()
     login_user(user)
-    flash(f"Welcome, {user.username}!", "success")
+    display_name = user.full_name or user.username
+    flash(f"Welcome, {display_name}!", "success")
     return redirect(url_for("dashboard.dashboard"))

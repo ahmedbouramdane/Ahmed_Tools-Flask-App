@@ -71,6 +71,33 @@ class DesignEditor {
     defaultPlugins.forEach(p => this.plugins.register(p));
   }
 
+  getProjectData() {
+    return this.state.serialize();
+  }
+
+  loadProject(data) {
+    if (!data) return;
+    this.state.deserialize(data);
+    this.state.set('projectMeta.modified', Date.now());
+    this.state.set('selectedIds', []);
+    if (this.workspace) this.workspace.scheduleRender();
+  }
+
+  async loadSharedProject(projectId) {
+    try {
+      const response = await fetch('/tools/api/design/load/' + encodeURIComponent(projectId));
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unable to load shared project');
+      }
+      this.loadProject(data.project);
+      showToast('Shared design loaded');
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Failed to load shared design', 'error');
+    }
+  }
+
   _bindGlobalKeys() {
     this._globalKeyHandler = e => {
       if (!this.container?.isConnected) return;

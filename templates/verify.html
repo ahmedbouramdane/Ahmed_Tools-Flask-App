@@ -1,26 +1,212 @@
 {% extends "base.html" %}
+{% block title %}Verify Email - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 mt-12">
-  <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
-    <i class="fas fa-envelope text-indigo-600 mr-2"></i> Verify Your Email
-  </h2>
-  <p class="text-gray-600 mb-6 text-center">
-    A 6‑digit code was sent to <strong>{{ user.email }}</strong>.<br>
-    <span class="text-sm">It expires in 10 minutes.</span>
-  </p>
-  <form method="POST">
-    <div class="mb-6">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
-      <input type="text" name="code" required pattern="[0-9]{6}" maxlength="6"
-             class="w-full px-4 py-3 border border-gray-300 rounded-xl text-center text-2xl tracking-wide focus:ring-2 focus:ring-indigo-500 outline-none"
-             placeholder="000000">
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-12">
+  <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 mb-4">
+        <i class="fas fa-envelope text-2xl text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Verify Your Email</h2>
+      <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">
+        A 6-digit code was sent to <strong class="text-slate-700 dark:text-slate-300">{{ user.email }}</strong>
+      </p>
     </div>
-    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition">
-      <i class="fas fa-check mr-2"></i> Verify Account
-    </button>
-  </form>
-  <p class="mt-4 text-center text-gray-500 text-sm">
-    Didn't receive the code? <a href="{{ url_for('auth.register') }}" class="text-indigo-600 hover:underline">Register again</a>.
-  </p>
+
+    <div id="alert-area"></div>
+
+    {% if dev_code %}
+    <div class="mb-4 p-3 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl text-center" id="code-display">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Your verification code</p>
+      <div class="text-3xl font-bold tracking-[0.3em] text-indigo-600 dark:text-indigo-400 select-all font-mono">{{ dev_code }}</div>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('auth.verify', user_id=user.id) }}" id="verify-form">
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 text-center">Enter verification code</label>
+        <div class="flex gap-2 justify-center" id="code-inputs">
+          <input type="text" name="code" id="code-hidden" class="hidden">
+          {% for i in range(6) %}
+          <input type="text" maxlength="1"
+                 class="code-digit w-11 h-12 text-center text-xl font-bold border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-gray-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                 data-index="{{ i }}" inputmode="numeric" pattern="[0-9]">
+          {% endfor %}
+        </div>
+        <p class="text-xs text-slate-400 dark:text-slate-500 text-center mt-2" id="expiry-text">Code expires in 10 minutes</p>
+      </div>
+      <button type="submit" id="verify-btn" class="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 shadow-lg shadow-indigo-500/20 transition flex items-center justify-center gap-2">
+        <i class="fas fa-check-circle"></i> Verify Account
+      </button>
+    </form>
+
+    <div class="mt-6 flex items-center justify-between gap-4">
+      <button id="resend-btn" class="flex-1 rounded-2xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" data-user-id="{{ user.id }}">
+        <i class="fas fa-redo-alt" id="resend-btn-icon"></i> <span id="resend-btn-text">Resend</span>
+      </button>
+      <a href="{{ url_for('auth.register') }}" class="flex-1 rounded-2xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-600 transition text-center flex items-center justify-center gap-2">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+    </div>
+    <p class="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
+      Check your spam folder if you didn't receive the code.
+    </p>
+  </div>
 </div>
+
+<script>
+(function() {
+  var digits = document.querySelectorAll('.code-digit');
+  var hidden = document.getElementById('code-hidden');
+  var verifyForm = document.getElementById('verify-form');
+  var resendBtn = document.getElementById('resend-btn');
+  var resendBtnText = document.getElementById('resend-btn-text');
+  var resendBtnIcon = document.getElementById('resend-btn-icon');
+  var alertArea = document.getElementById('alert-area');
+  var expiryText = document.getElementById('expiry-text');
+  var codeDisplay = document.getElementById('code-display');
+
+  function showAlert(message, type) {
+    var icon = type === 'success' ? 'check-circle' : type === 'danger' ? 'times-circle' : 'exclamation-circle';
+    var cls = type === 'success' ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-300' :
+              type === 'danger' ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300' :
+              'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300';
+    alertArea.innerHTML = '<div class="mb-4 p-3 rounded-xl text-sm flex items-center gap-2 ' + cls +
+      '"><i class="fas fa-' + icon + '"></i><span>' + message + '</span></div>';
+  }
+
+  function clearAlert() {
+    alertArea.innerHTML = '';
+  }
+
+  function setCodeDisplay(code) {
+    if (codeDisplay) {
+      codeDisplay.querySelector('.font-mono').textContent = code;
+    } else {
+      var div = document.createElement('div');
+      div.id = 'code-display';
+      div.className = 'mb-4 p-3 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl text-center';
+      div.innerHTML = '<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Your verification code</p>' +
+        '<div class="text-3xl font-bold tracking-[0.3em] text-indigo-600 dark:text-indigo-400 select-all font-mono">' + code + '</div>';
+      document.getElementById('verify-form').before(div);
+      codeDisplay = div;
+    }
+  }
+
+  // Digit input logic
+  digits.forEach(function(input, idx) {
+    input.addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      var code = '';
+      digits.forEach(function(d) { code += d.value; });
+      hidden.value = code;
+      if (this.value && idx < 5) {
+        digits[idx + 1].focus();
+      }
+      if (code.length === 6) {
+        verifyForm.submit();
+      }
+    });
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace' && !this.value && idx > 0) {
+        digits[idx - 1].focus();
+      }
+    });
+    input.addEventListener('paste', function(e) {
+      e.preventDefault();
+      var paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+      paste.split('').forEach(function(char, i) {
+        if (digits[i]) { digits[i].value = char; }
+      });
+      var code = '';
+      digits.forEach(function(d) { code += d.value; });
+      hidden.value = code;
+      if (paste.length === 6) {
+        verifyForm.submit();
+      } else if (digits[paste.length]) {
+        digits[paste.length].focus();
+      }
+    });
+  });
+  if (digits[0]) digits[0].focus();
+
+  // Resend with cooldown
+  var cooldown = 0;
+  var cooldownTimer = null;
+
+  function startCooldown(seconds) {
+    cooldown = seconds;
+    resendBtn.disabled = true;
+    function tick() {
+      if (cooldown <= 0) {
+        resendBtn.disabled = false;
+        resendBtnText.textContent = 'Resend';
+        resendBtnIcon.className = 'fas fa-redo-alt';
+        if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null; }
+        return;
+      }
+      resendBtnText.textContent = 'Resend (' + cooldown + 's)';
+      resendBtnIcon.className = 'fas fa-hourglass-half';
+      cooldown--;
+    }
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+  }
+
+  resendBtn.addEventListener('click', function() {
+    if (resendBtn.disabled) return;
+    var userId = resendBtn.getAttribute('data-user-id');
+    resendBtn.disabled = true;
+    resendBtnText.textContent = 'Sending...';
+    resendBtnIcon.className = 'fas fa-spinner fa-spin';
+    clearAlert();
+
+    fetch('/api/verify/' + userId + '/resend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }).then(function(resp) {
+      return resp.json().then(function(data) {
+        if (data.error && data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        if (data.code) {
+          setCodeDisplay(data.code);
+        }
+        if (data.sent) {
+          showAlert(data.message || 'Code sent! Check your email.', 'success');
+        } else {
+          showAlert(data.message || 'Could not send email.', 'warning');
+        }
+        startCooldown(30);
+      });
+    }).catch(function() {
+      resendBtn.disabled = false;
+      resendBtnText.textContent = 'Resend';
+      resendBtnIcon.className = 'fas fa-redo-alt';
+      showAlert('Network error. Please try again.', 'danger');
+      startCooldown(10);
+    });
+  });
+
+  // Update expiry countdown
+  var expiresStr = '{{ user.verification_code_expires.isoformat() if user.verification_code_expires else "" }}';
+  if (expiresStr) {
+    var expires = new Date(expiresStr);
+    function tick() {
+      var now = new Date();
+      var diff = Math.max(0, Math.floor((expires - now) / 1000));
+      if (diff <= 0) {
+        expiryText.textContent = 'Code expired. Request a new one.';
+        return;
+      }
+      var min = Math.floor(diff / 60);
+      var sec = diff % 60;
+      expiryText.textContent = 'Code expires in ' + min + 'm ' + sec + 's';
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+})();
+</script>
 {% endblock %}

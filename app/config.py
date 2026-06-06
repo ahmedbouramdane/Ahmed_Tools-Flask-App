@@ -1,4 +1,9 @@
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Get the absolute path of the project root (the folder containing app/)
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -14,7 +19,11 @@ class Config:
 
     # Gemini API (use environment variable)
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-    GEMINI_MODEL = "gemini-1.5-flash-latest"
+    GEMINI_MODEL = "gemini-2.0-flash"
+
+    @staticmethod
+    def get_gemini_api_key():
+        return os.environ.get("GEMINI_API_KEY")
 
     # Email configuration
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")

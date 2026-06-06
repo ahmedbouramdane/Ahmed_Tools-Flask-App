@@ -2,7 +2,7 @@ class DesignEditorLeftPanel {
   constructor(state) {
     this.state = state;
     this.el = null;
-    this._tabs = { elements: null, images: null, stickers: null, templates: null };
+    this._tabs = { elements: null, images: null, stickers: null, templates: null, ai: null };
   }
 
   mount(container) {
@@ -15,6 +15,7 @@ class DesignEditorLeftPanel {
         <button class="de-left-tab" data-tab="images"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Images</span></button>
         <button class="de-left-tab" data-tab="stickers"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M9 15a3 3 0 0 0 6 0"/></svg><span>Stickers</span></button>
         <button class="de-left-tab" data-tab="templates"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg><span>Templates</span></button>
+        <button class="de-left-tab" data-tab="ai"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4"/><path d="M12 17v4"/><path d="M5.64 5.64l2.83 2.83"/><path d="M15.54 15.54l2.83 2.83"/><path d="M3 12h2"/><path d="M19 12h2"/><circle cx="12" cy="12" r="3"/></svg><span>AI</span></button>
       </div>
       <div class="de-left-content">
         <div class="de-left-tab-content de-left-tab-active" id="de-tab-elements">
@@ -57,6 +58,19 @@ class DesignEditorLeftPanel {
         <div class="de-left-tab-content" id="de-tab-templates">
           <div class="de-panel-title">Templates</div>
           <div class="de-template-grid"></div>
+          <div class="de-panel-title" style="margin-top:14px">Backgrounds</div>
+          <div class="de-background-grid"></div>
+        </div>
+        <div class="de-left-tab-content" id="de-tab-ai">
+          <div class="de-panel-title">AI Design Assistant</div>
+          <textarea class="de-ai-prompt" placeholder="Describe your design idea, color mood, or text style..."></textarea>
+          <div class="de-ai-actions">
+            <button class="de-ai-btn" data-ai="headline">Generate Headline</button>
+            <button class="de-ai-btn" data-ai="palette">Generate Palette</button>
+            <button class="de-ai-btn" data-ai="background">Create Background</button>
+          </div>
+          <div class="de-ai-output">Enter a prompt and choose an AI action.</div>
+          <button class="de-ai-insert-btn">Insert Result</button>
         </div>
       </div>
     `;
@@ -67,7 +81,9 @@ class DesignEditorLeftPanel {
     this._bindImageUpload();
     this._bindStickers();
     this._bindTemplates();
+    this._bindBackgrounds();
     this._bindFilters();
+    this._bindAi();
 
     container.appendChild(this.el);
   }
@@ -175,6 +191,86 @@ class DesignEditorLeftPanel {
     });
   }
 
+  _bindAi() {
+    const promptEl = this.el.querySelector('.de-ai-prompt');
+    const outputEl = this.el.querySelector('.de-ai-output');
+    let currentResult = { type: null, content: '' };
+
+    const setOutput = (html) => {
+      outputEl.innerHTML = html;
+    };
+
+    this.el.querySelectorAll('.de-ai-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const type = btn.dataset.ai;
+        const prompt = promptEl.value.trim();
+        if (!prompt) {
+          showToast('Enter an AI prompt first', 'error');
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+        try {
+          const response = await fetch('/tools/api/design/ai-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: type, prompt: prompt })
+          });
+          const data = await response.json();
+          if (!data.success) {
+            throw new Error(data.error || 'AI generation failed');
+          }
+          currentResult = { type: type, content: data.result, palette: data.palette || [] };
+          let html = `<div>${data.result}</div>`;
+          if (data.palette && data.palette.length) {
+            html += '<div class="de-palette">' + data.palette.map(c => `<div class="de-ai-swatch" style="background:${c}" title="${c}"></div>`).join('') + '</div>';
+          }
+          setOutput(html);
+        } catch (err) {
+          setOutput('<div style="color:#f87171">' + escapeHtml(err.message || 'AI failed') + '</div>');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = btn.dataset.ai === 'headline' ? 'Generate Headline' : btn.dataset.ai === 'palette' ? 'Generate Palette' : 'Create Background';
+        }
+      });
+    });
+
+    this.el.querySelector('.de-ai-insert-btn').addEventListener('click', () => {
+      if (!currentResult.content) {
+        showToast('Generate a result before inserting', 'error');
+        return;
+      }
+      if (currentResult.type === 'headline' || currentResult.type === 'background') {
+        const obj = DesignEditorObjectUtils.createObject('text', {
+          x: 100,
+          y: 100,
+          w: 420,
+          h: 160,
+          fontSize: currentResult.type === 'headline' ? 32 : 20,
+          fontWeight: '700',
+          text: currentResult.content,
+          fill: '#111827'
+        });
+        this.state.addObject(obj);
+      } else if (currentResult.type === 'palette' && currentResult.palette && currentResult.palette.length) {
+        currentResult.palette.forEach((color, index) => {
+          const obj = DesignEditorObjectUtils.createObject('rectangle', {
+            x: 80 + index * 90,
+            y: 120,
+            w: 80,
+            h: 80,
+            fill: color,
+            borderRadius: 16
+          });
+          this.state.addObject(obj);
+        });
+      }
+      this.state.set('activeTool', 'select');
+      this.state.get('history')?.save();
+      showToast('AI result inserted');
+    });
+  }
+
   _bindStickers() {
     const grid = this.el.querySelector('.de-sticker-grid');
     DesignEditorObjectUtils.STICKERS.forEach(s => {
@@ -209,6 +305,32 @@ class DesignEditorLeftPanel {
       btn.innerHTML = `<div class="de-template-preview" style="background:${t.bg}"><span>${t.w}×${t.h}</span></div><span class="de-template-name">${t.name}</span>`;
       btn.addEventListener('click', () => {
         this.state.set('canvas', { ...this.state.get('canvas'), width: t.w, height: t.h, background: t.bg });
+        this.state.get('history')?.save();
+        showToast(`${t.name} template applied`);
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  _bindBackgrounds() {
+    const grid = this.el.querySelector('.de-background-grid');
+    const backgrounds = [
+      { name: 'Soft Breeze', bg: '#EFF6FF' },
+      { name: 'Warm Sunset', bg: '#FDE68A' },
+      { name: 'Mint Dream', bg: '#D1FAE5' },
+      { name: 'Night Sky', bg: '#0F172A' },
+      { name: 'Peach Glow', bg: '#FBCFE8' },
+      { name: 'Slate Mist', bg: '#E2E8F0' },
+    ];
+    backgrounds.forEach(b => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'de-background-btn';
+      btn.innerHTML = `<span class="de-background-swatch" style="background:${b.bg}"></span><span>${b.name}</span>`;
+      btn.addEventListener('click', () => {
+        this.state.set('canvas', { ...this.state.get('canvas'), background: b.bg });
+        this.state.get('history')?.save();
+        showToast('Background applied');
       });
       grid.appendChild(btn);
     });

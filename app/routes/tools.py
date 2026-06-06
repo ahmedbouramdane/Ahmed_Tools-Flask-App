@@ -1,5 +1,6 @@
 import os, io, uuid, random, string, base64, json, hashlib, re
-from flask import Blueprint, render_template, request, jsonify, send_file
+from dotenv import load_dotenv
+from flask import Blueprint, render_template, request, jsonify, send_file, url_for
 from flask_login import login_required
 from app.config import Config
 import google.generativeai as genai
@@ -7,24 +8,34 @@ import google.generativeai as genai
 tools_bp = Blueprint("tools", __name__)
 
 UPLOAD_FOLDER = Config.UPLOAD_FOLDER
+DESIGN_PROJECTS_FOLDER = os.path.join(UPLOAD_FOLDER, 'design-projects')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(DESIGN_PROJECTS_FOLDER, exist_ok=True)
 
 # ─── Gemini Helper ──────────────────────────────────────────────────────────
 
 def gemini_response(prompt):
-    key = Config.GEMINI_API_KEY
+    key = Config.get_gemini_api_key()
+    if not key:
+        load_dotenv()
+        key = Config.get_gemini_api_key()
     if not key:
         return "Gemini API key not configured"
+
     genai.configure(api_key=key)
-    models_to_try = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-001"]
-    for model_name in models_to_try:
+    models_to_try = [Config.GEMINI_MODEL, "gemini-2.0-flash-lite", "gemini-1.5-flash"]
+    last_error = None
+    for model_name in filter(None, models_to_try):
         try:
             model = genai.GenerativeModel(model_name)
             resp = model.generate_content(prompt)
-            return resp.text
-        except Exception:
+            if getattr(resp, 'text', None):
+                return resp.text
+            return str(resp)
+        except Exception as e:
+            last_error = str(e)
             continue
-    return "AI service unavailable"
+    return f"AI service unavailable: {last_error or 'no response from Gemini'}"
 
 # ─── Main SPA Page ──────────────────────────────────────────────────────────
 
@@ -154,6 +165,121 @@ def image_tool(operation):
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@tools_bp.route("/tools/api/math/ai-solve", methods=["POST"])
+@login_required
+def math_ai_solve():
+    expression = request.form.get('expression', '').strip()
+    if not expression:
+        return jsonify({"success": False, "error": "Expression required"}), 400
+
+    prompt = (
+        "You are an advanced math assistant with CASIO, GeoGebra and symbolic reasoning skills. "
+        "Provide a clear step-by-step solution and explanation for the following problem. "
+        "If it is an equation, solve it. If it is an expression, simplify or evaluate it. "
+        "Give the answer in plain text with numbered steps and include any useful graph or algebra guidance.\n\n"
+        "Problem:\n" + expression + "\n\nAnswer:"
+    )
+    answer = gemini_response(prompt)
+    if not answer:
+        return jsonify({"success": False, "error": "AI service unavailable"}), 500
+    if answer.startswith('Gemini API key not configured'):
+        return jsonify({"success": False, "error": "Gemini API key not configured. Please add GEMINI_API_KEY to your .env and restart the app."}), 500
+    if answer.startswith('AI service unavailable'):
+        return jsonify({"success": False, "error": answer}), 500
+    return jsonify({"success": True, "solution": answer})
+
+@tools_bp.route("/tools/api/math/ai-status", methods=["GET"])
+@login_required
+def math_ai_status():
+    key = Config.get_gemini_api_key()
+    if not key:
+        load_dotenv()
+        key = Config.get_gemini_api_key()
+    return jsonify({
+        "success": True,
+        "configured": bool(key),
+        "model": Config.GEMINI_MODEL,
+        "message": "Gemini API key is configured." if key else "GEMINI_API_KEY is missing in your environment or .env file."
+    })
+
+@tools_bp.route("/tools/api/design/save", methods=["POST"])
+@login_required
+def design_save_project():
+    data = request.get_json(silent=True) or {}
+    project = data.get('project') or {}
+    if not project:
+        return jsonify({"success": False, "error": "No project data provided"}), 400
+    project_id = uuid.uuid4().hex
+    file_path = os.path.join(DESIGN_PROJECTS_FOLDER, f"{project_id}.json")
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(project, f)
+        url = url_for('tools.tools_page', _external=True) + f'?tool=canva&project_id={project_id}'
+        return jsonify({"success": True, "project_id": project_id, "url": url})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@tools_bp.route("/tools/api/design/load/<project_id>", methods=["GET"])
+@login_required
+def design_load_project(project_id):
+    if not re.match(r'^[0-9a-fA-F]+$', project_id):
+        return jsonify({"success": False, "error": "Invalid project ID"}), 400
+    file_path = os.path.join(DESIGN_PROJECTS_FOLDER, f"{project_id}.json")
+    if not os.path.exists(file_path):
+        return jsonify({"success": False, "error": "Project not found"}), 404
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            project = json.load(f)
+        return jsonify({"success": True, "project": project})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@tools_bp.route("/tools/api/design/ai-generate", methods=["POST"])
+@login_required
+def design_ai_generate():
+    data = request.get_json(silent=True) or {}
+    prompt_text = (data.get('prompt') or '').strip()
+    gen_type = data.get('type')
+    if not prompt_text:
+        return jsonify({"success": False, "error": "Prompt is required"}), 400
+    if gen_type not in ('headline', 'palette', 'background'):
+        return jsonify({"success": False, "error": "Unknown AI action"}), 400
+
+    if gen_type == 'headline':
+        prompt = (
+            "You are an experienced visual copywriter and design assistant. "
+            "Generate a short, modern marketing headline for the following design brief. "
+            "Keep it catchy, bold, and easy to place on a graphic.\n"
+            "Prompt:\n" + prompt_text + "\n\nHeadline:"
+        )
+    elif gen_type == 'palette':
+        prompt = (
+            "Create four modern color palette hex codes for a design with this brief. "
+            "Only return the hex codes separated by spaces or commas.\n"
+            "Prompt:\n" + prompt_text + "\n\nPalette:"
+        )
+    else:
+        prompt = (
+            "Suggest a modern background design idea for the following brief. "
+            "Include a short description with gradient, texture or lighting style.\n"
+            "Prompt:\n" + prompt_text + "\n\nBackground:"
+        )
+
+    answer = gemini_response(prompt)
+    if not answer:
+        return jsonify({"success": False, "error": "AI service unavailable"}), 500
+    if answer.startswith('Gemini API key not configured'):
+        return jsonify({"success": False, "error": "Gemini API key not configured. Please add GEMINI_API_KEY to your .env and restart the app."}), 500
+    if answer.startswith('AI service unavailable'):
+        return jsonify({"success": False, "error": answer}), 500
+
+    palette = []
+    if gen_type == 'palette':
+        palette = re.findall(r'#[0-9A-Fa-f]{6}', answer)
+        if not palette:
+            palette = re.findall(r'#[0-9A-Fa-f]{3}', answer)
+    return jsonify({"success": True, "result": answer.strip(), "palette": palette})
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  📄 PDF TOOLS

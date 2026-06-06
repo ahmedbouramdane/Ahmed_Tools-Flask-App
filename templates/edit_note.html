@@ -1,19 +1,33 @@
 {% extends "base.html" %}
+{% block title %}Edit Note - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
-<div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
-  <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-    <i class="fas fa-paint-brush text-indigo-600"></i> Edit Note
-  </h2>
+<div class="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl border border-gray-200 dark:border-slate-700 p-4 md:p-6">
+  <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <h2 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+        <i class="fas fa-paint-brush text-indigo-600"></i>
+        Edit Note
+      </h2>
+      <p class="text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-2xl">Use the rich editor to format headings, lists, fonts, colors, images, links, and export from the preview page.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="button" onclick="previewCurrentNote()" class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition"><i class="fas fa-eye"></i> Preview</button>
+      <button type="button" onclick="downloadCurrentNotePdf()" class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-purple-600 text-white hover:bg-purple-700 transition"><i class="fas fa-file-pdf"></i> Export PDF</button>
+      <button type="button" onclick="copyEditorText()" class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition"><i class="fas fa-copy"></i> Copy text</button>
+    </div>
+  </div>
 
   <form id="note-form" method="POST" action="{{ url_for('notes.edit_note', note_id=note.id) }}" onsubmit="return prepareForm()">
     <!-- Title -->
     <div class="mb-4">
       <label class="block text-sm font-semibold mb-1">Note Title</label>
-      <input type="text" name="title" id="note-title" class="w-full px-4 py-2 border border-gray-300 rounded-xl" value="{{ note.title }}" required>
+      <input type="text" name="title" id="note-title" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" value="{{ note.title }}" required>
     </div>
 
     <!-- Quill Editor Container -->
-    <div id="quill-editor" class="mb-4 bg-white" style="min-height: 400px;"></div>
+    <div class="mb-4 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+      <div id="quill-editor" class="bg-white dark:bg-slate-900" style="min-height: 520px;"></div>
+    </div>
 
     <!-- Hidden content field -->
     <input type="hidden" name="content" id="form-content">
@@ -47,6 +61,8 @@
         ['bold', 'italic', 'underline', 'strike'],
         [{ 'color': [] }, { 'background': [] }],
         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        ['blockquote', 'code-block'],
         [{ 'align': [] }],
         ['link', 'image'],
         ['clean']
@@ -111,6 +127,68 @@
   if (!hasImageResize) {
     console.info('Image resize module not loaded – images can still be used but won’t have drag handles.');
     // You could also show a non‑blocking toast
+  }
+
+  function getEditorHtml() {
+    return quill.root.innerHTML;
+  }
+
+  function getEditorText() {
+    return quill.getText().trim();
+  }
+
+  function sanitizeHtml(html) {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('script, style, iframe, object, embed').forEach(function(el) { el.remove(); });
+    Array.from(tmp.querySelectorAll('*')).forEach(function(el) {
+      Array.from(el.attributes).forEach(function(attr) {
+        if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+      });
+    });
+    return tmp.innerHTML;
+  }
+
+  function previewCurrentNote() {
+    var html = getEditorHtml();
+    Swal.fire({
+      title: document.getElementById('note-title').value || 'Preview',
+      html: `<div class="text-left ql-editor max-h-[65vh] overflow-y-auto p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800">${sanitizeHtml(html)}</div>`,
+      width: '880px',
+      showCloseButton: true,
+      showConfirmButton: false,
+      customClass: { popup: 'rounded-2xl shadow-2xl' }
+    });
+  }
+
+  function copyEditorText() {
+    var text = getEditorText();
+    navigator.clipboard.writeText(text).then(function() {
+      Swal.fire({ icon: 'success', title: 'Copied', text: 'Note text copied to clipboard.', toast: true, position: 'top-end', showConfirmButton: false, timer: 1800 });
+    }).catch(function() {
+      Swal.fire('Copy failed', 'Unable to copy note text.', 'error');
+    });
+  }
+
+  function downloadCurrentNotePdf() {
+    var title = document.getElementById('note-title').value || 'note';
+    var html = getEditorHtml();
+    var container = document.createElement('div');
+    container.style.width = '800px';
+    container.style.padding = '24px';
+    container.style.background = '#ffffff';
+    container.style.color = '#111827';
+    container.style.fontFamily = 'Inter, sans-serif';
+    container.innerHTML = `<h1 style="font-size:28px;margin-bottom:18px;">${title}</h1><div>${sanitizeHtml(html)}</div>`;
+    document.body.appendChild(container);
+    var filename = title.replace(/[^a-z0-9]+/gi, '_').toLowerCase() + '.pdf';
+    html2pdf().set({
+      margin: 12,
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(container).save().finally(function() { container.remove(); });
   }
 
   // Prepare form for submission
