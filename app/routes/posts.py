@@ -71,12 +71,13 @@ def posts_feed():
             react_counts = post.reaction_counts
             total_reacts = post.total_reactions
             items.append({
-                'post_id': post.id,
+                'post_id': post.uuid,
                 'content': post.content,
                 'image_urls': image_urls,
                 'author': {
                     'id': post.author.id,
                     'username': post.author.username,
+                    'full_name': post.author.full_name,
                     'avatar_url': post.author.avatar_url or ''
                 },
                 'created_at': post.created_at.strftime('%B %d, %Y at %H:%M'),
@@ -141,14 +142,15 @@ def create_post():
     db.session.commit()
     
     post_data = {
-        'post_id': post.id,
+        'post_id': post.uuid,
         'content': post.content,
         'image_url': image_urls[0] if image_urls else None,
         'image_urls': image_urls,
         'author': {
             'id': current_user.id,
             'username': current_user.username,
-            'avatar_url': current_user.avatar_url
+            'avatar_url': current_user.avatar_url,
+            'full_name': current_user.full_name
         },
         'created_at': post.created_at.strftime('%B %d, %Y at %H:%M'),
         'likes_count': 0,
@@ -159,31 +161,32 @@ def create_post():
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({
             'success': True,
-            'post_id': post.id,
-            'url': url_for('posts.view_post', post_id=post.id),
+            'post_id': post.uuid,
+            'url': url_for('posts.view_post', post_id=post.uuid),
             'post': post_data
         })
 
     return redirect(url_for('posts.posts_feed'))
 
 
-@posts_bp.route("/posts/<int:post_id>")
+@posts_bp.route("/posts/<string:post_id>")
 @login_required
 def view_post(post_id):
     """View a single post with comments"""
-    post = Post.query.options(subqueryload(Post.images)).get_or_404(post_id)
+    post = Post.query.options(subqueryload(Post.images)).filter_by(uuid=post_id).first_or_404()
     user_reaction = post.user_reaction(current_user.id)
     return render_template('posts/view.html', post=post, user_reaction=user_reaction)
 
 
-@posts_bp.route("/posts/<int:post_id>/like", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/like", methods=["POST"])
 @login_required
 def toggle_like(post_id):
     """Toggle like on a post"""
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
+    pid = post.id
     
-    existing = PostReaction.query.filter_by(post_id=post_id, user_id=current_user.id, reaction='like').first()
-    existing_like = PostLike.query.filter_by(post_id=post_id, user_id=current_user.id).first()
+    existing = PostReaction.query.filter_by(post_id=pid, user_id=current_user.id, reaction='like').first()
+    existing_like = PostLike.query.filter_by(post_id=pid, user_id=current_user.id).first()
     
     if existing:
         db.session.delete(existing)
@@ -191,22 +194,25 @@ def toggle_like(post_id):
             db.session.delete(existing_like)
         liked = False
     else:
-        PostReaction.query.filter_by(post_id=post_id, user_id=current_user.id).delete()
-        db.session.add(PostReaction(post_id=post_id, user_id=current_user.id, reaction='like'))
+        PostReaction.query.filter_by(post_id=pid, user_id=current_user.id).delete()
+        db.session.add(PostReaction(post_id=pid, user_id=current_user.id, reaction='like'))
         if not existing_like:
-            db.session.add(PostLike(post_id=post_id, user_id=current_user.id))
+            db.session.add(PostLike(post_id=pid, user_id=current_user.id))
         liked = True
     
     db.session.commit()
     
-    like_count = PostReaction.query.filter_by(post_id=post_id).count()
+    like_count = PostReaction.query.filter_by(post_id=pid).count()
+    
+    rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=pid).group_by(PostReaction.reaction).all()
+    counts = {r: c for r, c in rows}
     
     # Create notification for post owner
     if liked and post.user_id != current_user.id:
         notif = PostNotification(
             user_id=post.user_id,
             actor_id=current_user.id,
-            post_id=post_id,
+            post_id=pid,
             type='like',
             message=f'{current_user.username} liked your post'
         )
@@ -215,13 +221,15 @@ def toggle_like(post_id):
     
     # Emit real-time event to all users
     like_data = {
-        'post_id': post_id,
+        'post_id': post.uuid,
         'liked': liked,
         'like_count': like_count,
+        'counts': counts,
         'user': {
             'id': current_user.id,
             'username': current_user.username
-        }
+        },
+        'user_id': current_user.id
     }
     socketio.emit('post_liked', like_data, room='posts_global', namespace='/posts')
     
@@ -230,23 +238,25 @@ def toggle_like(post_id):
         return jsonify({
             'success': True,
             'liked': liked,
-            'like_count': like_count
+            'like_count': like_count,
+            'counts': counts
         })
     
-    return redirect(url_for('posts.view_post', post_id=post_id))
+    return redirect(url_for('posts.view_post', post_id=post.uuid))
 
 
-@posts_bp.route("/posts/<int:post_id>/react", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/react", methods=["POST"])
 @login_required
 def react_to_post(post_id):
     """Set any reaction on a post (like, love, haha, wow, sad, angry)"""
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
+    pid = post.id
     reaction = request.form.get('reaction', '').strip().lower()
     valid = {'like', 'love', 'haha', 'wow', 'sad', 'angry'}
     if reaction not in valid:
         return jsonify({'success': False, 'error': 'Invalid reaction'}), 400
 
-    existing = PostReaction.query.filter_by(post_id=post_id, user_id=current_user.id).first()
+    existing = PostReaction.query.filter_by(post_id=pid, user_id=current_user.id).first()
     removed = False
     if existing and existing.reaction == reaction:
         db.session.delete(existing)
@@ -254,33 +264,33 @@ def react_to_post(post_id):
     else:
         if existing:
             db.session.delete(existing)
-        db.session.add(PostReaction(post_id=post_id, user_id=current_user.id, reaction=reaction))
-        existing_like = PostLike.query.filter_by(post_id=post_id, user_id=current_user.id).first()
+        db.session.add(PostReaction(post_id=pid, user_id=current_user.id, reaction=reaction))
+        existing_like = PostLike.query.filter_by(post_id=pid, user_id=current_user.id).first()
         if reaction == 'like':
             if not existing_like:
-                db.session.add(PostLike(post_id=post_id, user_id=current_user.id))
+                db.session.add(PostLike(post_id=pid, user_id=current_user.id))
         else:
             if existing_like:
                 db.session.delete(existing_like)
 
     db.session.commit()
 
-    rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=post_id).group_by(PostReaction.reaction).all()
+    rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=pid).group_by(PostReaction.reaction).all()
     counts = {r: c for r, c in rows}
 
     if not removed and post.user_id != current_user.id:
         emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'}
         notif = PostNotification(
-            user_id=post.user_id, actor_id=current_user.id, post_id=post_id,
+            user_id=post.user_id, actor_id=current_user.id, post_id=pid,
             type='react', message=f'{current_user.username} reacted with {emoji_map.get(reaction, reaction)}'
         )
         db.session.add(notif)
         db.session.commit()
 
     socketio.emit('post_reacted', {
-        'post_id': post_id, 'reaction': reaction if not removed else None,
+        'post_id': post.uuid, 'reaction': reaction if not removed else None,
         'removed': removed, 'user': {'id': current_user.id, 'username': current_user.username},
-        'counts': counts
+        'counts': counts, 'user_id': current_user.id
     }, room='posts_global', namespace='/posts')
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -288,24 +298,25 @@ def react_to_post(post_id):
             'success': True, 'reaction': reaction if not removed else None,
             'removed': removed, 'counts': counts
         })
-    return redirect(url_for('posts.view_post', post_id=post_id))
+    return redirect(url_for('posts.view_post', post_id=post.uuid))
 
 
-@posts_bp.route("/posts/<int:post_id>/comment", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/comment", methods=["POST"])
 @login_required
 def add_comment(post_id):
     """Add a comment to a post"""
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
+    pid = post.id
     content = request.form.get('content', '').strip()
     parent_id = request.form.get('parent_id', type=int)
     
     if not content:
         flash('Comment cannot be empty.', 'danger')
-        return redirect(url_for('posts.view_post', post_id=post_id))
+        return redirect(url_for('posts.view_post', post_id=post.uuid))
     
     comment = PostComment(
         content=content,
-        post_id=post_id,
+        post_id=pid,
         user_id=current_user.id,
         parent_id=parent_id if parent_id else None
     )
@@ -317,7 +328,7 @@ def add_comment(post_id):
         notif = PostNotification(
             user_id=post.user_id,
             actor_id=current_user.id,
-            post_id=post_id,
+            post_id=pid,
             type='comment',
             message=f'{current_user.username} commented on your post'
         )
@@ -330,7 +341,7 @@ def add_comment(post_id):
             reply_notif = PostNotification(
                 user_id=parent_comment.user_id,
                 actor_id=current_user.id,
-                post_id=post_id,
+                post_id=pid,
                 type='comment',
                 message=f'{current_user.username} replied to your comment'
             )
@@ -340,13 +351,14 @@ def add_comment(post_id):
     
     # Emit real-time event for new comment
     comment_data = {
-        'post_id': post_id,
+        'post_id': post.uuid,
         'comment_id': comment.id,
         'content': comment.content,
         'author': {
             'id': current_user.id,
             'username': current_user.username,
-            'avatar_url': current_user.avatar_url
+            'avatar_url': current_user.avatar_url,
+            'full_name': current_user.full_name
         },
         'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
         'parent_id': parent_id
@@ -354,7 +366,7 @@ def add_comment(post_id):
     socketio.emit('new_comment', comment_data, room=f'user_{post.user_id}', namespace='/posts')
     if parent_id and parent_comment:
         socketio.emit('new_comment', comment_data, room=f'user_{parent_comment.user_id}', namespace='/posts')
-    socketio.emit('new_comment', comment_data, room=f'post_{post_id}', namespace='/posts')
+    socketio.emit('new_comment', comment_data, room=f'post_{post.uuid}', namespace='/posts')
     socketio.emit('new_comment', comment_data, room='posts_global', namespace='/posts')
     
     flash('Comment added successfully!', 'success')
@@ -367,14 +379,14 @@ def add_comment(post_id):
             'comment': comment_data
         })
     
-    return redirect(url_for('posts.view_post', post_id=post_id))
+    return redirect(url_for('posts.view_post', post_id=post.uuid))
 
 
-@posts_bp.route("/posts/<int:post_id>/edit", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/edit", methods=["POST"])
 @login_required
 def edit_post(post_id):
     """Edit a post (owner only)"""
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
     
     if post.user_id != current_user.id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -414,7 +426,7 @@ def edit_post(post_id):
     db.session.commit()
     
     socketio.emit('post_edited', {
-        'post_id': post_id,
+        'post_id': post.uuid,
         'content': post.content,
         'updated_at': post.updated_at.strftime('%B %d, %Y at %H:%M'),
         'image_url': post.image_url,
@@ -431,14 +443,14 @@ def edit_post(post_id):
         })
     
     flash('Post updated successfully!', 'success')
-    return redirect(url_for('posts.view_post', post_id=post_id))
+    return redirect(url_for('posts.view_post', post_id=post.uuid))
 
 
-@posts_bp.route("/posts/<int:post_id>/delete", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/delete", methods=["POST"])
 @login_required
 def delete_post(post_id):
     """Delete a post"""
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
     
     if post.user_id != current_user.id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -448,7 +460,7 @@ def delete_post(post_id):
     db.session.delete(post)
     db.session.commit()
     
-    socketio.emit('post_deleted', {'post_id': post_id}, room='posts_global', namespace='/posts')
+    socketio.emit('post_deleted', {'post_id': post.uuid}, room='posts_global', namespace='/posts')
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True})
@@ -457,7 +469,7 @@ def delete_post(post_id):
     return redirect(url_for('posts.posts_feed'))
 
 
-@posts_bp.route("/posts/<int:post_id>/comment/<int:comment_id>/edit", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/comment/<int:comment_id>/edit", methods=["POST"])
 @login_required
 def edit_comment(comment_id, post_id):
     """Edit a comment (commenter only)"""
@@ -499,12 +511,12 @@ def edit_comment(comment_id, post_id):
     return redirect(url_for('posts.view_post', post_id=post_id))
 
 
-@posts_bp.route("/posts/<int:post_id>/comment/<int:comment_id>/delete", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/comment/<int:comment_id>/delete", methods=["POST"])
 @login_required
 def delete_comment(post_id, comment_id):
     """Delete a comment (commenter or post owner)"""
     comment = PostComment.query.get_or_404(comment_id)
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
     
     # Allow deletion by comment author OR post owner
     is_comment_author = comment.user_id == current_user.id
@@ -518,7 +530,7 @@ def delete_comment(post_id, comment_id):
     db.session.delete(comment)
     db.session.commit()
     
-    socketio.emit('comment_deleted', {'comment_id': comment.id, 'post_id': post_id}, room='posts_global', namespace='/posts')
+    socketio.emit('comment_deleted', {'comment_id': comment.id, 'post_id': post.uuid}, room='posts_global', namespace='/posts')
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True})
@@ -546,7 +558,7 @@ def user_profile(username):
         follower_id=current_user.id, followed_id=user.id
     ).first() is not None
     
-    return render_template('posts/user_profile.html', 
+    return render_template('profile.html', 
                          user=user, posts=posts, 
                          is_following=is_following)
 
@@ -638,16 +650,16 @@ def upload_post_image():
     return jsonify({'success': True, 'urls': uploaded, 'url': uploaded[0]})
 
 
-@posts_bp.route("/posts/<int:post_id>/image/<int:image_id>/delete", methods=["POST"])
+@posts_bp.route("/posts/<string:post_id>/image/<int:image_id>/delete", methods=["POST"])
 @login_required
 def delete_post_image(post_id, image_id):
     """Delete a single image from a post"""
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter_by(uuid=post_id).first_or_404()
     if post.user_id != current_user.id:
         return jsonify({'error': 'Forbidden'}), 403
     
     img = PostImage.query.get_or_404(image_id)
-    if img.post_id != post_id:
+    if img.post_id != post.id:
         return jsonify({'error': 'Image not found on this post'}), 404
     
     db.session.delete(img)
@@ -656,6 +668,11 @@ def delete_post_image(post_id, image_id):
 
 
 @posts_bp.route("/explore")
+@login_required
+def explore_redirect():
+    return redirect(url_for('posts.explore'))
+
+@posts_bp.route("/posts/explore")
 @login_required
 def explore():
     """Explore page - discover posts and users"""
@@ -708,7 +725,7 @@ def api_notifications():
             'id': n.id,
             'actor': n.actor.username if n.actor else 'Unknown',
             'actor_id': n.actor_id,
-            'post_id': n.post_id,
+            'post_id': n.post.uuid if n.post else None,
             'type': n.type,
             'message': n.message,
             'is_read': n.is_read,

@@ -1,129 +1,176 @@
 {% extends "base.html" %}
-{% block title %}Profile - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}{{ user.full_name or user.username }} - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
-  <!-- Cover Image -->
-  <div class="h-48 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-2xl relative"
-       style="{% if current_user.cover_url %}background: url('{{ current_user.cover_url }}') center/cover;{% endif %}">
-    <div class="absolute bottom-0 left-8 transform translate-y-1/2">
-      {% if current_user.avatar_url %}
-        <img src="{{ current_user.avatar_url }}" alt="Avatar"
-             class="w-28 h-28 rounded-full border-4 border-white dark:border-gray-700 shadow-lg object-cover">
-      {% else %}
-        <div class="w-28 h-28 rounded-full bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-700 shadow-lg flex items-center justify-center text-4xl font-bold text-indigo-600 dark:text-indigo-400">
-          {{ current_user.username[0] | upper }}
-        </div>
+{% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
+{% set is_owner = (user.id == current_user.id) %}
+<div class="max-w-4xl mx-auto px-4 py-6">
+  <!-- Profile Card -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <!-- Cover Photo -->
+    <div class="h-48 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
+      {% if user.cover_url %}
+        <img src="{{ user.cover_url }}" alt="Cover" class="w-full h-full object-cover">
       {% endif %}
+    </div>
+
+    <!-- Profile Info -->
+    <div class="px-6 pb-6">
+      <div class="flex flex-col sm:flex-row items-center sm:items-end -mt-12">
+        <!-- Avatar -->
+        <div class="relative">
+          {% if user.avatar_url %}
+            <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 object-cover shadow-lg">
+          {% else %}
+            <div class="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-3xl shadow-lg">
+              {{ user.username[0] | upper }}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Name and Actions -->
+        <div class="flex-1 mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left">
+          <h1 class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.full_name or user.username }}</h1>
+          <p class="text-gray-500 dark:text-gray-400 text-sm flex items-center justify-center sm:justify-start gap-1">
+            <i class="fas fa-at text-indigo-500"></i> {{ user.username }}
+          </p>
+          {% if user.bio %}
+            <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">{{ user.bio }}</p>
+          {% endif %}
+          <div class="flex items-center justify-center sm:justify-start gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+            <span><strong class="text-gray-800 dark:text-white">{{ user.followers | length }}</strong> followers</span>
+            <span><strong class="text-gray-800 dark:text-white">{{ user.following | length }}</strong> following</span>
+            <span><strong class="text-gray-800 dark:text-white">{{ posts.total }}</strong> posts</span>
+          </div>
+
+          <!-- Skills -->
+          {% if user.skills %}
+            <div class="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+              {% for skill in user.skills.split(',') %}
+                {% if skill.strip() %}
+                  <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-medium">
+                    {{ skill.strip() }}
+                  </span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <!-- Social Links -->
+          {% if user.linkedin_url or user.github_url or user.twitter_url or user.website_url %}
+            <div class="flex flex-wrap gap-3 mt-3 justify-center sm:justify-start">
+              {% if user.linkedin_url %}
+                <a href="{{ user.linkedin_url }}" target="_blank" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition">
+                  <i class="fab fa-linkedin text-lg"></i>
+                </a>
+              {% endif %}
+              {% if user.github_url %}
+                <a href="{{ user.github_url }}" target="_blank" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition">
+                  <i class="fab fa-github text-lg"></i>
+                </a>
+              {% endif %}
+              {% if user.twitter_url %}
+                <a href="{{ user.twitter_url }}" target="_blank" class="text-gray-500 hover:text-blue-400 dark:text-gray-400 dark:hover:text-blue-300 transition">
+                  <i class="fab fa-twitter text-lg"></i>
+                </a>
+              {% endif %}
+              {% if user.website_url %}
+                <a href="{{ user.website_url }}" target="_blank" class="text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition">
+                  <i class="fas fa-globe text-lg"></i>
+                </a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-4 sm:mt-0 sm:ml-4 flex flex-col sm:flex-row gap-2">
+          {% if is_owner %}
+            <button onclick="toggleEditProfile()" id="edit-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-semibold shadow transition">
+              <i class="fas fa-edit mr-2"></i> Edit Profile
+            </button>
+          {% else %}
+            <button onclick="toggleFollow({{ user.id }}, this)" class="px-6 py-2 rounded-lg font-medium transition {{ 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-red-100 hover:text-red-600' if is_following else 'bg-indigo-600 hover:bg-indigo-700 text-white' }}">
+              {{ 'Following' if is_following else 'Follow' }}
+            </button>
+            <a href="{{ url_for('user_chat.start_chat', user_id=user.id) }}" class="px-6 py-2 rounded-lg font-medium transition bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2">
+              <i class="fas fa-comment-dots"></i> Message
+            </a>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Profile Info & Edit -->
-  <div class="bg-white dark:bg-gray-800 rounded-b-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 pt-16">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ current_user.full_name or current_user.username }}</h2>
-        <p class="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1">
-          <i class="fas fa-at text-indigo-500"></i> {{ current_user.username }}
-        </p>
-        <p class="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 mt-0.5">
-          <i class="fas fa-link"></i> {{ request.host_url }}profile/{{ current_user.username }}
-        </p>
-        <p class="text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1"><i class="fas fa-envelope"></i> {{ current_user.email }}</p>
-        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ current_user.bio or 'No bio added yet.' }}</p>
+  <!-- Owner-only: Edit Profile Form -->
+  {% if is_owner %}
+  <div id="edit-profile-form" class="hidden mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+      <i class="fas fa-user-edit text-indigo-600"></i> Edit Profile
+    </h3>
+    <form method="POST" action="{{ url_for('profile.update_profile') }}">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Full Name</label>
+          <input type="text" name="full_name" value="{{ user.full_name or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Username</label>
+          <input type="text" value="{{ user.username }}" disabled class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 text-gray-400 cursor-not-allowed">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Email</label>
+          <input type="email" name="email" value="{{ user.email }}" required class="w-full px-4 py-2 border border-gray-300 rounded-xl">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">Bio</label>
+          <textarea name="bio" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-xl">{{ user.bio or '' }}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Avatar URL</label>
+          <input type="url" name="avatar_url" value="{{ user.avatar_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="https://...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Cover Image URL</label>
+          <input type="url" name="cover_url" value="{{ user.cover_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="https://... (or leave empty for gradient)">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">Skills (comma-separated)</label>
+          <input type="text" name="skills" value="{{ user.skills or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="e.g. Python, JavaScript, Design">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">LinkedIn URL</label>
+          <input type="url" name="linkedin_url" value="{{ user.linkedin_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">GitHub URL</label>
+          <input type="url" name="github_url" value="{{ user.github_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Twitter URL</label>
+          <input type="url" name="twitter_url" value="{{ user.twitter_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Personal Website</label>
+          <input type="url" name="website_url" value="{{ user.website_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
+        </div>
       </div>
-      <button id="edit-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl shadow font-semibold transition">
-        <i class="fas fa-edit mr-2"></i> Edit Profile
+      <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-xl shadow transition">
+        <i class="fas fa-save mr-2"></i> Save Changes
+      </button>
+    </form>
+  </div>
+
+  <!-- Owner-only: Change Password (togglable) -->
+  <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <div class="flex items-center justify-between">
+      <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+        <i class="fas fa-key text-indigo-600"></i> Change Password
+      </h3>
+      <button onclick="togglePasswordForm()" id="password-toggle-btn" class="text-indigo-600 hover:text-indigo-700 font-medium text-sm transition">
+        <i class="fas fa-chevron-down mr-1"></i> Show
       </button>
     </div>
-
-    <!-- Skills -->
-    <div class="mt-6">
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-white"><i class="fas fa-code mr-2 text-indigo-600"></i> Skills</h3>
-      <div class="flex flex-wrap gap-2 mt-2" id="skills-display">
-        {% if current_user.skills %}
-          {% for skill in current_user.skills.split(',') %}
-            <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">{{ skill.strip() }}</span>
-          {% endfor %}
-        {% else %}
-          <span class="text-gray-400 dark:text-gray-500 text-sm">No skills added.</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Social Links -->
-    <div class="mt-6 flex flex-wrap gap-3">
-      {% if current_user.linkedin_url %}
-      <a href="{{ current_user.linkedin_url }}" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-blue-700 dark:hover:text-blue-400 transition"><i class="fab fa-linkedin text-2xl"></i></a>
-      {% endif %}
-      {% if current_user.github_url %}
-      <a href="{{ current_user.github_url }}" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 transition"><i class="fab fa-github text-2xl"></i></a>
-      {% endif %}
-      {% if current_user.twitter_url %}
-      <a href="{{ current_user.twitter_url }}" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-sky-500 transition"><i class="fab fa-twitter text-2xl"></i></a>
-      {% endif %}
-      {% if current_user.website_url %}
-      <a href="{{ current_user.website_url }}" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"><i class="fas fa-globe text-2xl"></i></a>
-      {% endif %}
-    </div>
-
-    <!-- Edit Profile Form -->
-    <div id="edit-profile-form" class="mt-8 hidden">
-      <form method="POST" action="{{ url_for('profile.update_profile') }}">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-1">Full Name</label>
-            <input type="text" name="full_name" value="{{ current_user.full_name or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Username</label>
-            <input type="text" value="{{ current_user.username }}" disabled class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 text-gray-400 cursor-not-allowed">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Email</label>
-            <input type="email" name="email" value="{{ current_user.email }}" required class="w-full px-4 py-2 border border-gray-300 rounded-xl">
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium mb-1">Bio</label>
-            <textarea name="bio" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-xl">{{ current_user.bio or '' }}</textarea>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Avatar URL</label>
-            <input type="url" name="avatar_url" value="{{ current_user.avatar_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="https://...">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Cover Image URL</label>
-            <input type="url" name="cover_url" value="{{ current_user.cover_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="https://... (or leave empty for gradient)">
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium mb-1">Skills (comma‑separated)</label>
-            <input type="text" name="skills" value="{{ current_user.skills or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="e.g. Python, JavaScript, Design">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">LinkedIn URL</label>
-            <input type="url" name="linkedin_url" value="{{ current_user.linkedin_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">GitHub URL</label>
-            <input type="url" name="github_url" value="{{ current_user.github_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Twitter URL</label>
-            <input type="url" name="twitter_url" value="{{ current_user.twitter_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Personal Website</label>
-            <input type="url" name="website_url" value="{{ current_user.website_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
-          </div>
-        </div>
-        <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-xl shadow transition">
-          <i class="fas fa-save mr-2"></i> Save Changes
-        </button>
-      </form>
-    </div>
-
-    <!-- Change Password -->
-    <div class="mt-12 border-t pt-8">
-      <h3 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-key mr-2 text-indigo-600"></i> Change Password</h3>
+    <div id="change-password-form" class="hidden mt-4">
       <form method="POST" action="{{ url_for('profile.change_password') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label class="block text-sm font-medium mb-1">Current Password</label>
@@ -145,15 +192,221 @@
       </form>
     </div>
   </div>
+  {% endif %}
+
+  <!-- Posts Section -->
+  <h2 class="text-xl font-bold text-gray-800 dark:text-white mt-6 mb-4 flex items-center gap-2">
+    <i class="fas fa-newspaper text-indigo-600"></i> Posts
+  </h2>
+
+  <div class="space-y-6">
+    {% if posts.items %}
+      {% for post in posts.items %}
+        {% set profile_user_reaction = post.user_reaction(current_user.id) %}
+        {% set profile_react_counts = post.reaction_counts %}
+        {% set profile_total_reacts = post.total_reactions %}
+        {% set btn_color = 'text-gray-600 dark:text-gray-400 font-medium' %}
+        {% if profile_user_reaction == 'like' %}
+          {% set btn_color = 'text-blue-500 font-semibold' %}
+        {% elif profile_user_reaction == 'love' %}
+          {% set btn_color = 'text-red-500 font-semibold' %}
+        {% elif profile_user_reaction in ['haha', 'wow', 'sad'] %}
+          {% set btn_color = 'text-yellow-500 font-semibold' %}
+        {% elif profile_user_reaction == 'angry' %}
+          {% set btn_color = 'text-orange-500 font-semibold' %}
+        {% endif %}
+        <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-user-reaction="{{ profile_user_reaction or '' }}">
+          <!-- Post Header -->
+          <div class="p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              {% if user.avatar_url %}
+                <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-10 h-10 rounded-full object-cover">
+              {% else %}
+                <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
+                  {{ user.username[0] | upper }}
+                </div>
+              {% endif %}
+              <div>
+                <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ user.full_name or user.username }}</span>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  <span class="text-gray-400">@{{ user.username }}</span>
+                  <span class="mx-1">·</span>
+                  {{ post.created_at.strftime('%b %d, %Y at %H:%M') }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Content -->
+          <div class="px-4 pb-3">
+            <p class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content[:300] }}{% if post.content | length > 300 %}...{% endif %}</p>
+          </div>
+
+          <!-- Post Image -->
+          {% if post.image_url %}
+            <div class="w-full">
+              <img src="{{ post.image_url }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="window.open(this.src, '_blank')">
+            </div>
+          {% endif %}
+
+          <!-- Post Stats -->
+          <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+            <span id="profile-stats-like-{{ post.uuid }}">👍 {{ profile_total_reacts }}</span>
+            <span><i class="fas fa-comment mr-1"></i> {{ post.comments | length }} comments</span>
+          </div>
+
+          <!-- Post Actions -->
+          <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+              <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+                <i class="fas fa-eye"></i><span>View</span>
+              </a>
+              <button onclick="toggleLikeFromProfile('{{ post.uuid }}')" id="profile-like-btn-{{ post.uuid }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
+                {% if profile_user_reaction %}<span class="text-lg leading-none" id="profile-like-icon-{{ post.uuid }}">{{ emoji_map.get(profile_user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="profile-like-icon-{{ post.uuid }}"></i>{% endif %}<span class="ml-1" id="profile-like-count-{{ post.uuid }}">{{ profile_total_reacts }}</span>
+              </button>
+              <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}#comments" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+                <i class="far fa-comment"></i><span>Comments</span>
+              </a>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <i class="fas fa-newspaper text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
+        <p class="text-gray-500 dark:text-gray-400 text-lg">No posts yet.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Pagination -->
+  {% if posts.pages > 1 %}
+    <div class="flex justify-center mt-8 gap-2">
+      {% if posts.has_prev %}
+        <a href="?page={{ posts.prev_num }}" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-white transition">
+          <i class="fas fa-chevron-left"></i> Previous
+        </a>
+      {% endif %}
+      <span class="px-4 py-2 text-gray-600 dark:text-gray-400">Page {{ posts.page }} of {{ posts.pages }}</span>
+      {% if posts.has_next %}
+        <a href="?page={{ posts.next_num }}" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-white transition">
+          Next <i class="fas fa-chevron-right"></i>
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
 </div>
 
 <script>
-  document.getElementById('edit-profile-btn').addEventListener('click', function() {
-    const form = document.getElementById('edit-profile-form');
-    form.classList.toggle('hidden');
-    this.innerHTML = form.classList.contains('hidden')
-      ? '<i class="fas fa-edit mr-2"></i> Edit Profile'
-      : '<i class="fas fa-times mr-2"></i> Close';
+function toggleEditProfile() {
+  const form = document.getElementById('edit-profile-form');
+  const btn = document.getElementById('edit-profile-btn');
+  form.classList.toggle('hidden');
+  btn.innerHTML = form.classList.contains('hidden')
+    ? '<i class="fas fa-edit mr-2"></i> Edit Profile'
+    : '<i class="fas fa-times mr-2"></i> Close';
+}
+
+function togglePasswordForm() {
+  const form = document.getElementById('change-password-form');
+  const btn = document.getElementById('password-toggle-btn');
+  form.classList.toggle('hidden');
+  btn.innerHTML = form.classList.contains('hidden')
+    ? '<i class="fas fa-chevron-down mr-1"></i> Show'
+    : '<i class="fas fa-chevron-up mr-1"></i> Hide';
+}
+
+function toggleFollow(userId, button) {
+  fetch('/follow/' + userId, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      if (data.following) {
+        button.textContent = 'Following';
+        button.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'text-white');
+        button.classList.add('bg-gray-200', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300', 'hover:bg-red-100', 'hover:text-red-600');
+      } else {
+        button.textContent = 'Follow';
+        button.classList.remove('bg-gray-200', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300', 'hover:bg-red-100', 'hover:text-red-600');
+        button.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'text-white');
+      }
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: data.following ? 'Now following!' : 'Unfollowed', showConfirmButton: false, timer: 2000 });
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+function setProfileLikeIcon(postId, reaction) {
+  const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+  const el = document.getElementById('profile-like-icon-' + postId);
+  if (!el) return;
+  if (reaction) {
+    const span = document.createElement('span');
+    span.className = 'text-lg leading-none';
+    span.id = 'profile-like-icon-' + postId;
+    span.textContent = emojiMap[reaction] || '👍';
+    el.parentNode.replaceChild(span, el);
+  } else {
+    const i = document.createElement('i');
+    i.className = 'far fa-thumbs-up';
+    i.id = 'profile-like-icon-' + postId;
+    el.parentNode.replaceChild(i, el);
+  }
+}
+
+function setProfileBtnColor(postId, reaction) {
+  const btn = document.getElementById('profile-like-btn-' + postId);
+  if (!btn) return;
+  btn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+  if (reaction) {
+    if (reaction === 'like') btn.classList.add('text-blue-500', 'font-semibold');
+    else if (reaction === 'love') btn.classList.add('text-red-500', 'font-semibold');
+    else btn.classList.add('text-yellow-500', 'font-semibold');
+  } else {
+    btn.classList.add('text-gray-600', 'dark:text-gray-400');
+  }
+}
+
+function toggleLikeFromProfile(postId) {
+  const btn = document.getElementById('profile-like-btn-' + postId);
+  const count = document.getElementById('profile-like-count-' + postId);
+  const postEl = document.getElementById('post-' + postId);
+  const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
+  const wasLiked = !!prevReaction;
+  const oldCount = count ? parseInt(count.textContent || '0') : 0;
+  setProfileBtnColor(postId, wasLiked ? '' : 'like');
+  setProfileLikeIcon(postId, wasLiked ? '' : 'like');
+  if (count) count.textContent = wasLiked ? oldCount - 1 : oldCount + 1;
+  if (postEl) postEl.dataset.userReaction = wasLiked ? '' : 'like';
+  fetch('/posts/' + postId + '/react', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: new URLSearchParams({ reaction: 'like' })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : (data.like_count || 0);
+      if (count) count.textContent = total;
+    } else {
+      setProfileBtnColor(postId, prevReaction);
+      setProfileLikeIcon(postId, prevReaction);
+      if (postEl) postEl.dataset.userReaction = prevReaction;
+      if (count) count.textContent = oldCount;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    setProfileBtnColor(postId, prevReaction);
+    setProfileLikeIcon(postId, prevReaction);
+    if (postEl) postEl.dataset.userReaction = prevReaction;
+    if (count) count.textContent = oldCount;
   });
+}
 </script>
 {% endblock %}

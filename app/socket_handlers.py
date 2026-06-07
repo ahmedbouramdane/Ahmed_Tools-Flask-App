@@ -122,10 +122,10 @@ class PostsNamespace(Namespace):
             db.session.commit()
 
             post_data = {
-                'post_id': post.id, 'content': post.content,
+                'post_id': post.uuid, 'content': post.content,
                 'image_url': image_urls[0] if image_urls else None,
                 'image_urls': image_urls,
-                'author': {'id': user.id, 'username': user.username, 'avatar_url': user.avatar_url or ''},
+                'author': {'id': user.id, 'username': user.username, 'full_name': user.full_name, 'avatar_url': user.avatar_url or ''},
                 'created_at': post.created_at.strftime('%B %d, %Y at %H:%M'),
                 'likes_count': 0, 'comments_count': 0
             }
@@ -151,18 +151,19 @@ class PostsNamespace(Namespace):
                 if callback: callback({'success': False, 'error': 'Not authenticated'})
                 return
 
-            post_id = data.get('post_id')
-            if not post_id:
+            post_uuid = data.get('post_id')
+            if not post_uuid:
                 if callback: callback({'success': False, 'error': 'Post ID required'})
                 return
 
-            post = Post.query.get(post_id)
+            post = Post.query.filter_by(uuid=post_uuid).first()
             if not post:
                 if callback: callback({'success': False, 'error': 'Post not found'})
                 return
 
-            existing = PostReaction.query.filter_by(post_id=post_id, user_id=user.id, reaction='like').first()
-            existing_like = PostLike.query.filter_by(post_id=post_id, user_id=user.id).first()
+            pid = post.id
+            existing = PostReaction.query.filter_by(post_id=pid, user_id=user.id, reaction='like').first()
+            existing_like = PostLike.query.filter_by(post_id=pid, user_id=user.id).first()
 
             if existing:
                 db.session.delete(existing)
@@ -170,23 +171,23 @@ class PostsNamespace(Namespace):
                     db.session.delete(existing_like)
                 liked = False
             else:
-                PostReaction.query.filter_by(post_id=post_id, user_id=user.id).delete()
-                db.session.add(PostReaction(post_id=post_id, user_id=user.id, reaction='like'))
+                PostReaction.query.filter_by(post_id=pid, user_id=user.id).delete()
+                db.session.add(PostReaction(post_id=pid, user_id=user.id, reaction='like'))
                 if not existing_like:
-                    db.session.add(PostLike(post_id=post_id, user_id=user.id))
+                    db.session.add(PostLike(post_id=pid, user_id=user.id))
                 liked = True
 
             db.session.commit()
-            like_count = PostReaction.query.filter_by(post_id=post_id).count()
+            like_count = PostReaction.query.filter_by(post_id=pid).count()
 
-            rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=post_id).group_by(PostReaction.reaction).all()
+            rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=pid).group_by(PostReaction.reaction).all()
             counts = {r: c for r, c in rows}
 
             if liked and post.user_id != user.id:
                 notif = PostNotification(
                     user_id=post.user_id,
                     actor_id=user.id,
-                    post_id=post_id,
+                    post_id=pid,
                     type='like',
                     message=f'{user.username} liked your post'
                 )
@@ -195,14 +196,15 @@ class PostsNamespace(Namespace):
                 try:
                     emit('new_notification', {
                         'id': notif.id, 'message': notif.message,
-                        'type': notif.type, 'actor': user.username, 'post_id': post_id
+                        'type': notif.type, 'actor': user.username, 'post_id': post_uuid
                     }, room=f'user_{post.user_id}')
                 except Exception:
                     pass
 
             like_data = {
-                'post_id': post_id, 'liked': liked, 'like_count': like_count,
-                'user': {'id': user.id, 'username': user.username}, 'counts': counts
+                'post_id': post_uuid, 'liked': liked, 'like_count': like_count,
+                'user': {'id': user.id, 'username': user.username}, 'counts': counts,
+                'user_id': user.id
             }
 
             try:
@@ -211,7 +213,7 @@ class PostsNamespace(Namespace):
                 pass
 
             if callback:
-                callback({'success': True, 'liked': liked, 'like_count': like_count})
+                callback({'success': True, 'liked': liked, 'like_count': like_count, 'counts': counts})
         except Exception as e:
             db.session.rollback()
             print(f'[on_like_post] Error: {e}')
@@ -226,19 +228,20 @@ class PostsNamespace(Namespace):
                 if callback: callback({'success': False, 'error': 'Not authenticated'})
                 return
 
-            post_id = data.get('post_id')
+            post_uuid = data.get('post_id')
             reaction = data.get('reaction', '').strip().lower()
             valid = {'like', 'love', 'haha', 'wow', 'sad', 'angry'}
-            if not post_id or reaction not in valid:
+            if not post_uuid or reaction not in valid:
                 if callback: callback({'success': False, 'error': 'Invalid post ID or reaction'})
                 return
 
-            post = Post.query.get(post_id)
+            post = Post.query.filter_by(uuid=post_uuid).first()
             if not post:
                 if callback: callback({'success': False, 'error': 'Post not found'})
                 return
 
-            existing = PostReaction.query.filter_by(post_id=post_id, user_id=user.id).first()
+            pid = post.id
+            existing = PostReaction.query.filter_by(post_id=pid, user_id=user.id).first()
             removed = False
             if existing and existing.reaction == reaction:
                 db.session.delete(existing)
@@ -246,24 +249,24 @@ class PostsNamespace(Namespace):
             else:
                 if existing:
                     db.session.delete(existing)
-                db.session.add(PostReaction(post_id=post_id, user_id=user.id, reaction=reaction))
-                existing_like = PostLike.query.filter_by(post_id=post_id, user_id=user.id).first()
+                db.session.add(PostReaction(post_id=pid, user_id=user.id, reaction=reaction))
+                existing_like = PostLike.query.filter_by(post_id=pid, user_id=user.id).first()
                 if reaction == 'like':
                     if not existing_like:
-                        db.session.add(PostLike(post_id=post_id, user_id=user.id))
+                        db.session.add(PostLike(post_id=pid, user_id=user.id))
                 else:
                     if existing_like:
                         db.session.delete(existing_like)
 
             db.session.commit()
 
-            rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=post_id).group_by(PostReaction.reaction).all()
+            rows = db.session.query(PostReaction.reaction, db.func.count(PostReaction.id)).filter_by(post_id=pid).group_by(PostReaction.reaction).all()
             counts = {r: c for r, c in rows}
 
             if not removed and post.user_id != user.id:
                 emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'}
                 notif = PostNotification(
-                    user_id=post.user_id, actor_id=user.id, post_id=post_id,
+                    user_id=post.user_id, actor_id=user.id, post_id=pid,
                     type='react', message=f'{user.username} reacted with {emoji_map.get(reaction, reaction)}'
                 )
                 db.session.add(notif)
@@ -271,15 +274,15 @@ class PostsNamespace(Namespace):
                 try:
                     emit('new_notification', {
                         'id': notif.id, 'message': notif.message, 'type': notif.type,
-                        'actor': user.username, 'post_id': post_id
+                        'actor': user.username, 'post_id': post_uuid
                     }, room=f'user_{post.user_id}')
                 except Exception:
                     pass
 
             reacted_data = {
-                'post_id': post_id, 'reaction': reaction if not removed else None,
+                'post_id': post_uuid, 'reaction': reaction if not removed else None,
                 'removed': removed, 'user': {'id': user.id, 'username': user.username},
-                'counts': counts
+                'counts': counts, 'user_id': user.id
             }
 
             try:
@@ -303,19 +306,20 @@ class PostsNamespace(Namespace):
                 if callback: callback({'success': False, 'error': 'Not authenticated'})
                 return
 
-            post_id = data.get('post_id')
+            post_uuid = data.get('post_id')
             content = data.get('content', '').strip()
             raw_parent_id = data.get('parent_id')
 
-            if not post_id or not content:
+            if not post_uuid or not content:
                 if callback: callback({'success': False, 'error': 'Post ID and content required'})
                 return
 
-            post = Post.query.get(post_id)
+            post = Post.query.filter_by(uuid=post_uuid).first()
             if not post:
                 if callback: callback({'success': False, 'error': 'Post not found'})
                 return
 
+            pid = post.id
             parent_id = raw_parent_id
             if raw_parent_id:
                 parent_comment = PostComment.query.get(raw_parent_id)
@@ -323,7 +327,7 @@ class PostsNamespace(Namespace):
                     parent_id = parent_comment.parent_id
 
             comment = PostComment(
-                content=content, post_id=post_id, user_id=user.id,
+                content=content, post_id=pid, user_id=user.id,
                 parent_id=parent_id if parent_id else None
             )
             db.session.add(comment)
@@ -333,7 +337,7 @@ class PostsNamespace(Namespace):
                 replied_to = PostComment.query.get(raw_parent_id)
                 if replied_to and replied_to.user_id != user.id:
                     reply_notif = PostNotification(
-                        user_id=replied_to.user_id, actor_id=user.id, post_id=post_id,
+                        user_id=replied_to.user_id, actor_id=user.id, post_id=pid,
                         type='comment', message=f'{user.username} replied to your comment'
                     )
                     db.session.add(reply_notif)
@@ -341,14 +345,14 @@ class PostsNamespace(Namespace):
                     try:
                         emit('new_notification', {
                             'id': reply_notif.id, 'message': reply_notif.message,
-                            'type': reply_notif.type, 'actor': user.username, 'post_id': post_id
+                            'type': reply_notif.type, 'actor': user.username, 'post_id': post_uuid
                         }, room=f'user_{replied_to.user_id}')
                     except Exception:
                         pass
 
             if not raw_parent_id and post.user_id != user.id:
                 notif = PostNotification(
-                    user_id=post.user_id, actor_id=user.id, post_id=post_id,
+                    user_id=post.user_id, actor_id=user.id, post_id=pid,
                     type='comment', message=f'{user.username} commented on your post'
                 )
                 db.session.add(notif)
@@ -359,13 +363,13 @@ class PostsNamespace(Namespace):
                 try:
                     emit('new_notification', {
                         'id': notif.id, 'message': notif.message,
-                        'type': notif.type, 'actor': user.username, 'post_id': post_id
+                        'type': notif.type, 'actor': user.username, 'post_id': post_uuid
                     }, room=f'user_{post.user_id}')
                 except Exception:
                     pass
 
             comment_data = {
-                'post_id': post_id, 'comment_id': comment.id, 'content': comment.content,
+                'post_id': post_uuid, 'comment_id': comment.id, 'content': comment.content,
                 'author': {'id': user.id, 'username': user.username, 'avatar_url': user.avatar_url or ''},
                 'created_at': comment.created_at.strftime('%H:%M'), 'parent_id': parent_id
             }
@@ -391,12 +395,12 @@ class PostsNamespace(Namespace):
                 if callback: callback({'success': False, 'error': 'Not authenticated'})
                 return
 
-            post_id = data.get('post_id')
-            if not post_id:
+            post_uuid = data.get('post_id')
+            if not post_uuid:
                 if callback: callback({'success': False, 'error': 'Post ID required'})
                 return
 
-            post = Post.query.get(post_id)
+            post = Post.query.filter_by(uuid=post_uuid).first()
             if not post:
                 if callback: callback({'success': False, 'error': 'Post not found'})
                 return
@@ -409,7 +413,7 @@ class PostsNamespace(Namespace):
             db.session.commit()
 
             try:
-                emit('post_deleted', {'post_id': post_id}, room='posts_global')
+                emit('post_deleted', {'post_id': post_uuid}, room='posts_global')
             except Exception:
                 pass
 
@@ -429,14 +433,14 @@ class PostsNamespace(Namespace):
                 if callback: callback({'success': False, 'error': 'Not authenticated'})
                 return
 
-            post_id = data.get('post_id')
+            post_uuid = data.get('post_id')
             content = data.get('content', '').strip()
 
-            if not post_id or not content:
+            if not post_uuid or not content:
                 if callback: callback({'success': False, 'error': 'Post ID and content required'})
                 return
 
-            post = Post.query.get(post_id)
+            post = Post.query.filter_by(uuid=post_uuid).first()
             if not post or post.user_id != user.id:
                 if callback: callback({'success': False, 'error': 'Not authorized'})
                 return
@@ -445,11 +449,11 @@ class PostsNamespace(Namespace):
             post.updated_at = datetime.utcnow()
             db.session.commit()
 
-            post_images = PostImage.query.filter_by(post_id=post_id).order_by(PostImage.created_at).all()
+            post_images = PostImage.query.filter_by(post_id=post.id).order_by(PostImage.created_at).all()
             image_urls = [img.image_url for img in post_images]
 
             edit_data = {
-                'post_id': post_id, 'content': post.content,
+                'post_id': post_uuid, 'content': post.content,
                 'updated_at': post.updated_at.strftime('%B %d, %Y at %H:%M'),
                 'image_url': post.image_url, 'image_urls': image_urls
             }
@@ -475,14 +479,14 @@ class PostsNamespace(Namespace):
             return
         
         comment_id = data.get('comment_id')
-        post_id = data.get('post_id')
+        post_uuid = data.get('post_id')
         
         if not comment_id:
             if callback: callback({'success': False, 'error': 'Comment ID required'})
             return
         
         comment = PostComment.query.get(comment_id)
-        post = Post.query.get(post_id) if post_id else None
+        post = Post.query.filter_by(uuid=post_uuid).first() if post_uuid else None
         
         if not comment:
             if callback: callback({'success': False, 'error': 'Comment not found'})
@@ -499,7 +503,7 @@ class PostsNamespace(Namespace):
         db.session.delete(comment)
         db.session.commit()
         
-        emit('comment_deleted', {'comment_id': comment_id, 'post_id': comment.post_id}, room='posts_global')
+        emit('comment_deleted', {'comment_id': comment_id, 'post_id': post_uuid}, room='posts_global')
         
         if callback:
             callback({'success': True})

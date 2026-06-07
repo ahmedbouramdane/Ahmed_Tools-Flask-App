@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from app.models import User
+from app.models import User, Post
 from app import db
 
 profile_bp = Blueprint('profile', __name__)
@@ -8,7 +8,15 @@ profile_bp = Blueprint('profile', __name__)
 @profile_bp.route("/profile")
 @login_required
 def profile():
-    return render_template("profile.html")
+    page = request.args.get('page', 1, type=int)
+    posts = Post.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Post.created_at.desc()).paginate(
+        page=page, per_page=10, error_out=False
+    )
+    return render_template("profile.html", 
+                         user=current_user, posts=posts,
+                         is_following=False)
 
 @profile_bp.route("/profile/update", methods=["POST"])
 @login_required
@@ -70,8 +78,5 @@ def change_password():
 @profile_bp.route("/user/<int:user_id>")
 @login_required
 def view_profile(user_id):
-    if user_id == current_user.id:
-        return redirect(url_for("profile.profile"))
-    
     user = User.query.get_or_404(user_id)
-    return render_template("view_profile.html", user=user)
+    return redirect(url_for("posts.user_profile", username=user.username))

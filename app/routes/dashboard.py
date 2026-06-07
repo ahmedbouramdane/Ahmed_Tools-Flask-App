@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
-from app.models import Note, Task, Event, UserMessage
+from app.models import Note, Task, Event, UserMessage, Post, PostNotification
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -50,7 +50,9 @@ def dashboard():
         activity_labels.append(day.strftime('%a'))
         activity_data.append(count)
 
-    unread_count = UserMessage.query.filter_by(receiver_id=uid, is_read=False).count()
+    unread_messages = UserMessage.query.filter_by(receiver_id=uid, is_read=False).count()
+    posts_count = Post.query.filter_by(user_id=uid).count()
+    notif_count = PostNotification.query.filter_by(user_id=uid, is_read=False).count()
 
     return render_template("dashboard.html",
                            now=now,
@@ -69,4 +71,6 @@ def dashboard():
                            recent_tasks=recent_tasks,
                            activity_labels=activity_labels,
                            activity_data=activity_data,
-                           unread_count=unread_count)
+                           unread_messages=unread_messages,
+                           posts_count=posts_count,
+                           notif_count=notif_count)

@@ -19,6 +19,45 @@
     animation-duration: 14s;
   }
 
+  .float-blob-2 {
+    animation: blobPulse 16s ease-in-out infinite;
+    will-change: transform;
+  }
+  .float-blob-2:nth-child(2) {
+    animation-delay: -6s;
+    animation-duration: 18s;
+  }
+
+  .particle-dot {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #6366f1;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  .highlight-card {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .highlight-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: #6366f1;
+  }
+  .dark .highlight-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  .dark .highlight-card:hover {
+    border-color: #818cf8;
+  }
+
   @media (max-width: 768px) {
     .parallax-bg { background-attachment: scroll; }
   }
@@ -30,20 +69,48 @@ document.addEventListener('DOMContentLoaded', function() {
   var isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (isReduced) { document.querySelectorAll('.reveal').forEach(function(el) { el.style.opacity = '1'; }); return; }
 
+  // === Floating particles ===
+  var hero = document.querySelector('.hero-section');
+  if (hero) {
+    var particlesContainer = hero.querySelector('.particles-container');
+    if (particlesContainer) {
+      for (var i = 0; i < 30; i++) {
+        var dot = document.createElement('div');
+        dot.className = 'particle-dot';
+        dot.style.left = (Math.random() * 100) + '%';
+        dot.style.top = (Math.random() * 100) + '%';
+        dot.style.width = dot.style.height = (2 + Math.random() * 4) + 'px';
+        dot.style.opacity = 0.1 + Math.random() * 0.3;
+        dot.style.background = ['#6366f1', '#8b5cf6', '#ec4899', '#06b6d4'][Math.floor(Math.random() * 4)];
+        particlesContainer.appendChild(dot);
+      }
+      anime({
+        targets: '.particle-dot',
+        translateX: function() { return anime.random(-60, 60); },
+        translateY: function() { return anime.random(-60, 60); },
+        direction: 'alternate',
+        loop: true,
+        duration: function() { return anime.random(3000, 6000); },
+        easing: 'easeInOutSine',
+        delay: function(el, i) { return i * 200; },
+      });
+    }
+  }
+
   // === Floating background blobs ===
   anime({
-    targets: '.float-blob',
+    targets: '.float-blob, .float-blob-2',
     translateX: [
+      { value: function() { return anime.random(-40, 40) + 'px'; } },
       { value: function() { return anime.random(-30, 30) + 'px'; } },
-      { value: function() { return anime.random(-20, 20) + 'px'; } },
-      { value: function() { return anime.random(-30, 30) + 'px'; } },
+      { value: function() { return anime.random(-40, 40) + 'px'; } },
     ],
     translateY: [
+      { value: function() { return anime.random(-40, 40) + 'px'; } },
       { value: function() { return anime.random(-30, 30) + 'px'; } },
-      { value: function() { return anime.random(-20, 20) + 'px'; } },
-      { value: function() { return anime.random(-30, 30) + 'px'; } },
+      { value: function() { return anime.random(-40, 40) + 'px'; } },
     ],
-    duration: 8000,
+    duration: 10000,
     direction: 'alternate',
     loop: true,
     easing: 'easeInOutSine',
@@ -66,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
     anime({
       targets: el,
       innerHTML: [0, target],
-      duration: 1500,
+      duration: 2000,
       easing: 'easeOutCubic',
       round: target >= 10 ? 1 : 100,
       update: function() { el.innerHTML = Math.round(el.innerHTML) + suffix; }
@@ -87,6 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       } else if (el.classList.contains('features-section')) {
         anime({ targets: el.querySelectorAll('.feature-card'), opacity: [0, 1], translateY: [40, 0], duration: 700, delay: function(el, i) { return i * 120; }, easing: 'easeOutExpo' });
+      } else if (el.classList.contains('highlights-section')) {
+        anime({ targets: el.querySelectorAll('.highlight-card'), opacity: [0, 1], translateY: [30, 0], duration: 600, delay: function(el, i) { return i * 100; }, easing: 'easeOutExpo' });
       } else if (el.classList.contains('why-section')) {
         anime({ targets: el.querySelectorAll('.why-item'), opacity: [0, 1], translateX: [-40, 0], duration: 600, delay: function(el, i) { return i * 120; }, easing: 'easeOutExpo' });
         anime({ targets: el.querySelector('.why-mockup'), opacity: [0, 1], translateX: [40, 0], duration: 700, easing: 'easeOutExpo' });
@@ -96,35 +165,70 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
 
-  document.querySelectorAll('.stats-section, .features-section, .why-section, .cta-section').forEach(function(el) {
+  document.querySelectorAll('.stats-section, .features-section, .highlights-section, .why-section, .cta-section').forEach(function(el) {
     scrollObserver.observe(el);
   });
 
   // === Mouse parallax on hero ===
-  var hero = document.querySelector('.hero-section');
-  if (hero) {
-    hero.addEventListener('mousemove', function(e) {
-      var rect = hero.getBoundingClientRect();
+  var heroEl = document.querySelector('.hero-section');
+  if (heroEl) {
+    heroEl.addEventListener('mousemove', function(e) {
+      var rect = heroEl.getBoundingClientRect();
       var x = (e.clientX - rect.left) / rect.width - 0.5;
       var y = (e.clientY - rect.top) / rect.height - 0.5;
       anime({
-        targets: '.float-blob',
-        translateX: x * 20,
-        translateY: y * 20,
+        targets: '.float-blob, .float-blob-2',
+        translateX: x * 25,
+        translateY: y * 25,
         duration: 800,
+        easing: 'easeOutQuad',
+      });
+      anime({
+        targets: '.particle-dot',
+        translateX: function() { return anime.random(-60, 60) + x * 15; },
+        translateY: function() { return anime.random(-60, 60) + y * 15; },
+        duration: 1000,
         easing: 'easeOutQuad',
       });
     });
   }
+
+  // === Feature card tilt effect ===
+  document.querySelectorAll('.feature-card').forEach(function(card) {
+    card.addEventListener('mousemove', function(e) {
+      var rect = this.getBoundingClientRect();
+      var x = (e.clientX - rect.left) / rect.width - 0.5;
+      var y = (e.clientY - rect.top) / rect.height - 0.5;
+      anime({
+        targets: this,
+        rotateX: y * -8,
+        rotateY: x * 8,
+        duration: 300,
+        easing: 'easeOutQuad',
+      });
+    });
+    card.addEventListener('mouseleave', function() {
+      anime({
+        targets: this,
+        rotateX: 0,
+        rotateY: 0,
+        duration: 300,
+        easing: 'easeOutQuad',
+      });
+    });
+  });
 });
 </script>
 
 <div class="relative overflow-hidden bg-white dark:bg-slate-900">
   <section class="hero-section relative min-h-[90vh] flex items-center">
     <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950"></div>
-    <div class="absolute inset-0 overflow-hidden">
+    <div class="particles-container absolute inset-0 overflow-hidden pointer-events-none"></div>
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="float-blob absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-indigo-400/15 to-purple-400/15 dark:from-indigo-500/10 dark:to-purple-500/10 rounded-full blur-3xl"></div>
       <div class="float-blob absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-gradient-to-tr from-purple-400/15 to-pink-400/15 dark:from-purple-500/10 dark:to-pink-500/10 rounded-full blur-3xl"></div>
+      <div class="float-blob-2 absolute top-1/3 -left-20 w-[400px] h-[400px] bg-gradient-to-tr from-cyan-400/10 to-blue-400/10 dark:from-cyan-500/8 dark:to-blue-500/8 rounded-full blur-3xl"></div>
+      <div class="float-blob-2 absolute bottom-1/4 -right-20 w-[350px] h-[350px] bg-gradient-to-bl from-amber-400/10 to-rose-400/10 dark:from-amber-500/8 dark:to-rose-500/8 rounded-full blur-3xl"></div>
     </div>
     <div class="relative max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-20 sm:py-28">
       <div class="max-w-4xl">
@@ -172,60 +276,113 @@ document.addEventListener('DOMContentLoaded', function() {
         <p class="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Powerful features designed to make you more productive</p>
       </div>
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600 transition-all">
+        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600 transition-all" style="perspective: 800px;">
           <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-sticky-note text-indigo-600 dark:text-indigo-400"></i>
+            <i class="fas fa-sticky-note text-indigo-600 dark:text-indigo-400 text-xl"></i>
           </div>
           <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Smart Notes</h3>
-          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Rich-text editor with formatting, attachments, and instant search across all your notes.</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Rich-text editor with Markdown, code blocks with syntax highlighting, LaTeX math rendering, and image galleries.</p>
         </div>
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-600 transition-all">
+        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-600 transition-all" style="perspective: 800px;">
           <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-tasks text-purple-600 dark:text-purple-400"></i>
+            <i class="fas fa-tasks text-purple-600 dark:text-purple-400 text-xl"></i>
           </div>
           <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Task Management</h3>
-          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Stay on track with priorities, deadlines, and progress tracking across all your projects.</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Organize with priorities (High/Medium/Low), due dates, completion tracking, and smart filters.</p>
         </div>
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all" style="perspective: 800px;">
           <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-calendar-alt text-blue-600 dark:text-blue-400"></i>
+            <i class="fas fa-calendar-alt text-blue-600 dark:text-blue-400 text-xl"></i>
           </div>
           <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Calendar View</h3>
-          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Visual event planning with integrated scheduling and seamless synchronization.</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">FullCalendar-powered weekly and monthly views with drag-and-drop event management and scheduling.</p>
         </div>
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-300 dark:hover:border-emerald-600 transition-all">
+        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-300 dark:hover:border-emerald-600 transition-all" style="perspective: 800px;">
           <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-brain text-emerald-600 dark:text-emerald-400"></i>
+            <i class="fas fa-brain text-emerald-600 dark:text-emerald-400 text-xl"></i>
           </div>
           <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">AI Assistant</h3>
-          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Get intelligent suggestions, summaries, and content generation powered by AI.</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">AI-powered chat with code generation, markdown responses with syntax highlighting, and PDF export.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="why-section relative py-20 sm:py-28 bg-slate-50 dark:bg-slate-800/30">
+  <section class="highlights-section relative py-20 sm:py-28 bg-slate-50 dark:bg-slate-800/30">
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+      <div class="text-center mb-16 reveal">
+        <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Built for productivity</h2>
+        <p class="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Every tool you need to stay organized and get things done</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-5">
+        <div class="highlight-card">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-code text-indigo-600 dark:text-indigo-400"></i></div>
+            <h3 class="font-bold text-slate-900 dark:text-white">Code & LaTeX</h3>
+          </div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Write code blocks with Prism.js syntax highlighting supporting 100+ languages. Render mathematical expressions with KaTeX — perfect for technical documentation.</p>
+        </div>
+        <div class="highlight-card">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-file-pdf text-purple-600 dark:text-purple-400"></i></div>
+            <h3 class="font-bold text-slate-900 dark:text-white">PDF Export</h3>
+          </div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Export any AI chat conversation or note to PDF with a single click. Your content, perfectly formatted and ready to share.</p>
+        </div>
+        <div class="highlight-card">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-comments text-blue-600 dark:text-blue-400"></i></div>
+            <h3 class="font-bold text-slate-900 dark:text-white">Real-time Chat</h3>
+          </div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Instant messaging with typing indicators, online presence, group conversations, file sharing, and emoji reactions powered by Socket.IO.</p>
+        </div>
+        <div class="highlight-card">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-palette text-emerald-600 dark:text-emerald-400"></i></div>
+            <h3 class="font-bold text-slate-900 dark:text-white">Dark Mode</h3>
+          </div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Full dark mode support across every page. System-aware auto-detection with manual toggle for comfortable viewing day or night.</p>
+        </div>
+        <div class="highlight-card">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-image text-amber-600 dark:text-amber-400"></i></div>
+            <h3 class="font-bold text-slate-900 dark:text-white">Image Gallery</h3>
+          </div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Attach and preview images with a beautiful lightbox gallery. Zoom, navigate, and download images directly from your notes.</p>
+        </div>
+        <div class="highlight-card">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-chart-simple text-rose-600 dark:text-rose-400"></i></div>
+            <h3 class="font-bold text-slate-900 dark:text-white">Dashboard Insights</h3>
+          </div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Visual progress tracking with Chart.js — donut charts for completion, bar charts for priority breakdown, and line charts for weekly activity trends.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why-section relative py-20 sm:py-28">
     <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
       <div class="grid lg:grid-cols-2 gap-16 items-center">
         <div>
-          <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Why choose us?</h2>
-          <p class="mt-4 text-lg text-slate-500 dark:text-slate-400">We built the productivity app that actually works the way you do.</p>
+          <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Why choose Ahmed—Stack?</h2>
+          <p class="mt-4 text-lg text-slate-500 dark:text-slate-400">A modern, all-in-one platform designed for how you actually work.</p>
           <div class="mt-10 space-y-6">
             <div class="why-item flex gap-5">
               <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-bolt text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Lightning Fast</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Optimized for speed across all devices with instant load times.</p></div>
+              <div><h4 class="font-bold text-slate-900 dark:text-white">Lightning Fast</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Optimized for speed across all devices with instant load times and smooth transitions.</p></div>
             </div>
             <div class="why-item flex gap-5">
               <div class="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-sync text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Always Synced</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Real-time updates across all your devices, anywhere you go.</p></div>
+              <div><h4 class="font-bold text-slate-900 dark:text-white">Always Synced</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Real-time updates powered by Socket.IO — your data stays in sync without page refreshes.</p></div>
             </div>
             <div class="why-item flex gap-5">
               <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-lock text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Privacy First</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Your data encrypted and protected with enterprise-grade security.</p></div>
+              <div><h4 class="font-bold text-slate-900 dark:text-white">Privacy First</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Your data encrypted and protected with enterprise-grade security. You control what stays private.</p></div>
             </div>
             <div class="why-item flex gap-5">
-              <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-wifi-slash text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Works Offline</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Stay productive even without internet connection.</p></div>
+              <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-mobile-screen text-white text-sm"></i></div>
+              <div><h4 class="font-bold text-slate-900 dark:text-white">Fully Responsive</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Seamless experience across desktop, tablet, and mobile — with a collapsible sidebar and touch-friendly UI.</p></div>
             </div>
           </div>
         </div>
@@ -234,9 +391,12 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="absolute -inset-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl blur-3xl opacity-20"></div>
             <div class="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:shadow-xl transition-shadow">
               <div class="space-y-5">
-                <div class="h-10 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg opacity-20"></div>
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">AS</div>
+                  <div><div class="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded-full"></div><div class="h-2 w-16 bg-slate-100 dark:bg-slate-700/50 rounded-full mt-1"></div></div>
+                </div>
                 <div class="space-y-3"><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded-full w-3/4"></div><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded-full w-full"></div><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded-full w-5/6"></div></div>
-                <div class="grid grid-cols-2 gap-3 pt-2"><div class="h-24 bg-slate-100 dark:bg-slate-700/50 rounded-xl"></div><div class="h-24 bg-slate-100 dark:bg-slate-700/50 rounded-xl"></div></div>
+                <div class="grid grid-cols-2 gap-3 pt-2"><div class="h-24 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-300 dark:text-slate-600 text-xs"><i class="fas fa-sticky-note text-2xl"></i></div><div class="h-24 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-300 dark:text-slate-600 text-xs"><i class="fas fa-calendar-alt text-2xl"></i></div></div>
               </div>
             </div>
           </div>
@@ -245,11 +405,11 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </section>
 
-  <section class="cta-section relative py-20 sm:py-28">
+  <section class="cta-section relative py-20 sm:py-28 bg-slate-50 dark:bg-slate-800/30">
     <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
       <div class="cta-content">
         <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Ready to transform your productivity?</h2>
-        <p class="mt-4 text-lg text-slate-500 dark:text-slate-400">Join thousands of users organizing their lives better.</p>
+        <p class="mt-4 text-lg text-slate-500 dark:text-slate-400">Join thousands of users organizing their lives better with notes, tasks, calendar, and AI — all in one workspace.</p>
         <div class="flex flex-wrap gap-4 justify-center mt-10">
           <a href="{{ url_for('auth.register') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-0.5 transition-all">
             <i class="fas fa-rocket"></i>

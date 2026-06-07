@@ -58,6 +58,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.3s ease;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body.dark {
@@ -190,7 +192,7 @@ pre[class*=language-], code[class*=language-] {
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
-    padding: 1rem 0.75rem;
+    padding: 0.5rem;
   }
 }
 

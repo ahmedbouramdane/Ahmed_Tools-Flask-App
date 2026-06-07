@@ -1,4 +1,5 @@
 import secrets
+import uuid
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
@@ -177,6 +178,7 @@ class Post(db.Model):
     """Social media posts - like Facebook/Instagram posts"""
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     content = db.Column(db.Text, nullable=False)
     image_url = db.Column(db.String(500), nullable=True)  # Main post image
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

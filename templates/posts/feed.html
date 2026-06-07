@@ -13,7 +13,7 @@
 {% set user_reaction = post.user_reaction(current_user.id) %}
 {% set total_reacts = post.total_reactions %}
 {% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
-<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.id }}" data-images='{{ post_image_urls | tojson | safe }}' data-user-reaction="{{ user_reaction or '' }}">
+<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-images='{{ post_image_urls | tojson | safe }}' data-user-reaction="{{ user_reaction or '' }}">
   <div class="p-4 flex items-center justify-between">
     <div class="flex items-center gap-3">
       {% if post.author.avatar_url %}
@@ -24,11 +24,13 @@
         </div>
       {% endif %}
       <div>
-        <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
-          {{ post.author.username }}
+        <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-sm leading-tight">
+          {{ post.author.full_name or post.author.username }}
         </a>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          <a href="{{ url_for('posts.view_post', post_id=post.id) }}" class="hover:underline">{{ post.created_at.strftime('%B %d, %Y at %H:%M') }}</a>
+          <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="hover:text-indigo-500">@{{ post.author.username }}</a>
+          <span class="mx-1">·</span>
+          <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="hover:underline">{{ post.created_at.strftime('%b %d, %Y at %H:%M') }}</a>
           {% if post.updated_at and post.updated_at != post.created_at %}
             <span class="italic">(edited)</span>
           {% endif %}
@@ -39,21 +41,21 @@
       </div>
     </div>
     <div class="relative">
-      <button onclick="togglePostMenu({{ post.id }})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
+      <button onclick="togglePostMenu({{ post.uuid }})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
         <i class="fas fa-ellipsis-v"></i>
       </button>
-      <div id="post-menu-{{ post.id }}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
+      <div id="post-menu-{{ post.uuid }}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
         {% if post.user_id == current_user.id %}
-          <button onclick="openEditPostModal({{ post.id }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+          <button onclick="openEditPostModal({{ post.uuid }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
             <i class="fas fa-edit"></i> Edit
           </button>
         {% endif %}
-        <button onclick="copyPostLink({{ post.id }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+        <button onclick="copyPostLink({{ post.uuid }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
           <i class="fas fa-link"></i> Copy link
         </button>
         {% if post.user_id == current_user.id %}
           <hr class="border-gray-200 dark:border-gray-700 my-1">
-          <button onclick="deletePost({{ post.id }})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+          <button onclick="deletePost({{ post.uuid }})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
             <i class="fas fa-trash"></i> Delete
           </button>
         {% endif %}
@@ -62,32 +64,32 @@
   </div>
 
   <div class="px-4 pb-3">
-    <div id="post-content-{{ post.id }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content }}</div>
+    <div id="post-content-{{ post.uuid }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content }}</div>
   </div>
 
   {% if post_images or post.image_url %}
-  <div class="w-full post-images-container" data-post-id="{{ post.id }}">
+  <div class="w-full post-images-container" data-post-id="{{ post.uuid }}">
     {% if has_multi %}
-    <div class="splide" id="splide-{{ post.id }}">
+    <div class="splide" id="splide-{{ post.uuid }}">
       <div class="splide__track">
         <ul class="splide__list">
           {% for img in post_images %}
           <li class="splide__slide">
-            <img src="{{ img.image_url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, {{ loop.index0 }})" loading="lazy">
+            <img src="{{ img.image_url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, {{ loop.index0 }})" loading="lazy">
           </li>
           {% endfor %}
         </ul>
       </div>
     </div>
     {% else %}
-    <img src="{{ single_img }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, 0)" loading="lazy">
+    <img src="{{ single_img }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, 0)" loading="lazy">
     {% endif %}
   </div>
   {% endif %}
 
   <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
     <div class="flex items-center gap-3">
-      <span id="stats-like-{{ post.id }}" class="font-medium text-gray-700 dark:text-gray-300 flex items-center">
+      <span id="stats-like-{{ post.uuid }}" class="font-medium text-gray-700 dark:text-gray-300 flex items-center">
         {% if total_reacts > 0 %}
           <span class="flex -space-x-1 mr-1.5 items-center">
             {% set count = namespace(value=0) %}
@@ -103,13 +105,13 @@
           <span class="mr-1">👍</span> 0
         {% endif %}
       </span>
-      <span id="stats-comment-{{ post.id }}"><i class="fas fa-comment mr-1"></i> {{ post.comments | length }}</span>
+      <span id="stats-comment-{{ post.uuid }}"><i class="fas fa-comment mr-1"></i> {{ post.comments | length }}</span>
     </div>
   </div>
-  <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="{{ post.id }}">
+  <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="{{ post.uuid }}">
     {% for r, c in react_counts.items() %}
       {% if c > 0 %}
-      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="{{ post.id }}-{{ r }}">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="{{ post.uuid }}-{{ r }}">
         {{ emoji_map.get(r, r) }} {{ c }}
       </span>
       {% endif %}
@@ -128,32 +130,32 @@
       {% set btn_color = 'text-orange-500 font-semibold' %}
     {% endif %}
     <div class="flex items-center justify-between">
-      <div class="relative like-btn-wrap" onmouseenter="showReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
-        <div id="reactions-picker-{{ post.id }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
-          <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost({{ post.id }}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
-          <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost({{ post.id }}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
-          <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost({{ post.id }}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
-          <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost({{ post.id }}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
-          <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost({{ post.id }}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
-          <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost({{ post.id }}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+      <div class="relative like-btn-wrap" onmouseenter="showReactions('{{ post.uuid }}')" onmouseleave="startHideReactions('{{ post.uuid }}')">
+        <div id="reactions-picker-{{ post.uuid }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions('{{ post.uuid }}')" onmouseleave="startHideReactions('{{ post.uuid }}')">
+          <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost('{{ post.uuid }}', 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+          <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost('{{ post.uuid }}', 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+          <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost('{{ post.uuid }}', 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+          <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost('{{ post.uuid }}', 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+          <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost('{{ post.uuid }}', 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+          <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost('{{ post.uuid }}', 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
         </div>
-        <button onclick="reactToPost({{ post.id }}, 'main', event)" id="like-btn-{{ post.id }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
-          {% if user_reaction %}<span class="text-lg leading-none" id="like-icon-{{ post.id }}">{{ emoji_map.get(user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="like-icon-{{ post.id }}"></i>{% endif %}
-          <span id="like-count-{{ post.id }}">{{ total_reacts }}</span>
+        <button onclick="reactToPost('{{ post.uuid }}', 'main', event)" id="like-btn-{{ post.uuid }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
+          {% if user_reaction %}<span class="text-lg leading-none" id="like-icon-{{ post.uuid }}">{{ emoji_map.get(user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="like-icon-{{ post.uuid }}"></i>{% endif %}
+          <span id="like-count-{{ post.uuid }}">{{ total_reacts }}</span>
         </button>
       </div>
-      <button onclick="toggleComments({{ post.id }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
-        <i class="far fa-comment"></i><span id="comment-btn-count-{{ post.id }}">{{ post.comments | length }}</span>
+      <button onclick="toggleComments({{ post.uuid }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+        <i class="far fa-comment"></i><span id="comment-btn-count-{{ post.uuid }}">{{ post.comments | length }}</span>
       </button>
-      <button onclick="sharePost({{ post.id }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+      <button onclick="sharePost({{ post.uuid }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
         <i class="far fa-share-square"></i><span>Share</span>
       </button>
     </div>
   </div>
 
   {% set top_comments = post.comments | selectattr('parent_id', 'none') | list %}
-  <div id="comment-section-{{ post.id }}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">
-    <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-{{ post.id }}">
+  <div id="comment-section-{{ post.uuid }}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+    <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-{{ post.uuid }}">
       {% for comment in top_comments %}
       <div class="comment-thread" data-comment-id="{{ comment.id }}">
         <div class="flex gap-2" id="comment-{{ comment.id }}">
@@ -164,10 +166,10 @@
                 <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ comment.author.username }}</span>
                 <div class="flex items-center gap-1">
                   {% if comment.user_id == current_user.id %}
-                  <button onclick="editComment({{ comment.id }}, {{ post.id }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs" title="Edit"><i class="fas fa-pen"></i></button>
+                  <button onclick="editComment({{ comment.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs" title="Edit"><i class="fas fa-pen"></i></button>
                   {% endif %}
                   {% if comment.user_id == current_user.id or post.user_id == current_user.id %}
-                  <button onclick="deleteComment({{ comment.id }}, {{ post.id }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs" title="Delete"><i class="fas fa-times"></i></button>
+                  <button onclick="deleteComment({{ comment.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs" title="Delete"><i class="fas fa-times"></i></button>
                   {% endif %}
                 </div>
               </div>
@@ -175,7 +177,7 @@
             </div>
             <div class="flex items-center gap-3 mt-0.5 ml-1">
               <span class="text-xs text-gray-400 dark:text-gray-500">{{ comment.created_at.strftime('%H:%M') }}</span>
-              <button onclick="openReply({{ comment.id }}, {{ post.id }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+              <button onclick="openReply({{ comment.id }}, {{ post.uuid }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
             </div>
             <div class="ml-5 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3 comment-replies-container">
               {% for reply in comment.replies %}
@@ -187,10 +189,10 @@
                       <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ reply.author.username }}</span>
                       <div class="flex items-center gap-1">
                         {% if reply.user_id == current_user.id %}
-                        <button onclick="editComment({{ reply.id }}, {{ post.id }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>
+                        <button onclick="editComment({{ reply.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>
                         {% endif %}
                         {% if reply.user_id == current_user.id or post.user_id == current_user.id %}
-                        <button onclick="deleteComment({{ reply.id }}, {{ post.id }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                        <button onclick="deleteComment({{ reply.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
                         {% endif %}
                       </div>
                     </div>
@@ -198,14 +200,14 @@
                   </div>
                   <div class="flex items-center gap-3 mt-0.5 ml-1">
                     <span class="text-xs text-gray-400 dark:text-gray-500">{{ reply.created_at.strftime('%H:%M') }}</span>
-                    <button onclick="openReply({{ reply.id }}, {{ post.id }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                    <button onclick="openReply({{ reply.id }}, {{ post.uuid }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
                   </div>
                 </div>
               </div>
               {% endfor %}
             </div>
             <div id="reply-form-{{ comment.id }}" class="hidden mt-2 ml-5">
-              <form onsubmit="addReply(event, {{ post.id }}, {{ comment.id }})" class="flex gap-2">
+              <form onsubmit="addReply(event, {{ post.uuid }}, {{ comment.id }})" class="flex gap-2">
                 <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
                 <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium transition"><i class="fas fa-paper-plane"></i></button>
               </form>
@@ -214,10 +216,10 @@
         </div>
       </div>
       {% else %}
-      <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-{{ post.id }}">No comments yet.</p>
+      <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-{{ post.uuid }}">No comments yet.</p>
       {% endfor %}
     </div>
-    <form onsubmit="addComment(event, {{ post.id }})" class="flex gap-2">
+    <form onsubmit="addComment(event, {{ post.uuid }})" class="flex gap-2">
       <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
       <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
     </form>
@@ -480,25 +482,48 @@ socket.on('post_liked', (data) => {
   const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
   const currentUserId = {{ current_user.id }};
   const statEl = document.getElementById(`stats-like-${data.post_id}`);
-  if (statEl) statEl.innerHTML = `<span class="mr-1">👍</span> ${data.like_count}`;
-  if (data.user && data.user.id === currentUserId) {
+  const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : (data.like_count || 0);
+  if (statEl) {
+    if (data.counts && total > 0) {
+      const sortedReacts = Object.entries(data.counts)
+        .filter(([_, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1]);
+      if (sortedReacts.length > 0) {
+        const emojisHtml = sortedReacts.slice(0, 3).map(([r, _], idx) => {
+          const zIndex = 10 - idx;
+          return `<span class="text-sm leading-none z-[${zIndex}] inline-block bg-white dark:bg-gray-800 rounded-full ring-1 ring-white dark:ring-gray-800 p-0.5 shadow-sm">${emojiMap[r] || '👍'}</span>`;
+        }).join('');
+        statEl.innerHTML = `<span class="flex -space-x-1 mr-1.5 items-center">${emojisHtml}</span> ${total}`;
+      } else {
+        statEl.innerHTML = '<span class="mr-1">👍</span> 0';
+      }
+    } else {
+      statEl.innerHTML = '<span class="mr-1">👍</span> 0';
+    }
+  }
+  if ((data.user && data.user.id === currentUserId) || data.user_id === currentUserId) {
     const likeBtn = document.getElementById(`like-btn-${data.post_id}`);
     if (likeBtn) {
       const countSpan = document.getElementById(`like-count-${data.post_id}`);
-      if (countSpan) countSpan.textContent = data.like_count;
-      const icon = document.getElementById(`like-icon-${data.post_id}`);
-      if (icon) {
-        if (data.liked) {
-          icon.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + data.post_id + '">👍</span>';
-          likeBtn.classList.add('text-red-500');
-          likeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
-        } else {
-          icon.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + data.post_id + '"></i>';
-          likeBtn.classList.remove('text-red-500');
-          likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
-        }
-        const newIcon = document.getElementById(`like-icon-${data.post_id}`);
-        if (newIcon) newIcon.classList.add('like-animate');
+      if (countSpan) countSpan.textContent = total;
+      const oldIcon = document.getElementById(`like-icon-${data.post_id}`);
+      if (oldIcon) oldIcon.remove();
+      const newIcon = document.createElement(data.liked ? 'span' : 'i');
+      newIcon.id = `like-icon-${data.post_id}`;
+      if (data.liked) {
+        newIcon.className = 'text-lg leading-none';
+        newIcon.textContent = '👍';
+      } else {
+        newIcon.className = 'far fa-thumbs-up';
+      }
+      likeBtn.insertBefore(newIcon, likeBtn.firstChild);
+      newIcon.classList.add('like-animate');
+      if (data.liked) {
+        likeBtn.classList.add('text-blue-500', 'font-semibold');
+        likeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+      } else {
+        likeBtn.classList.remove('text-red-500', 'text-blue-500', 'font-semibold');
+        likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
       }
     }
     const postEl = document.getElementById(`post-${data.post_id}`);
@@ -666,25 +691,29 @@ socket.on('post_reacted', (data) => {
     }
   }
   
-  if (data.user && data.user.id === currentUserId) {
+  if ((data.user && data.user.id === currentUserId) || data.user_id === currentUserId) {
     if (postEl) postEl.dataset.userReaction = data.reaction || '';
     if (likeBtn) {
-      const icon = likeBtn.querySelector('i, span');
-      if (icon) {
-        if (data.reaction) {
-          icon.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + data.post_id + '">' + (emojiMap[data.reaction] || '👍') + '</span>';
-          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
-          if (data.reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
-          else if (data.reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
-          else likeBtn.classList.add('text-yellow-500', 'font-semibold');
-        } else {
-          icon.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + data.post_id + '"></i>';
-          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'font-semibold');
-          likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
-        }
-        const newIcon = document.getElementById(`like-icon-${data.post_id}`);
-        if (newIcon) newIcon.classList.add('like-animate');
+      const oldIcon = document.getElementById(`like-icon-${data.post_id}`);
+      if (oldIcon) oldIcon.remove();
+      const newIcon = document.createElement(data.reaction ? 'span' : 'i');
+      newIcon.id = `like-icon-${data.post_id}`;
+      if (data.reaction) {
+        newIcon.className = 'text-lg leading-none';
+        newIcon.textContent = emojiMap[data.reaction] || '👍';
+      } else {
+        newIcon.className = 'far fa-thumbs-up';
       }
+      likeBtn.insertBefore(newIcon, likeBtn.firstChild);
+      likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+      if (data.reaction) {
+        if (data.reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
+        else if (data.reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
+        else likeBtn.classList.add('text-yellow-500', 'font-semibold');
+      } else {
+        likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
+      }
+      newIcon.classList.add('like-animate');
     }
   }
   const reactBar = document.querySelector(`[data-reaction-bar="${data.post_id}"]`);
@@ -725,8 +754,8 @@ function renderPostHTML(data) {
     <div class="p-4 flex items-center justify-between">
       <div class="flex items-center gap-3">${avatar}
         <div>
-          <a href="/profile/${escapeHtml(author.username)}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">${escapeHtml(author.username)}</a>
-          <p class="text-xs text-gray-500 dark:text-gray-400"><a href="/posts/${data.post_id}" class="hover:underline">${escapeHtml(time)}</a></p>
+          <a href="/profile/${escapeHtml(author.username)}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-sm">${escapeHtml(author.full_name || author.username)}</a>
+          <p class="text-xs text-gray-500 dark:text-gray-400"><a href="/profile/${escapeHtml(author.username)}" class="hover:text-indigo-500">@${escapeHtml(author.username)}</a><span class="mx-1">·</span><a href="/posts/${data.post_id}" class="hover:underline">${escapeHtml(time)}</a></p>
         </div>
       </div>
       <div class="relative">
@@ -749,19 +778,19 @@ function renderPostHTML(data) {
     <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="${data.post_id}"></div>
     <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between">
-        <div class="relative like-btn-wrap" onmouseenter="showReactions(${data.post_id})" onmouseleave="startHideReactions(${data.post_id})">
-          <div id="reactions-picker-${data.post_id}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions(${data.post_id})" onmouseleave="startHideReactions(${data.post_id})">
-            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost(${data.post_id}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
-            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost(${data.post_id}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
-            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost(${data.post_id}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
-            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost(${data.post_id}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
-            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost(${data.post_id}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
-            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost(${data.post_id}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+        <div class="relative like-btn-wrap" onmouseenter="showReactions('${data.post_id}')" onmouseleave="startHideReactions('${data.post_id}')">
+          <div id="reactions-picker-${data.post_id}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions('${data.post_id}')" onmouseleave="startHideReactions('${data.post_id}')">
+            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost('${data.post_id}', 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost('${data.post_id}', 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost('${data.post_id}', 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost('${data.post_id}', 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost('${data.post_id}', 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost('${data.post_id}', 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
           </div>
-          <button onclick="reactToPost(${data.post_id}, 'main', event)" id="like-btn-${data.post_id}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-thumbs-up" id="like-icon-${data.post_id}"></i><span id="like-count-${data.post_id}">0</span></button>
+          <button onclick="reactToPost('${data.post_id}', 'main', event)" id="like-btn-${data.post_id}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-thumbs-up" id="like-icon-${data.post_id}"></i><span id="like-count-${data.post_id}">0</span></button>
         </div>
-        <button onclick="toggleComments(${data.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-comment"></i><span id="comment-btn-count-${data.post_id}">0</span></button>
-        <button onclick="sharePost(${data.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-share-square"></i><span>Share</span></button>
+        <button onclick="toggleComments('${data.post_id}')" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-comment"></i><span id="comment-btn-count-${data.post_id}">0</span></button>
+        <button onclick="sharePost('${data.post_id}')" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-share-square"></i><span>Share</span></button>
       </div>
     </div>
     <div id="comment-section-${data.post_id}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">
@@ -891,7 +920,7 @@ function createPost(e) {
   if (selectedFiles.length > 0) {
     const formData = new FormData();
     selectedFiles.forEach(f => formData.append('images', f));
-    fetch('/upload_post_image', { method: 'POST', body: formData })
+    fetch('/upload_post_image', { method: 'POST', credentials: 'include', body: formData })
       .then(r => r.json())
       .then(res => {
         if (res.success) doCreate(res.urls || []);
@@ -911,6 +940,7 @@ function fetchFallbackCreate(content, imageUrls, visibility, submitBtn, done) {
   formData.append('image_urls', JSON.stringify(imageUrls));
   fetch('/posts/create', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'X-Requested-With': 'XMLHttpRequest' },
     body: formData
   })
@@ -988,17 +1018,21 @@ function reactToPost(postId, reaction, event) {
     const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
     
     const setReact = (r) => {
-      const ic = document.getElementById(`like-icon-${postId}`);
       const bt = document.getElementById(`like-btn-${postId}`);
       const pe = document.getElementById(`post-${postId}`);
-      if (ic) {
-        if (r) {
-          ic.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + postId + '">' + (emojiMap[r] || '👍') + '</span>';
-        } else {
-          ic.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + postId + '"></i>';
-        }
-      }
+      const oldIcon = document.getElementById(`like-icon-${postId}`);
       if (bt) {
+        if (oldIcon) oldIcon.remove();
+        const newIcon = document.createElement(r ? 'span' : 'i');
+        newIcon.id = `like-icon-${postId}`;
+        if (r) {
+          newIcon.className = 'text-lg leading-none';
+          newIcon.textContent = emojiMap[r] || '👍';
+        } else {
+          newIcon.className = 'far fa-thumbs-up';
+        }
+        bt.insertBefore(newIcon, bt.firstChild);
+        newIcon.classList.add('like-animate');
         bt.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
         if (r) {
           if (r === 'like') bt.classList.add('text-blue-500', 'font-semibold');
@@ -1063,7 +1097,7 @@ function reactToPost(postId, reaction, event) {
     if (socket && socket.connected) {
       socket.emit('react_to_post', { post_id: postId, reaction: targetReaction }, handleResp);
     } else {
-      fetch('/posts/' + postId + '/react', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams({ reaction: targetReaction }) })
+      fetch('/posts/' + postId + '/react', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams({ reaction: targetReaction }) })
         .then(r => r.json()).then(handleResp).catch(() => setReact(prevReaction));
     }
   } catch(ex) { console.error('reactToPost error:', ex); }
@@ -1091,6 +1125,7 @@ function addComment(e, postId) {
   } else {
     fetch(`/posts/${postId}/comment`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
       body: new URLSearchParams({ content })
     }).then(r => r.json()).then(data => {
@@ -1175,6 +1210,7 @@ function addReply(e, postId, parentId) {
   } else {
     fetch(`/posts/${postId}/comment`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
       body: new URLSearchParams({ content, parent_id: parentId })
     }).then(r => r.json()).then(data => {
@@ -1228,7 +1264,7 @@ function editComment(commentId, postId) {
   }).then((r) => {
     if (r.isConfirmed) {
       fetch(`/posts/${postId}/comment/${commentId}/edit`, {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
         body: new URLSearchParams({ content: r.value.trim() })
       }).then(res => res.json()).then(data => {
         if (data.success) {
@@ -1258,6 +1294,7 @@ function deletePost(postId) {
       } else {
         fetch(`/posts/${postId}/delete`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).then(r => r.json()).then(data => {
           if (data.success) {
@@ -1297,6 +1334,7 @@ function deleteComment(commentId, postId) {
       } else {
         fetch(`/posts/${postId}/comment/${commentId}/delete`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).then(r => r.json()).then(data => {
           if (data.success) { removeCommentEl(); }
@@ -1386,6 +1424,7 @@ function saveEditedPost(e) {
     const allUrls = [...editPostLoadedImages, ...newUrls];
     fetch(`/posts/${postId}/edit`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
       body: new URLSearchParams({ content, image_urls: JSON.stringify(allUrls), visibility: document.getElementById('edit-post-visibility').value })
     }).then(r => r.json()).then(data => {
@@ -1400,7 +1439,7 @@ function saveEditedPost(e) {
           const existingContainer = document.querySelector(`#post-${postId} .post-images-container`);
           if (existingContainer) {
             if (data.image_urls.length > 0) {
-              existingContainer.outerHTML = renderImagesHTML(parseInt(postId), data.image_urls);
+              existingContainer.outerHTML = renderImagesHTML(postId, data.image_urls);
             } else {
               existingContainer.remove();
             }
@@ -1409,13 +1448,13 @@ function saveEditedPost(e) {
             if (contentDiv) {
               const wrapper = contentDiv.closest('.px-4');
               if (wrapper) {
-                wrapper.insertAdjacentHTML('afterend', renderImagesHTML(parseInt(postId), data.image_urls));
+                wrapper.insertAdjacentHTML('afterend', renderImagesHTML(postId, data.image_urls));
               }
             }
           }
-          initSplideForPost(parseInt(postId));
+          initSplideForPost(postId);
         }
-        socket.emit('edit_post', { post_id: parseInt(postId), content });
+        socket.emit('edit_post', { post_id: postId, content });
         closeEditPostModal();
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Post updated!', showConfirmButton: false, timer: 2000 });
       }
@@ -1425,7 +1464,7 @@ function saveEditedPost(e) {
   if (editPostNewImages.length > 0) {
     const fd = new FormData();
     editPostNewImages.forEach(f => fd.append('images', f));
-    fetch('/upload_post_image', { method: 'POST', body: fd })
+    fetch('/upload_post_image', { method: 'POST', credentials: 'include', body: fd })
       .then(r => r.json())
       .then(res => { if (res.success) doSave(res.urls); else resetBtn(); })
       .catch(() => resetBtn());
@@ -1576,7 +1615,7 @@ function loadMorePosts() {
   if (text) text.textContent = 'Loading...';
 
   const page = parseInt(document.getElementById('current-page').value) + 1;
-  fetch(`/posts?page=${page}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+  fetch(`/posts?page=${page}`, { credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
     .then(r => r.json())
     .then(data => {
       const container = document.getElementById('posts-container');
@@ -1645,12 +1684,13 @@ function renderAndAppendPost(p, container, emojiMap) {
     }
   }
 
-  const html = `<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${p.post_id}" data-images='${imagesJson}' data-user-reaction="${userReact}">
+    const displayName = p.author.full_name || p.author.username;
+    const html = `<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${p.post_id}" data-images='${imagesJson}' data-user-reaction="${userReact}">
     <div class="p-4 flex items-center justify-between">
       <div class="flex items-center gap-3">${avatarHtml}
         <div>
-          <a href="/profile/${escapeHtml(p.author.username)}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">${escapeHtml(p.author.username)}</a>
-          <p class="text-xs text-gray-500 dark:text-gray-400"><a href="/posts/${p.post_id}" class="hover:underline">${escapeHtml(p.created_at)}</a></p>
+          <a href="/profile/${escapeHtml(p.author.username)}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">${escapeHtml(displayName)}</a>
+          <p class="text-xs text-gray-500 dark:text-gray-400"><span class="text-gray-400 dark:text-gray-500">@${escapeHtml(p.author.username)}</span> · <a href="/posts/${p.post_id}" class="hover:underline">${escapeHtml(p.created_at)}</a></p>
         </div>
       </div>
       <div class="relative">
@@ -1672,19 +1712,19 @@ function renderAndAppendPost(p, container, emojiMap) {
     <div class="px-4 pb-2 text-xs reaction-bar" data-reaction-bar="${p.post_id}">${reactBarHtml}</div>
     <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between">
-        <div class="relative like-btn-wrap" onmouseenter="showReactions(${p.post_id})" onmouseleave="startHideReactions(${p.post_id})">
-          <div id="reactions-picker-${p.post_id}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions(${p.post_id})" onmouseleave="startHideReactions(${p.post_id})">
-            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost(${p.post_id}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
-            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost(${p.post_id}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
-            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost(${p.post_id}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
-            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost(${p.post_id}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
-            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost(${p.post_id}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
-            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost(${p.post_id}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+        <div class="relative like-btn-wrap" onmouseenter="showReactions('${p.post_id}')" onmouseleave="startHideReactions('${p.post_id}')">
+          <div id="reactions-picker-${p.post_id}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions('${p.post_id}')" onmouseleave="startHideReactions('${p.post_id}')">
+            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost('${p.post_id}', 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost('${p.post_id}', 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost('${p.post_id}', 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost('${p.post_id}', 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost('${p.post_id}', 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost('${p.post_id}', 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
           </div>
-          <button onclick="reactToPost(${p.post_id}, 'main', event)" id="like-btn-${p.post_id}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition ${likeBtnClass}">${likeIconHtml}<span id="like-count-${p.post_id}">${p.likes_count}</span></button>
+          <button onclick="reactToPost('${p.post_id}', 'main', event)" id="like-btn-${p.post_id}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition ${likeBtnClass}">${likeIconHtml}<span id="like-count-${p.post_id}">${p.likes_count}</span></button>
         </div>
-        <button onclick="toggleComments(${p.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-comment"></i><span id="comment-btn-count-${p.post_id}">${p.comments_count}</span></button>
-        <button onclick="sharePost(${p.post_id})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-share-square"></i><span>Share</span></button>
+        <button onclick="toggleComments('${p.post_id}')" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-comment"></i><span id="comment-btn-count-${p.post_id}">${p.comments_count}</span></button>
+        <button onclick="sharePost('${p.post_id}')" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400"><i class="far fa-share-square"></i><span>Share</span></button>
       </div>
     </div>
     <div id="comment-section-${p.post_id}" class="hidden px-4 py-3 border-t border-gray-100 dark:border-gray-700">

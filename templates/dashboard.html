@@ -2,76 +2,106 @@
 {% block title %}Dashboard - Ahmed BOURAMDANE · Organiser{% endblock %}
 {% block content %}
 <style>
-  .stat-card-modern {
+  .stat-card {
     background: var(--surface);
-    border-radius: var(--radius-sm);
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border);
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     cursor: default;
   }
-  .stat-card-modern::before {
+  .stat-card::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, var(--card-color), transparent);
-    opacity: 0;
-    transition: opacity 0.35s ease;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--card-color);
+    opacity: 0.7;
   }
-  .stat-card-modern:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-lg);
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--card-color);
+    opacity: 0.04;
+    transform: translate(30%, -30%);
+    pointer-events: none;
   }
-  .stat-card-modern:hover::before {
+  .dark .stat-card::after {
     opacity: 0.06;
   }
-  .dark .stat-card-modern {
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--card-color);
+  }
+  .dark .stat-card {
     background: #1e293b;
     border-color: #334155;
   }
-  .stat-icon-modern {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
+  .dark .stat-card:hover {
+    border-color: var(--card-color);
+  }
+  .stat-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  .stat-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     color: white;
     flex-shrink: 0;
-    position: relative;
-    z-index: 1;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
-  .stat-content {
-    position: relative;
-    z-index: 1;
-  }
-  .stat-number {
+  .stat-card-value {
     font-size: 2rem;
     font-weight: 800;
-    line-height: 1.2;
-    display: block;
+    line-height: 1.1;
     letter-spacing: -0.03em;
+    color: var(--text-primary);
   }
-  .dark .stat-number { color: #f1f5f9; }
-  .stat-label {
-    font-size: 0.85rem;
+  .dark .stat-card-value { color: #f1f5f9; }
+  .stat-card-label {
+    font-size: 0.8rem;
     font-weight: 500;
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    margin-top: 0.15rem;
   }
-  .stat-sub {
-    font-size: 0.8rem;
+  .stat-card-sub {
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    opacity: 0.7;
+    opacity: 0.65;
+  }
+  .stat-card-bar {
+    margin-top: 0.75rem;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .dark .stat-card-bar { background: #334155; }
+  .stat-card-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--card-color);
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0;
   }
   .dashboard-card {
     background: var(--surface);
@@ -79,14 +109,18 @@
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border);
     overflow: hidden;
-    transition: box-shadow 0.3s ease;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
   }
   .dashboard-card:hover {
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-lg);
+    border-color: #6366f1;
   }
   .dark .dashboard-card {
     background: #1e293b;
     border-color: #334155;
+  }
+  .dark .dashboard-card:hover {
+    border-color: #818cf8;
   }
   .card-header {
     display: flex;
@@ -251,6 +285,8 @@
     gap: 1rem;
     color: white;
     box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
+    position: relative;
+    overflow: hidden;
   }
   .welcome-cta h3 { font-size: 1.2rem; font-weight: 700; }
   .welcome-cta p { opacity: 0.9; font-size: 0.9rem; margin-top: 0.2rem; }
@@ -266,33 +302,91 @@
     white-space: nowrap;
   }
   .welcome-cta .btn-white:hover {
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.03);
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  }
+
+  /* ===== Skeleton Loading ===== */
+  .skeleton-dash {
+    position: relative;
+  }
+  .skeleton-dash .skeleton-content {
+    transition: opacity 0.5s ease;
+  }
+  .skeleton-dash.loaded .skeleton-content {
+    opacity: 1;
+  }
+  .skeleton-dash .skeleton-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    border-radius: inherit;
+    z-index: 10;
+    transition: opacity 0.4s ease;
+  }
+  .dark .skeleton-dash .skeleton-overlay {
+    background: #1e293b;
+  }
+  .skeleton-dash.loaded .skeleton-overlay {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @keyframes shimmer-anim {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer-anim 1.5s ease-in-out infinite;
+    border-radius: 8px;
+  }
+  .dark .skeleton-shimmer {
+    background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+    background-size: 200% 100%;
+  }
+  .skeleton-stat {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.5rem;
+  }
+  .skeleton-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    flex-shrink: 0;
+  }
+  .skeleton-text-line {
+    height: 14px;
+    border-radius: 8px;
+    margin-bottom: 6px;
   }
 
   @media (max-width: 768px) {
     .welcome-cta { flex-direction: column; text-align: center; }
-    .stat-number { font-size: 1.6rem; }
-    .stat-icon-modern { width: 46px; height: 46px; font-size: 1.2rem; }
+    .stat-card-value { font-size: 1.6rem; }
+    .stat-card-icon { width: 36px; height: 36px; font-size: 1rem; }
   }
 </style>
 
 <div class="mb-8">
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold greeting-gradient">
+      <h1 class="text-3xl md:text-4xl font-extrabold greeting-gradient" id="greeting-text">
         {% if now is defined %}
         {% set hour = now.hour %}
         {% if hour < 12 %}Good Morning{% elif hour < 17 %}Good Afternoon{% else %}Good Evening{% endif %},
         {% else %}Welcome{% endif %}
         {{ current_user.full_name or current_user.username }}!
       </h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
+      <p class="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2" id="date-subtitle">
         <i class="far fa-calendar-alt"></i>
         {% if now is defined %}{{ now.strftime('%A, %d %B %Y') }}{% endif %}
       </p>
     </div>
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2" id="quick-actions">
       <a href="{{ url_for('notes.notes') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
         <i class="fas fa-plus"></i> New Note
       </a>
@@ -305,59 +399,55 @@
 
 {% set td = tasks_done|default(0) %}{% set tt = tasks_total|default(0) %}{% set completion_pct = (td / tt * 100)|round|int if tt > 0 else 0 %}
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-  <div class="stat-card-modern" style="--card-color: #6366f1;">
-    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
-      <i class="fas fa-sticky-note"></i>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8" id="stat-cards-grid">
+  <div class="stat-card" style="--card-color: #6366f1;">
+    <div class="stat-card-top">
+      <div class="stat-card-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-sticky-note"></i></div>
+      <span class="stat-card-sub">total</span>
     </div>
-    <div class="stat-content">
-      <span class="stat-number dark:text-white" style="color:#1e293b;">
-        <span class="counter" data-target="{{ notes_count|default(0) }}">0</span>
-      </span>
-      <span class="stat-label">Notes</span>
-    </div>
+    <div class="stat-card-value"><span class="counter" data-target="{{ notes_count|default(0) }}">0</span></div>
+    <div class="stat-card-label">Notes</div>
   </div>
-  <div class="stat-card-modern" style="--card-color: #10b981;">
-    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #10b981, #34d399);">
-      <i class="fas fa-check-double"></i>
+  <div class="stat-card" style="--card-color: #10b981;">
+    <div class="stat-card-top">
+      <div class="stat-card-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fas fa-check-double"></i></div>
+      <span class="stat-card-sub">{{ completion_pct }}%</span>
     </div>
-    <div class="stat-content">
-      <span class="stat-number dark:text-white" style="color:#1e293b;">
-        <span class="counter" data-target="{{ tasks_done }}">0</span>
-        <span style="font-size:1rem;font-weight:600;opacity:0.5;">/{{ tasks_total }}</span>
-      </span>
-      <span class="stat-label">Tasks Done</span>
-      {% if (tasks_total|default(0)) > 0 %}
-      <span class="stat-sub">
-        <span class="counter" data-target="{{ completion_pct|default(0) }}">0</span>% complete
-      </span>
-      {% endif %}
-    </div>
+    <div class="stat-card-value"><span class="counter" data-target="{{ tasks_done }}">0</span><span class="text-base font-semibold opacity-50 ml-1">/{{ tasks_total }}</span></div>
+    <div class="stat-card-label">Tasks Done</div>
+    <div class="stat-card-bar"><div class="stat-card-bar-fill" style="--card-color: #10b981;" data-pct="{{ completion_pct }}"></div></div>
   </div>
-  <div class="stat-card-modern" style="--card-color: #3b82f6;">
-    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
-      <i class="fas fa-calendar-alt"></i>
+  <div class="stat-card" style="--card-color: #f59e0b;">
+    <div class="stat-card-top">
+      <div class="stat-card-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fas fa-newspaper"></i></div>
+      {% if upcoming_events|default([]) %}<span class="stat-card-sub">{{ (upcoming_events|default([]))|length }} upcoming</span>{% endif %}
     </div>
-    <div class="stat-content">
-      <span class="stat-number dark:text-white" style="color:#1e293b;">
-        <span class="counter" data-target="{{ events_total|default(0) }}">0</span>
-      </span>
-      <span class="stat-label">Events</span>
-      {% if upcoming_events|default([]) %}
-      <span class="stat-sub"><span class="counter" data-target="{{ (upcoming_events|default([]))|length }}">0</span> upcoming</span>
-      {% endif %}
-    </div>
+    <div class="stat-card-value"><span class="counter" data-target="{{ events_total|default(0) }}">0</span></div>
+    <div class="stat-card-label">Events</div>
   </div>
-  <div class="stat-card-modern" style="--card-color: #ec4899;">
-    <div class="stat-icon-modern" style="background: linear-gradient(135deg, #ec4899, #f472b6);">
-      <i class="fab fa-facebook-messenger"></i>
+  <div class="stat-card" style="--card-color: #ec4899;">
+    <div class="stat-card-top">
+      <div class="stat-card-icon" style="background: linear-gradient(135deg, #ec4899, #f472b6);"><i class="fab fa-facebook-messenger"></i></div>
+      <span class="stat-card-sub">unread</span>
     </div>
-    <div class="stat-content">
-      <span class="stat-number dark:text-white" style="color:#1e293b;">
-        <span class="counter" data-target="{{ unread_count|default(0) }}">0</span>
-      </span>
-      <span class="stat-label">Unread Messages</span>
+    <div class="stat-card-value"><span class="counter" data-target="{{ unread_messages|default(0) }}">0</span></div>
+    <div class="stat-card-label">Messages</div>
+  </div>
+  <div class="stat-card" style="--card-color: #3b82f6;">
+    <div class="stat-card-top">
+      <div class="stat-card-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fas fa-users"></i></div>
+      <span class="stat-card-sub">published</span>
     </div>
+    <div class="stat-card-value"><span class="counter" data-target="{{ posts_count|default(0) }}">0</span></div>
+    <div class="stat-card-label">Posts</div>
+  </div>
+  <div class="stat-card" style="--card-color: #8b5cf6;">
+    <div class="stat-card-top">
+      <div class="stat-card-icon" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);"><i class="fas fa-bell"></i></div>
+      <span class="stat-card-sub">unread</span>
+    </div>
+    <div class="stat-card-value"><span class="counter" data-target="{{ notif_count|default(0) }}">0</span></div>
+    <div class="stat-card-label">Notifications</div>
   </div>
 </div>
 
@@ -525,23 +615,78 @@
   if (typeof anime === 'undefined') { return; }
   var isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // --- Entrance stagger for stat cards ---
+  // --- Entrance Animations ---
   if (!isReduced) {
-    var statCards = document.querySelectorAll('.stat-card-modern');
+    var mainTimeline = anime.timeline({ easing: 'easeOutExpo' });
+    mainTimeline.add({
+      targets: '#greeting-text',
+      opacity: [0, 1],
+      translateY: [15, 0],
+      duration: 600,
+    });
+    mainTimeline.add({
+      targets: '#date-subtitle',
+      opacity: [0, 1],
+      translateY: [10, 0],
+      duration: 400,
+    }, 400);
+    mainTimeline.add({
+      targets: '#quick-actions a',
+      opacity: [0, 1],
+      translateX: [20, 0],
+      duration: 500,
+      delay: function(el, i) { return i * 100; },
+    }, 600);
+    var statCards = document.querySelectorAll('.stat-card');
     if (statCards.length) {
-      anime({ targets: statCards, opacity: [0, 1], translateY: [30, 0], duration: 600, delay: function(el, i) { return i * 100; }, easing: 'easeOutExpo' });
+      mainTimeline.add({
+        targets: statCards,
+        opacity: [0, 1],
+        translateY: [25, 0],
+        duration: 600,
+        delay: function(el, i) { return i * 80; },
+        easing: 'easeOutExpo',
+      }, 900);
+      // Animate progress bars after cards appear
+      setTimeout(function() {
+        document.querySelectorAll('.stat-card-bar-fill').forEach(function(bar) {
+          var pct = bar.getAttribute('data-pct') || 0;
+          bar.style.width = pct + '%';
+        });
+      }, 1600);
     }
     var chartCards = document.querySelectorAll('.dashboard-card');
     if (chartCards.length) {
-      anime({ targets: chartCards, opacity: [0, 1], translateY: [20, 0], duration: 500, delay: function(el, i) { return 400 + i * 100; }, easing: 'easeOutExpo' });
+      setTimeout(function() {
+        anime({
+          targets: chartCards,
+          opacity: [0, 1],
+          translateY: [20, 0],
+          duration: 500,
+          delay: function(el, i) { return i * 100; },
+          easing: 'easeOutExpo',
+        });
+      }, 200);
     }
     var ctaBanner = document.querySelector('.welcome-cta');
-    if (ctaBanner) { anime({ targets: ctaBanner, opacity: [0, 1], scale: [0.96, 1], duration: 600, delay: 700, easing: 'easeOutExpo' }); }
+    if (ctaBanner) {
+      setTimeout(function() {
+        anime({
+          targets: ctaBanner,
+          opacity: [0, 1],
+          scale: [0.95, 1],
+          duration: 600,
+          easing: 'easeOutExpo',
+        });
+      }, 400);
+    }
   } else {
-    document.querySelectorAll('.stat-card-modern, .dashboard-card, .welcome-cta').forEach(function(el) { el.style.opacity = '1'; });
+    document.querySelectorAll('#greeting-text, #date-subtitle, #quick-actions a, .stat-card, .dashboard-card, .welcome-cta').forEach(function(el) {
+      el.style.opacity = '1';
+    });
   }
 
-  // --- Counter Animation with anime.js ---
+  // --- Counter Animation ---
   var counterObserver = new IntersectionObserver(function(entries) {
     entries.forEach(function(entry) {
       if (!entry.isIntersecting) return;
@@ -549,181 +694,189 @@
       var el = entry.target;
       var target = parseInt(el.getAttribute('data-target'), 10);
       if (!target || target === 0) { el.textContent = target; return; }
-      anime({ targets: el, innerHTML: [0, target], duration: 1200, easing: 'easeOutCubic', round: 1, update: function() { el.textContent = Math.round(el.innerHTML); } });
+      if (anime && typeof anime === 'object') {
+        anime({
+          targets: el, innerHTML: [0, target], duration: 1500,
+          easing: 'easeOutCubic', round: 1,
+          update: function() { el.textContent = Math.round(el.innerHTML).toLocaleString(); }
+        });
+      }
     });
-  }, { threshold: 0.5 });
+  }, { threshold: 0.3 });
   document.querySelectorAll('.counter').forEach(function(c) { counterObserver.observe(c); });
 
-  // --- Chart Colors (dark-aware) ---
-  var isDark = document.documentElement.classList.contains('dark');
-  var textColor = isDark ? '#94a3b8' : '#64748b';
-  var gridColor = isDark ? '#334155' : '#e2e8f0';
+  // --- Deferred Chart Rendering ---
+  function initCharts() {
+    var isDark = document.documentElement.classList.contains('dark');
+    var textColor = isDark ? '#94a3b8' : '#64748b';
+    var gridColor = isDark ? '#334155' : '#e2e8f0';
 
-  function createGradient(ctx, colors) {
-    var gradient = ctx.createLinearGradient(0, 0, 0, 200);
-    colors.forEach(function(c, i) { gradient.addColorStop(i / (colors.length - 1), c); });
-    return gradient;
-  }
+    function createGradient(ctx, colors) {
+      var gradient = ctx.createLinearGradient(0, 0, 0, 200);
+      colors.forEach(function(c, i) { gradient.addColorStop(i / (colors.length - 1), c); });
+      return gradient;
+    }
 
-  // 1. Tasks Donut Chart
-  var donutCtx = document.getElementById('tasksDonutChart');
-  if (donutCtx) {
-    new Chart(donutCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Done', 'Pending'],
-        datasets: [{
-          data: [{{ tasks_done|default(0) }}, {{ tasks_pending|default(0) }}],
-          backgroundColor: ['#10b981', isDark ? '#475569' : '#e5e7eb'],
-          borderWidth: 0,
-          hoverOffset: 6,
-        }]
-      },
-      options: {
-        cutout: '78%',
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? '#1e293b' : '#fff',
-            titleColor: isDark ? '#f1f5f9' : '#1e293b',
-            bodyColor: textColor,
-            borderColor: gridColor,
-            borderWidth: 1,
-            callbacks: {
-              label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.parsed + ' task' + (ctx.parsed !== 1 ? 's' : ''); }
-            }
-          }
-        },
-        animation: { animateRotate: true, duration: 1000 }
-      }
-    });
-  }
-
-  // 2. Priority Bar Chart
-  var priorityCtx = document.getElementById('priorityChart');
-  if (priorityCtx) {
-    new Chart(priorityCtx, {
-      type: 'bar',
-      data: {
-        labels: ['High', 'Medium', 'Low'],
-        datasets: [{
-          label: 'Tasks',
-          data: [{{ tasks_high|default(0) }}, {{ tasks_medium|default(0) }}, {{ tasks_low|default(0) }}],
-          backgroundColor: [
-            createGradient(priorityCtx.getContext('2d'), ['#ef4444', '#f87171']),
-            createGradient(priorityCtx.getContext('2d'), ['#f59e0b', '#fbbf24']),
-            createGradient(priorityCtx.getContext('2d'), ['#3b82f6', '#60a5fa']),
-          ],
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.55,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? '#1e293b' : '#fff',
-            titleColor: isDark ? '#f1f5f9' : '#1e293b',
-            bodyColor: textColor,
-            borderColor: gridColor,
-            borderWidth: 1,
-            callbacks: {
-              label: function(ctx) { return ' ' + ctx.parsed + ' pending task' + (ctx.parsed !== 1 ? 's' : ''); }
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { color: textColor, stepSize: 1 },
-            grid: { color: gridColor, drawBorder: false },
+    // 1. Tasks Donut Chart
+    var donutCtx = document.getElementById('tasksDonutChart');
+    if (donutCtx && typeof Chart !== 'undefined') {
+      try {
+        new Chart(donutCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Done', 'Pending'],
+            datasets: [{
+              data: [{{ tasks_done|default(0) }}, {{ tasks_pending|default(0) }}],
+              backgroundColor: ['#10b981', isDark ? '#475569' : '#e5e7eb'],
+              borderWidth: 0,
+              hoverOffset: 6,
+            }]
           },
-          x: {
-            ticks: { color: textColor },
-            grid: { display: false },
+          options: {
+            cutout: '78%',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: isDark ? '#1e293b' : '#fff',
+                titleColor: isDark ? '#f1f5f9' : '#1e293b',
+                bodyColor: textColor,
+                borderColor: gridColor,
+                borderWidth: 1,
+                callbacks: {
+                  label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.parsed + ' task' + (ctx.parsed !== 1 ? 's' : ''); }
+                }
+              }
+            },
+            animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' }
           }
-        },
-        animation: { duration: 800 }
-      }
-    });
-  }
+        });
+      } catch(e) { console.warn('Donut chart error:', e); }
+    }
 
-  // 3. Weekly Activity Line Chart
-  var activityCtx = document.getElementById('activityChart');
-  if (activityCtx) {
-    var grad = activityCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-    grad.addColorStop(0, isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(236, 72, 153, 0.2)');
-    grad.addColorStop(1, 'rgba(236, 72, 153, 0)');
-
-    new Chart(activityCtx, {
-      type: 'line',
-      data: {
-        labels: {{ activity_labels|default([])|tojson }},
-        datasets: [{
-          label: 'Tasks Created',
-          data: {{ activity_data|default([])|tojson }},
-          fill: true,
-          backgroundColor: grad,
-          borderColor: '#ec4899',
-          borderWidth: 2.5,
-          tension: 0.35,
-          pointRadius: 4,
-          pointBackgroundColor: '#ec4899',
-          pointBorderColor: isDark ? '#1e293b' : '#fff',
-          pointBorderWidth: 2,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#ec4899',
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? '#1e293b' : '#fff',
-            titleColor: isDark ? '#f1f5f9' : '#1e293b',
-            bodyColor: textColor,
-            borderColor: gridColor,
-            borderWidth: 1,
-            callbacks: {
-              label: function(ctx) { return ' ' + ctx.parsed + ' task' + (ctx.parsed !== 1 ? 's' : '') + ' created'; }
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { color: textColor, stepSize: 1 },
-            grid: { color: gridColor, drawBorder: false },
+    // 2. Priority Bar Chart
+    var priorityCtx = document.getElementById('priorityChart');
+    if (priorityCtx && typeof Chart !== 'undefined') {
+      try {
+        new Chart(priorityCtx, {
+          type: 'bar',
+          data: {
+            labels: ['High', 'Medium', 'Low'],
+            datasets: [{
+              label: 'Tasks',
+              data: [{{ tasks_high|default(0) }}, {{ tasks_medium|default(0) }}, {{ tasks_low|default(0) }}],
+              backgroundColor: [
+                createGradient(priorityCtx.getContext('2d'), ['#ef4444', '#f87171']),
+                createGradient(priorityCtx.getContext('2d'), ['#f59e0b', '#fbbf24']),
+                createGradient(priorityCtx.getContext('2d'), ['#3b82f6', '#60a5fa']),
+              ],
+              borderRadius: 6,
+              borderSkipped: false,
+              barPercentage: 0.55,
+            }]
           },
-          x: {
-            ticks: { color: textColor },
-            grid: { display: false },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: isDark ? '#1e293b' : '#fff',
+                titleColor: isDark ? '#f1f5f9' : '#1e293b',
+                bodyColor: textColor,
+                borderColor: gridColor,
+                borderWidth: 1,
+                callbacks: {
+                  label: function(ctx) { return ' ' + ctx.parsed + ' pending task' + (ctx.parsed !== 1 ? 's' : ''); }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor, drawBorder: false } },
+              x: { ticks: { color: textColor }, grid: { display: false } }
+            },
+            animation: { duration: 1000, easing: 'easeOutQuart' }
           }
-        },
-        animation: { duration: 1000, easing: 'easeOutQuart' },
-        interaction: { intersect: false, mode: 'index' },
-      }
-    });
+        });
+      } catch(e) { console.warn('Priority chart error:', e); }
+    }
+
+    // 3. Weekly Activity Line Chart
+    var activityCtx = document.getElementById('activityChart');
+    if (activityCtx && typeof Chart !== 'undefined') {
+      try {
+        var grad = activityCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+        grad.addColorStop(0, isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(236, 72, 153, 0.2)');
+        grad.addColorStop(1, 'rgba(236, 72, 153, 0)');
+        new Chart(activityCtx, {
+          type: 'line',
+          data: {
+            labels: {{ activity_labels|default([])|tojson }},
+            datasets: [{
+              label: 'Tasks Created',
+              data: {{ activity_data|default([])|tojson }},
+              fill: true,
+              backgroundColor: grad,
+              borderColor: '#ec4899',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 4,
+              pointBackgroundColor: '#ec4899',
+              pointBorderColor: isDark ? '#1e293b' : '#fff',
+              pointBorderWidth: 2,
+              pointHoverRadius: 6,
+              pointHoverBackgroundColor: '#ec4899',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: isDark ? '#1e293b' : '#fff',
+                titleColor: isDark ? '#f1f5f9' : '#1e293b',
+                bodyColor: textColor,
+                borderColor: gridColor,
+                borderWidth: 1,
+                callbacks: {
+                  label: function(ctx) { return ' ' + ctx.parsed + ' task' + (ctx.parsed !== 1 ? 's' : '') + ' created'; }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor, drawBorder: false } },
+              x: { ticks: { color: textColor }, grid: { display: false } }
+            },
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            interaction: { intersect: false, mode: 'index' },
+          }
+        });
+      } catch(e) { console.warn('Activity chart error:', e); }
+    }
   }
 
-  // --- Micro-interactions: stat card hover with anime.js ---
-  document.querySelectorAll('.stat-card-modern').forEach(function(card) {
+  // Defer chart rendering to ensure DOM + Chart.js is ready
+  if (document.readyState === 'complete') {
+    setTimeout(initCharts, 100);
+  } else {
+    window.addEventListener('load', function() { setTimeout(initCharts, 150); });
+  }
+
+  // --- Hover micro-interactions ---
+  document.querySelectorAll('.stat-card').forEach(function(card) {
     card.addEventListener('mouseenter', function() {
-      var icon = this.querySelector('.stat-icon-modern');
-      var number = this.querySelector('.stat-number');
-      if (icon) { anime({ targets: icon, scale: [1, 1.12], duration: 300, easing: 'easeOutQuad' }); }
-      if (number) { anime({ targets: number, scale: [1, 1.04], duration: 300, easing: 'easeOutQuad' }); }
+      var icon = this.querySelector('.stat-card-icon');
+      var val = this.querySelector('.stat-card-value');
+      if (icon && anime) { anime({ targets: icon, scale: [1, 1.15], duration: 300, easing: 'easeOutQuad' }); }
+      if (val && anime) { anime({ targets: val, translateY: [-2, 0], duration: 300, easing: 'easeOutQuad' }); }
     });
     card.addEventListener('mouseleave', function() {
-      var icon = this.querySelector('.stat-icon-modern');
-      var number = this.querySelector('.stat-number');
-      if (icon) { anime({ targets: icon, scale: [1.12, 1], duration: 300, easing: 'easeOutQuad' }); }
-      if (number) { anime({ targets: number, scale: [1.04, 1], duration: 300, easing: 'easeOutQuad' }); }
+      var icon = this.querySelector('.stat-card-icon');
+      var val = this.querySelector('.stat-card-value');
+      if (icon && anime) { anime({ targets: icon, scale: [1.15, 1], duration: 300, easing: 'easeOutQuad' }); }
+      if (val && anime) { anime({ targets: val, translateY: [0, 0], duration: 300, easing: 'easeOutQuad' }); }
     });
   });
 })();

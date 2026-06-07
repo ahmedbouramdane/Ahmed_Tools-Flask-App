@@ -611,10 +611,10 @@
   <div id="loading-bar" class="fixed top-0 left-0 h-1 bg-indigo-600 z-[9999] hidden transition-none" style="width: 0%;"></div>
 
   <!-- Splash Screen (visible by default, shown on every full page load) -->
-  <div id="splash-screen" class="fixed inset-0 z-[99999] flex items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/40 to-gray-100 dark:from-gray-900 dark:via-indigo-950/30 dark:to-gray-950">
+  <div id="splash-screen" class="fixed inset-0 z-[99999] flex items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/40 to-gray-100 dark:from-gray-900 dark:via-indigo-950/30 dark:to-gray-950 px-4">
     <div class="splash-inner text-center" style="transform: translateY(0);">
       <!-- Splash Logo -->
-      <div class="splash-logo-wrap mx-auto w-24 h-24 mb-10 relative">
+      <div class="splash-logo-wrap mx-auto w-20 h-20 sm:w-24 sm:h-24 mb-6 sm:mb-10 relative">
         <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-full drop-shadow-lg">
           <defs>
             <linearGradient id="splash-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -630,7 +630,6 @@
               </feMerge>
             </filter>
           </defs>
-          <!-- Stack bars -->
           <rect class="splash-logo-bar" x="40" y="152" width="120" height="14" rx="7" fill="url(#splash-grad)" filter="url(#splash-glow)" data-bar="1"/>
           <rect class="splash-logo-bar" x="52" y="122" width="96" height="14" rx="7" fill="url(#splash-grad)" opacity="0.9" data-bar="2"/>
           <rect class="splash-logo-bar" x="64" y="92" width="72" height="14" rx="7" fill="url(#splash-grad)" opacity="0.8" data-bar="3"/>
@@ -639,7 +638,7 @@
         </svg>
       </div>
       <!-- Splash Title -->
-      <h1 class="splash-title text-4xl font-bold text-gray-800 dark:text-white mb-3 tracking-tight">
+      <h1 class="splash-title text-2xl sm:text-4xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3 tracking-tight">
         <span>H</span><span>e</span><span>l</span><span>l</span><span>o</span><span>,</span>
         <span>&nbsp;</span>
         <span>I</span><span>'</span><span>m</span>
@@ -656,15 +655,13 @@
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">c</span>
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500">k</span>
       </h1>
-      <p class="splash-subtitle text-xl text-gray-500 dark:text-gray-400 font-medium mb-2 tracking-wide">Ahmed—Stack Platform</p>
-      <p class="splash-credit text-sm text-gray-400 dark:text-gray-500">by <strong>Ahmed BOURAMDANE</strong></p>
-      <p class="splash-tagline text-xs text-indigo-500 dark:text-indigo-400 mt-8 font-medium tracking-[0.2em] uppercase">Let's build the future...</p>
-      <!-- Loading Bar -->
-      <div class="splash-loader-wrap mt-12 mx-auto w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+      <p class="splash-subtitle text-base sm:text-xl text-gray-500 dark:text-gray-400 font-medium mb-1 sm:mb-2 tracking-wide">Ahmed—Stack Platform</p>
+      <p class="splash-credit text-xs sm:text-sm text-gray-400 dark:text-gray-500">by <strong>Ahmed BOURAMDANE</strong></p>
+      <p class="splash-tagline text-[10px] sm:text-xs text-indigo-500 dark:text-indigo-400 mt-4 sm:mt-8 font-medium tracking-[0.2em] uppercase">Let's build the future...</p>
+      <div class="splash-loader-wrap mt-6 sm:mt-12 mx-auto w-36 sm:w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
         <div id="splash-loader-bar" class="h-full bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500 rounded-full shadow-lg shadow-purple-500/30" style="width:0%;"></div>
       </div>
-      <!-- Skip Button -->
-      <button id="splash-skip-btn" class="mt-8 text-xs text-gray-400 dark:text-gray-600 hover:text-indigo-500 dark:hover:text-indigo-400 transition cursor-pointer" onclick="skipSplash()">Skip →</button>
+      <button id="splash-skip-btn" class="mt-4 sm:mt-8 text-xs text-gray-400 dark:text-gray-600 hover:text-indigo-500 dark:hover:text-indigo-400 transition cursor-pointer" onclick="skipSplash()">Skip →</button>
     </div>
   </div>
   <!-- Splash activation: runs immediately before any content renders -->
@@ -715,8 +712,8 @@
       }, 500);
     }
 
-    // Splash stays at least 5s, plus wait for page load
-    var MIN_DURATION = 5000;
+    // Splash stays at least 5s (3s on mobile), plus wait for page load
+    var MIN_DURATION = window.innerWidth < 768 ? 2500 : 5000;
     function onReady() {
       var elapsed = performance.now() - startTime;
       var remaining = Math.max(0, MIN_DURATION - elapsed);
@@ -1249,6 +1246,7 @@ function confirmLogout(event) {
 }
 </script>
 
+{% block footer %}
 <!-- Footer -->
 <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-10">
   <div class="max-w-7xl mx-auto px-4 py-6">
@@ -1257,6 +1255,7 @@ function confirmLogout(event) {
     </div>
   </div>
 </footer>
+{% endblock %}
 
 </body>
 </html>

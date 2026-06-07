@@ -13,7 +13,7 @@
   </a>
 
   <!-- Post Card -->
-  <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.id }}" data-images="{{ view_image_urls | tojson | safe }}">
+  <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-images="{{ view_image_urls | tojson | safe }}" data-user-reaction="{{ user_reaction or '' }}">
     <!-- Post Header -->
     <div class="p-6 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -26,10 +26,12 @@
         {% endif %}
         <div>
           <a href="{{ url_for('posts.user_posts', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
-            {{ post.author.username }}
+            {{ post.author.full_name or post.author.username }}
           </a>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            {{ post.created_at.strftime('%B %d, %Y at %H:%M') }}
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            <a href="{{ url_for('posts.user_posts', username=post.author.username) }}" class="hover:text-indigo-500">@{{ post.author.username }}</a>
+            <span class="mx-1">·</span>
+            {{ post.created_at.strftime('%b %d, %Y at %H:%M') }}
             {% if post.updated_at and post.updated_at != post.created_at %}
               <span class="italic">(edited)</span>
             {% endif %}
@@ -73,7 +75,7 @@
 
     <!-- Post Content -->
     <div class="px-6 pb-4">
-      <div id="post-content-{{ post.id }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-lg">{{ post.content }}</div>
+      <div id="post-content-{{ post.uuid }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-lg">{{ post.content }}</div>
     </div>
 
     <!-- Post Images -->
@@ -81,19 +83,19 @@
     {% if view_image_urls %}
       <div class="w-full post-images-container">
         {% if view_image_urls|length > 1 %}
-        <div class="splide" id="splide-view-{{ post.id }}">
+        <div class="splide" id="splide-view-{{ post.uuid }}">
           <div class="splide__track">
             <ul class="splide__list">
               {% for url in view_image_urls %}
               <li class="splide__slide">
-                <img src="{{ url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, {{ loop.index0 }})" loading="lazy">
+                <img src="{{ url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, {{ loop.index0 }})" loading="lazy">
               </li>
               {% endfor %}
             </ul>
           </div>
         </div>
         {% else %}
-        <img src="{{ view_single }}" alt="Post image" class="w-full max-h-[500px] object-cover cursor-pointer" onclick="openImageGallery({{ post.id }}, 0)">
+        <img src="{{ view_single }}" alt="Post image" class="w-full max-h-[500px] object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, 0)">
         {% endif %}
       </div>
     {% endif %}
@@ -102,7 +104,7 @@
     <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between">        <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
           <span class="flex items-center">
-            <span id="stats-like-{{ post.id }}" class="flex items-center">
+            <span id="stats-like-{{ post.uuid }}" class="flex items-center">
               {% set view_react_counts = post.reaction_counts %}
               {% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
               {% if post.total_reactions > 0 %}
@@ -125,7 +127,7 @@
           <span><i class="fas fa-comment mr-1"></i> <span id="comments-count-display">{{ post.comments | length }}</span> comments</span>
         </div>
       </div>
-      <div class="mt-1 text-xs reaction-bar" id="reaction-bar-{{ post.id }}">
+      <div class="mt-1 text-xs reaction-bar" id="reaction-bar-{{ post.uuid }}">
         {% for r, c in view_react_counts.items() %}
           {% if c > 0 %}
           <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">{{ emoji_map.get(r, r) }} {{ c }}</span>
@@ -147,18 +149,18 @@
         {% set btn_color = 'text-orange-500 font-semibold' %}
       {% endif %}
       <div class="flex items-center justify-between">
-        <div class="relative like-btn-wrap" onmouseenter="showReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
-          <div id="reactions-picker-{{ post.id }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions({{ post.id }})" onmouseleave="startHideReactions({{ post.id }})">
-            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost({{ post.id }}, 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
-            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost({{ post.id }}, 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
-            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost({{ post.id }}, 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
-            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost({{ post.id }}, 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
-            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost({{ post.id }}, 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
-            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost({{ post.id }}, 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+        <div class="relative like-btn-wrap" onmouseenter="showReactions('{{ post.uuid }}')" onmouseleave="startHideReactions('{{ post.uuid }}')">
+          <div id="reactions-picker-{{ post.uuid }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideReactions('{{ post.uuid }}')" onmouseleave="startHideReactions('{{ post.uuid }}')">
+            <button type="button" class="reaction-btn" data-reaction="like" onclick="reactToPost('{{ post.uuid }}', 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+            <button type="button" class="reaction-btn" data-reaction="love" onclick="reactToPost('{{ post.uuid }}', 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+            <button type="button" class="reaction-btn" data-reaction="haha" onclick="reactToPost('{{ post.uuid }}', 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+            <button type="button" class="reaction-btn" data-reaction="wow" onclick="reactToPost('{{ post.uuid }}', 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+            <button type="button" class="reaction-btn" data-reaction="sad" onclick="reactToPost('{{ post.uuid }}', 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+            <button type="button" class="reaction-btn" data-reaction="angry" onclick="reactToPost('{{ post.uuid }}', 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
           </div>
-          <button onclick="reactToPost({{ post.id }}, 'main', event)" id="like-btn-{{ post.id }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
-            {% if user_reaction %}<span class="text-lg leading-none" id="like-icon-{{ post.id }}">{{ emoji_map.get(user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="like-icon-{{ post.id }}"></i>{% endif %}
-            <span id="like-count-{{ post.id }}">{{ post.total_reactions }}</span>
+          <button onclick="reactToPost('{{ post.uuid }}', 'main', event)" id="like-btn-{{ post.uuid }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
+            {% if user_reaction %}<span class="text-lg leading-none" id="like-icon-{{ post.uuid }}">{{ emoji_map.get(user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="like-icon-{{ post.uuid }}"></i>{% endif %}
+            <span id="like-count-{{ post.uuid }}">{{ post.total_reactions }}</span>
           </button>
         </div>
         <button onclick="document.getElementById('comment-input').focus()" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
@@ -237,7 +239,7 @@
                 </div>
                 {% endif %}
                 <div id="view-reply-form-{{ comment.id }}" class="hidden mt-2 ml-8">
-                  <form onsubmit="addViewReply(event, {{ post.id }}, {{ comment.id }})" class="flex gap-2">
+                  <form onsubmit="addViewReply(event, {{ post.uuid }}, {{ comment.id }})" class="flex gap-2">
                     <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium"><i class="fas fa-paper-plane"></i></button>
                   </form>
@@ -249,7 +251,7 @@
       </div>
 
       <!-- Add Comment Form -->
-      <form id="comment-form" class="flex gap-3" onsubmit="return addViewComment(event, {{ post.id }})">
+      <form id="comment-form" class="flex gap-3" onsubmit="return addViewComment(event, {{ post.uuid }})">
         <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">
           {{ current_user.username[0] | upper }}
         </div>
@@ -275,7 +277,7 @@
       </button>
     </div>
     <form id="edit-post-form" onsubmit="saveEditedPost(event)">
-      <input type="hidden" id="edit-post-id" value="{{ post.id }}">
+      <input type="hidden" id="edit-post-id" value="{{ post.uuid }}">
       <div class="p-6">
         <textarea id="edit-post-content" name="content" rows="6" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
         <div id="edit-images-grid" class="mt-4 grid grid-cols-3 gap-3"></div>
@@ -427,7 +429,7 @@ var viewSocketConnected = false;
 
 viewSocket.on('connect', () => {
   viewSocketConnected = true;
-  viewSocket.emit('join_post', { post_id: {{ post.id }} });
+  viewSocket.emit('join_post', { post_id: {{ post.uuid }} });
 });
 
 viewSocket.on('connect_error', (error) => console.error('Socket connection error:', error.message));
@@ -441,7 +443,7 @@ viewSocket.on('post_reacted', (data) => {
   updateViewLikeUI(data.post_id, data);
 });
 viewSocket.on('new_comment', (data) => {
-  if (data.post_id !== {{ post.id }}) return;
+  if (data.post_id !== {{ post.uuid }}) return;
   const list = document.getElementById('comments-list');
   if (!list) return;
   if (document.getElementById(`comment-${data.comment_id}`)) return;
@@ -496,7 +498,7 @@ viewSocket.on('new_comment', (data) => {
 });
 
 viewSocket.on('comment_deleted', (data) => {
-  if (data.post_id !== {{ post.id }}) return;
+  if (data.post_id !== {{ post.uuid }}) return;
   const el = document.getElementById(`comment-${data.comment_id}`);
   if (el) {
     const thread = el.closest('.comment-thread');
@@ -508,17 +510,17 @@ viewSocket.on('comment_deleted', (data) => {
 });
 
 viewSocket.on('post_deleted', (data) => {
-  if (data.post_id === {{ post.id }}) { window.location.href = '/posts'; }
+  if (data.post_id === {{ post.uuid }}) { window.location.href = '/posts'; }
 });
 
 viewSocket.on('post_edited', (data) => {
-  if (data.post_id !== {{ post.id }}) return;
-  const el = document.getElementById(`post-content-{{ post.id }}`);
+  if (data.post_id !== {{ post.uuid }}) return;
+  const el = document.getElementById(`post-content-{{ post.uuid }}`);
   if (el) el.innerText = data.content;
 });
 
 viewSocket.on('comment_edited', (data) => {
-  if (data.post_id !== {{ post.id }}) return;
+  if (data.post_id !== {{ post.uuid }}) return;
   const el = document.getElementById(`comment-content-${data.comment_id}`);
   if (el) el.innerText = data.content;
 });
@@ -564,7 +566,7 @@ function cancelHideReactions(postId) {
 }
 
 function updateViewLikeUI(postId, data) {
-  if (postId !== {{ post.id }}) return;
+  if (postId !== {{ post.uuid }}) return;
   const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
   const likeBtn = document.getElementById(`like-btn-${postId}`);
   const countSpan = document.getElementById(`like-count-${postId}`);
@@ -574,6 +576,10 @@ function updateViewLikeUI(postId, data) {
   const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : (data.like_count || 0);
   if (countSpan) countSpan.textContent = total;
   if (likeDisplay) likeDisplay.textContent = total;
+  if (likeBtn) {
+    const cs = likeBtn.querySelector('span[id^="like-count-"]');
+    if (cs) cs.textContent = total;
+  }
   
   // Update reaction bar
   const reactBar = document.getElementById(`reaction-bar-${postId}`);
@@ -606,26 +612,30 @@ function updateViewLikeUI(postId, data) {
   }
 
   const currentUserId = {{ current_user.id }};
-  if (data.user && data.user.id === currentUserId || data.user_id === currentUserId) {
+  if ((data.user && data.user.id === currentUserId) || data.user_id === currentUserId) {
     const reaction = data.reaction || (data.liked ? 'like' : '');
     if (postEl) postEl.dataset.userReaction = reaction || '';
     if (likeBtn) {
-      const existingIcon = likeBtn.querySelector('i, span');
-      if (existingIcon) {
-        if (reaction) {
-          existingIcon.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + postId + '">' + (emojiMap[reaction] || '👍') + '</span>';
-          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
-          if (reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
-          else if (reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
-          else likeBtn.classList.add('text-yellow-500', 'font-semibold');
-        } else {
-          existingIcon.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + postId + '"></i>';
-          likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'font-semibold');
-          likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
-        }
-        const newIcon = document.getElementById(`like-icon-${postId}`);
-        if (newIcon) newIcon.classList.add('like-animate');
+      const oldIcon = document.getElementById(`like-icon-${postId}`);
+      if (oldIcon) oldIcon.remove();
+      const newIcon = document.createElement(reaction ? 'span' : 'i');
+      newIcon.id = `like-icon-${postId}`;
+      if (reaction) {
+        newIcon.className = 'text-lg leading-none';
+        newIcon.textContent = emojiMap[reaction] || '👍';
+      } else {
+        newIcon.className = 'far fa-thumbs-up';
       }
+      likeBtn.insertBefore(newIcon, likeBtn.firstChild);
+      likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
+      if (reaction) {
+        if (reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
+        else if (reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
+        else likeBtn.classList.add('text-yellow-500', 'font-semibold');
+      } else {
+        likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
+      }
+      newIcon.classList.add('like-animate');
     }
   }
 }
@@ -664,17 +674,21 @@ function reactToPost(postId, reaction, event) {
     const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
     
     const setReact = (r) => {
-      const ic = document.getElementById(`like-icon-${postId}`);
       const bt = document.getElementById(`like-btn-${postId}`);
       const pe = document.getElementById(`post-${postId}`);
-      if (ic) {
-        if (r) {
-          ic.outerHTML = '<span class="text-lg leading-none" id="like-icon-' + postId + '">' + (emojiMap[r] || '👍') + '</span>';
-        } else {
-          ic.outerHTML = '<i class="far fa-thumbs-up" id="like-icon-' + postId + '"></i>';
-        }
-      }
+      const oldIcon = document.getElementById(`like-icon-${postId}`);
       if (bt) {
+        if (oldIcon) oldIcon.remove();
+        const newIcon = document.createElement(r ? 'span' : 'i');
+        newIcon.id = `like-icon-${postId}`;
+        if (r) {
+          newIcon.className = 'text-lg leading-none';
+          newIcon.textContent = emojiMap[r] || '👍';
+        } else {
+          newIcon.className = 'far fa-thumbs-up';
+        }
+        bt.insertBefore(newIcon, bt.firstChild);
+        newIcon.classList.add('like-animate');
         bt.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
         if (r) {
           if (r === 'like') bt.classList.add('text-blue-500', 'font-semibold');
@@ -745,7 +759,7 @@ function reactToPost(postId, reaction, event) {
     if (viewSocket && viewSocket.connected) {
       viewSocket.emit('react_to_post', { post_id: postId, reaction: targetReaction }, handleResp);
     } else {
-      fetch('/posts/' + postId + '/react', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams({ reaction: targetReaction }) })
+      fetch('/posts/' + postId + '/react', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams({ reaction: targetReaction }) })
         .then(r => r.json()).then(handleResp).catch(() => setReact(prevReaction));
     }
   } catch(ex) { console.error('reactToPost error:', ex); }
@@ -765,6 +779,7 @@ function addViewComment(e, postId) {
     const body = parentId ? new URLSearchParams({ content, parent_id: parentId }) : new URLSearchParams({ content });
     fetch(`/posts/${postId}/comment`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
       body: body
     }).then(r => r.json()).then(data => {
@@ -851,6 +866,7 @@ function addViewReply(e, postId, parentId) {
   const doFetchReply = () => {
     fetch(`/posts/${postId}/comment`, {
       method: 'POST',
+      credentials: 'include',
       headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
       body: new URLSearchParams({ content, parent_id: parentId })
     }).then(r => r.json()).then(data => {
@@ -909,7 +925,7 @@ function deleteComment(commentId) {
     confirmButtonText: 'Yes, delete it!'
   }).then((result) => {
     if (result.isConfirmed) {
-      const postId = {{ post.id }};
+      const postId = {{ post.uuid }};
       const removeViewCommentEl = () => {
         const commentEl = document.getElementById(`comment-${commentId}`);
         if (commentEl) {
@@ -928,6 +944,7 @@ function deleteComment(commentId) {
       } else {
         fetch(`/posts/${postId}/comment/${commentId}/delete`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).then(r => r.json()).then(data => {
           if (data.success) { removeViewCommentEl(); }
@@ -949,7 +966,7 @@ function deletePost() {
     confirmButtonText: 'Yes, delete it!'
   }).then((result) => {
     if (result.isConfirmed) {
-      const postId = {{ post.id }};
+      const postId = {{ post.uuid }};
       if (viewSocket && viewSocket.connected) {
         viewSocket.emit('delete_post', { post_id: postId }, (response) => {
           if (response && response.success) { window.location.href = '/posts'; }
@@ -957,6 +974,7 @@ function deletePost() {
       } else {
         fetch(`/posts/${postId}/delete`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).then(r => r.json()).then(data => {
           if (data.success) { window.location.href = '/posts'; }
@@ -971,7 +989,7 @@ var viewEditLoadedImages = [];
 var viewEditNewImages = [];
 
 function openEditPostModal() {
-  const postContent = document.getElementById(`post-content-{{ post.id }}`).innerText;
+  const postContent = document.getElementById(`post-content-{{ post.uuid }}`).innerText;
   document.getElementById('edit-post-content').value = postContent;
   document.getElementById('edit-post-modal').classList.remove('hidden');
   closeAllMenus();
@@ -1030,7 +1048,7 @@ function handleEditImageSelect(input) {
 function saveEditedPost(e) {
   try { e.preventDefault(); } catch(ex) { return; }
   try {
-  const postId = {{ post.id }};
+  const postId = {{ post.uuid }};
   const content = document.getElementById('edit-post-content').value.trim();
   const visibility = document.getElementById('edit-post-visibility').value;
   
@@ -1045,6 +1063,7 @@ function saveEditedPost(e) {
     const allUrls = [...viewEditLoadedImages, ...newUrls];
     fetch(`/posts/${postId}/edit`, {
       method: 'POST',
+      credentials: 'include',
       headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
       body: new URLSearchParams({ content, image_urls: JSON.stringify(allUrls), visibility })
     })
@@ -1083,7 +1102,7 @@ function saveEditedPost(e) {
   if (viewEditNewImages.length > 0) {
     const fd = new FormData();
     viewEditNewImages.forEach(f => fd.append('images', f));
-    fetch('/upload_post_image', { method: 'POST', body: fd })
+    fetch('/upload_post_image', { method: 'POST', credentials: 'include', body: fd })
       .then(r => r.json())
       .then(res => { if (res.success) doSave(res.urls); else resetBtn(); })
       .catch(() => resetBtn());
@@ -1114,8 +1133,9 @@ function saveEditedComment(e) {
   
   if (!content) return;
   
-  fetch(`/posts/{{ post.id }}/comment/${commentId}/edit`, {
+  fetch(`/posts/{{ post.uuid }}/comment/${commentId}/edit`, {
     method: 'POST',
+    credentials: 'include',
     headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
     body: `content=${encodeURIComponent(content)}`
   })
@@ -1175,7 +1195,7 @@ function bookmarkPost() {
 function sharePost() {
   const url = window.location.href;
   if (navigator.share) {
-    navigator.share({ title: 'Check out this post!', text: document.getElementById(`post-content-{{ post.id }}`).innerText.substring(0, 100), url: url });
+    navigator.share({ title: 'Check out this post!', text: document.getElementById(`post-content-{{ post.uuid }}`).innerText.substring(0, 100), url: url });
   } else {
     copyPostLink();
   }
