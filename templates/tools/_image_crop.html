@@ -1,0 +1,381 @@
+    .ck-aspect-lock i { font-size:0.7rem; }
+  `;
+  document.head.appendChild(style);
+}
+
+function setupResizeOverlay(processImage, state) {
+  ensureImageToolStyles();
+  var origPreview = document.getElementById('orig-preview');
+  var previewContainer = document.getElementById('orig-panel');
+  if (!origPreview || !previewContainer) return;
+
+  var overlay = document.getElementById('resize-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'resize-overlay';
+    overlay.className = 'img-tool-overlay active';
+    overlay.innerHTML =
+      '<div class="img-tool-handle" data-handle="nw"></div>' +
+      '<div class="img-tool-handle" data-handle="n"></div>' +
+      '<div class="img-tool-handle" data-handle="ne"></div>' +
+      '<div class="img-tool-handle" data-handle="e"></div>' +
+      '<div class="img-tool-handle" data-handle="se"></div>' +
+      '<div class="img-tool-handle" data-handle="s"></div>' +
+      '<div class="img-tool-handle" data-handle="sw"></div>' +
+      '<div class="img-tool-handle" data-handle="w"></div>';
+    previewContainer.appendChild(overlay);
+  }
+
+  function imgOffset() {
+    var c = previewContainer.getBoundingClientRect();
+    var i = origPreview.getBoundingClientRect();
+    return { x: i.left - c.left, y: i.top - c.top, w: i.width, h: i.height };
+  }
+
+  function clamp(v, mn, mx) { return Math.min(Math.max(v, mn), mx); }
+
+  function updateOverlay() {
+    var off = imgOffset();
+    if (!off.w || !off.h || !origPreview.naturalWidth || !origPreview.naturalHeight) return;
+    var sx = off.w / origPreview.naturalWidth;
+    var sy = off.h / origPreview.naturalHeight;
+    state.dispW = off.w; state.dispH = off.h;
+    state.offX = off.x; state.offY = off.y;
+    state.boxW = clamp(state.width * sx, 30, off.w);
+    state.boxH = clamp(state.height * sy, 30, off.h);
+    overlay.style.left = off.x + 'px';
+    overlay.style.top = off.y + 'px';
+    overlay.style.width = state.boxW + 'px';
+    overlay.style.height = state.boxH + 'px';
+    var wEl = document.getElementById('resize-display-w');
+    var hEl = document.getElementById('resize-display-h');
+    if (wEl) wEl.textContent = state.width + ' px';
+    if (hEl) hEl.textContent = state.height + ' px';
+    var dimEl = document.getElementById('resize-dim');
+    if (dimEl) dimEl.textContent = state.width + '\u00d7' + state.height;
+  }
+
+  function setDim(w, h, doProcess) {
+    if (state.keepRatio && state.aspectRatio) {
+      h = Math.round(w / state.aspectRatio);
+    }
+    state.width = clamp(w, 1, 10000);
+    state.height = clamp(h, 1, 10000);
+    updateOverlay();
+    var wInp = document.getElementById('resize-w-input');
+    var hInp = document.getElementById('resize-h-input');
+    if (wInp) wInp.value = state.width;
+    if (hInp) hInp.value = state.height;
+    document.getElementById('resize-scale').value = Math.round((state.width / origPreview.naturalWidth) * 100);
+    var sv = document.getElementById('resize-scale-val');
+    if (sv) sv.textContent = document.getElementById('resize-scale').value;
+    if (doProcess !== false) {
+      clearTimeout(state.timer);
+      state.timer = setTimeout(processImage, 200);
+    }
+  }
+
+  function applyPreset(w, h) {
+    state.keepRatio = false;
+    var lockBtn = document.getElementById('resize-aspect-lock');
+    if (lockBtn) { lockBtn.classList.remove('active'); lockBtn.querySelector('i').className = 'fas fa-link'; }
+    setDim(w, h);
+  }
+
+  var dragSt = null;
+  function dragStart(e) {
+    if (!e.target.classList.contains('img-tool-handle')) return;
+    e.preventDefault();
+    var hdl = e.target.dataset.handle;
+    dragSt = {
+      type: hdl || 'move',
+      sx: e.clientX, sy: e.clientY,
+      sw: state.boxW, sh: state.boxH,
+      sl: parseFloat(overlay.style.left) || 0,
+      st: parseFloat(overlay.style.top) || 0,
+      ox: state.offX, oy: state.offY
+    };
+    overlay.classList.add('active');
+  }
+  function dragMove(e) {
+    if (!dragSt) return;
+    var dx = e.clientX - dragSt.sx, dy = e.clientY - dragSt.sy;
+    var dw = state.dispW, dh = state.dispH;
+    var bw = dragSt.sw, bh = dragSt.sh;
+    var t = dragSt.type;
+    if (t === 'move') {
+    } else {
+      if (t.indexOf('e') >= 0) bw = clamp(dragSt.sw + dx, 30, dw);
+      if (t.indexOf('w') >= 0) { bw = clamp(dragSt.sw - dx, 30, dw); overlay.style.left = clamp(dragSt.sl + dx, dragSt.ox, dragSt.ox + dw - bw) + 'px'; }
+      if (t.indexOf('s') >= 0) bh = clamp(dragSt.sh + dy, 30, dh);
+      if (t.indexOf('n') >= 0) { bh = clamp(dragSt.sh - dy, 30, dh); overlay.style.top = clamp(dragSt.st + dy, dragSt.oy, dragSt.oy + dh - bh) + 'px'; }
+    }
+    var sx = origPreview.naturalWidth / state.dispW;
+    var sy = origPreview.naturalHeight / state.dispH;
+    var nw = Math.round(bw * sx);
+    var nh = Math.round(bh * sy);
+    state.width = clamp(nw, 1, 10000);
+    state.height = clamp(nh, 1, 10000);
+    state.boxW = bw; state.boxH = bh;
+    overlay.style.width = bw + 'px'; overlay.style.height = bh + 'px';
+    var wInp = document.getElementById('resize-w-input');
+    var hInp = document.getElementById('resize-h-input');
+    if (wInp) wInp.value = state.width;
+    if (hInp) hInp.value = state.height;
+    document.getElementById('resize-scale').value = Math.round((state.width / origPreview.naturalWidth) * 100);
+    var sv = document.getElementById('resize-scale-val');
+    if (sv) sv.textContent = document.getElementById('resize-scale').value;
+    var wEl = document.getElementById('resize-display-w');
+    var hEl = document.getElementById('resize-display-h');
+    if (wEl) wEl.textContent = state.width + ' px';
+    if (hEl) hEl.textContent = state.height + ' px';
+    var dimEl = document.getElementById('resize-dim');
+    if (dimEl) dimEl.textContent = state.width + '\u00d7' + state.height;
+    clearTimeout(state.timer);
+    state.timer = setTimeout(processImage, 200);
+  }
+  function dragEnd() { if (dragSt) { dragSt = null; overlay.classList.remove('active'); } }
+
+  overlay.addEventListener('pointerdown', dragStart);
+  window.addEventListener('pointermove', dragMove);
+  window.addEventListener('pointerup', dragEnd);
+
+  origPreview.addEventListener('load', function() {
+    state.width = origPreview.naturalWidth;
+    state.height = origPreview.naturalHeight;
+    state.aspectRatio = origPreview.naturalWidth / origPreview.naturalHeight || 1;
+    var off = imgOffset();
+    state.dispW = off.w; state.dispH = off.h;
+    state.offX = off.x; state.offY = off.y;
+    updateOverlay();
+    var wInp = document.getElementById('resize-w-input');
+    var hInp = document.getElementById('resize-h-input');
+    if (wInp) { wInp.value = state.width; wInp.addEventListener('input', function() { setDim(parseInt(this.value) || 1, state.height); }); }
+    if (hInp) { hInp.value = state.height; hInp.addEventListener('input', function() { setDim(state.width, parseInt(this.value) || 1); }); }
+  });
+
+  document.getElementById('resize-scale').addEventListener('input', function() {
+    var pct = parseInt(this.value) || 100;
+    var w = Math.max(1, Math.round(origPreview.naturalWidth * pct / 100));
+    setDim(w, state.height);
+  });
+
+  var lockBtn = document.getElementById('resize-aspect-lock');
+  if (lockBtn) {
+    lockBtn.addEventListener('click', function() {
+      state.keepRatio = !state.keepRatio;
+      this.classList.toggle('active');
+      this.querySelector('i').className = state.keepRatio ? 'fas fa-link' : 'fas fa-unlink';
+      if (state.keepRatio) setDim(state.width, state.height);
+    });
+  }
+
+  document.querySelectorAll('[data-preset-w]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-preset-w]').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      applyPreset(parseInt(this.dataset.presetW), parseInt(this.dataset.presetH));
+    });
+  });
+
+  document.getElementById('resize-reset').addEventListener('click', function() {
+    state.keepRatio = true;
+    if (lockBtn) { lockBtn.classList.add('active'); lockBtn.querySelector('i').className = 'fas fa-link'; }
+    document.querySelectorAll('[data-preset-w]').forEach(function(b) { b.classList.remove('active'); });
+    setDim(origPreview.naturalWidth, origPreview.naturalHeight);
+  });
+}
+
+function setupCropOverlay(processImage, state) {
+  ensureImageToolStyles();
+  var origPreview = document.getElementById('orig-preview');
+  var previewContainer = document.getElementById('orig-panel');
+  if (!origPreview || !previewContainer) return;
+
+  var overlay = document.getElementById('crop-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'crop-overlay';
+    overlay.className = 'img-tool-overlay active';
+    overlay.innerHTML =
+      '<div class="img-tool-handle" data-handle="nw"></div>' +
+      '<div class="img-tool-handle" data-handle="n"></div>' +
+      '<div class="img-tool-handle" data-handle="ne"></div>' +
+      '<div class="img-tool-handle" data-handle="e"></div>' +
+      '<div class="img-tool-handle" data-handle="se"></div>' +
+      '<div class="img-tool-handle" data-handle="s"></div>' +
+      '<div class="img-tool-handle" data-handle="sw"></div>' +
+      '<div class="img-tool-handle" data-handle="w"></div>' +
+      '<div class="img-tool-grid"></div>' +
+      '<div class="img-tool-dim-label" id="crop-dim-label">200\u00d7200</div>';
+    previewContainer.appendChild(overlay);
+  }
+
+  function imgOffset() {
+    var c = previewContainer.getBoundingClientRect();
+    var i = origPreview.getBoundingClientRect();
+    return { x: i.left - c.left, y: i.top - c.top, w: i.width, h: i.height };
+  }
+
+  var dragState = null;
+
+  function clamp(v, mn, mx) { return Math.min(Math.max(v, mn), mx); }
+
+  function updateCropState() {
+    var off = imgOffset();
+    if (!off.w || !off.h || !origPreview.naturalWidth || !origPreview.naturalHeight) return;
+    state.dispW = off.w;
+    state.dispH = off.h;
+    state.offX = off.x;
+    state.offY = off.y;
+    var scaleX = origPreview.naturalWidth / off.w;
+    var scaleY = origPreview.naturalHeight / off.h;
+    state.left = Math.round((state.x - off.x) * scaleX);
+    state.top = Math.round((state.y - off.y) * scaleY);
+    state.right = Math.round((state.x - off.x + state.w) * scaleX);
+    state.bottom = Math.round((state.y - off.y + state.h) * scaleY);
+    if (document.getElementById('crop-display-left')) document.getElementById('crop-display-left').textContent = state.left;
+    if (document.getElementById('crop-display-top')) document.getElementById('crop-display-top').textContent = state.top;
+    if (document.getElementById('crop-display-right')) document.getElementById('crop-display-right').textContent = state.right;
+    if (document.getElementById('crop-display-bottom')) document.getElementById('crop-display-bottom').textContent = state.bottom;
+    var dimLabel = document.getElementById('crop-dim-label');
+    if (dimLabel) dimLabel.textContent = (state.right - state.left) + '\u00d7' + (state.bottom - state.top);
+  }
+
+  function updateOverlay() {
+    overlay.style.left = state.x + 'px';
+    overlay.style.top = state.y + 'px';
+    overlay.style.width = state.w + 'px';
+    overlay.style.height = state.h + 'px';
+    updateCropState();
+  }
+
+  function setAspectRatio(ar) {
+    if (!ar) { state.fixedRatio = null; return; }
+    state.fixedRatio = ar;
+    if (state.w > 0 && state.h > 0) {
+      var newH = state.w / ar;
+      if (newH <= state.dispH - (state.y - state.offY)) {
+        state.h = newH;
+      } else {
+        state.h = state.dispH - (state.y - state.offY);
+        state.w = state.h * ar;
+      }
+      updateOverlay();
+    }
+  }
+
+  function resetCrop(noProcess) {
+    var off = imgOffset();
+    state.offX = off.x; state.offY = off.y;
+    state.dispW = off.w; state.dispH = off.h;
+    state.x = off.x + 20;
+    state.y = off.y + 20;
+    state.w = Math.max(80, off.w - 40);
+    state.h = Math.max(80, off.h - 40);
+    if (state.fixedRatio) {
+      state.h = state.w / state.fixedRatio;
+      if (state.y - off.y + state.h > off.h) { state.h = off.h - (state.y - off.y); state.w = state.h * state.fixedRatio; }
+    }
+    updateOverlay();
+    if (!noProcess) processImage();
+  }
+
+  origPreview.addEventListener('load', function() {
+    var off = imgOffset();
+    state.dispW = off.w;
+    state.dispH = off.h;
+    state.naturalWidth = origPreview.naturalWidth;
+    state.naturalHeight = origPreview.naturalHeight;
+    state.offX = off.x;
+    state.offY = off.y;
+    if (!state.initialized) {
+      state.initialized = true;
+      resetCrop(true);
+    } else {
+      updateOverlay();
+    }
+  });
+
+  overlay.addEventListener('pointerdown', function(e) {
+    e.preventDefault();
+    var hdl = e.target.dataset.handle;
+    if (e.target.classList.contains('img-tool-grid')) hdl = 'move';
+    dragState = {
+      type: hdl || 'move',
+      sx: e.clientX, sy: e.clientY,
+      sl: state.x, st: state.y,
+      sw: state.w, sh: state.h
+    };
+    overlay.classList.add('active');
+  });
+
+  window.addEventListener('pointermove', function(e) {
+    if (!dragState) return;
+    var dx = e.clientX - dragState.sx, dy = e.clientY - dragState.sy;
+    var dw = state.dispW, dh = state.dispH;
+    var ox = state.offX, oy = state.offY;
+    var bw = dragState.sw, bh = dragState.sh, bl = dragState.sl, bt = dragState.st;
+    var t = dragState.type;
+
+    if (t === 'move') {
+      bl = clamp(dragState.sl + dx, ox, ox + dw - bw);
+      bt = clamp(dragState.st + dy, oy, oy + dh - bh);
+    } else {
+      if (t.indexOf('e') >= 0) bw = clamp(dragState.sw + dx, 30, ox + dw - bl);
+      if (t.indexOf('w') >= 0) { var maxW = ox + dw - dragState.sl; var newW = clamp(dragState.sw - dx, 30, maxW); bl = dragState.sl + (dragState.sw - newW); bw = newW; }
+      if (t.indexOf('s') >= 0) bh = clamp(dragState.sh + dy, 30, oy + dh - bt);
+      if (t.indexOf('n') >= 0) { var maxH = oy + dh - dragState.st; var newH = clamp(dragState.sh - dy, 30, maxH); bt = dragState.st + (dragState.sh - newH); bh = newH; }
+    }
+
+    if (state.fixedRatio && t !== 'move') {
+      var ar = state.fixedRatio;
+      if (t.indexOf('e') >= 0 || t.indexOf('w') >= 0) {
+        bh = bw / ar;
+        if (t.indexOf('n') >= 0) bt = (dragState.st + dragState.sh) - bh;
+      } else {
+        bw = bh * ar;
+        if (t.indexOf('w') >= 0) bl = (dragState.sl + dragState.sw) - bw;
+      }
+      if (bl + bw > ox + dw) { bw = ox + dw - bl; bh = bw / ar; }
+      if (bt + bh > oy + dh) { bh = oy + dh - bt; bw = bh * ar; }
+      if (bl < ox) { bl = ox; bw = Math.min(ox + dw - bl, dw); bh = bw / ar; }
+      if (bt < oy) { bt = oy; bh = Math.min(oy + dh - bt, dh); bw = bh * ar; }
+    }
+
+    state.x = clamp(bl, ox, ox + dw - bw);
+    state.y = clamp(bt, oy, oy + dh - bh);
+    state.w = clamp(bw, 30, ox + dw - state.x);
+    state.h = clamp(bh, 30, oy + dh - state.y);
+    updateOverlay();
+    clearTimeout(state.timer);
+    state.timer = setTimeout(processImage, 150);
+  });
+
+  window.addEventListener('pointerup', function() {
+    if (dragState) { dragState = null; overlay.classList.remove('active'); }
+  });
+
+  document.getElementById('crop-reset').addEventListener('click', resetCrop);
+
+  document.getElementById('crop-center').addEventListener('click', function() {
+    var off = imgOffset();
+    state.w = Math.max(80, off.w * 0.6);
+    state.h = Math.max(80, off.h * 0.6);
+    if (state.fixedRatio) { state.h = state.w / state.fixedRatio; }
+    state.x = Math.round(off.x + (off.w - state.w) / 2);
+    state.y = Math.round(off.y + (off.h - state.h) / 2);
+    updateOverlay();
+    processImage();
+  });
+
+  document.querySelectorAll('[data-crop-ar]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-crop-ar]').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      var ar = this.dataset.cropAr;
+      setAspectRatio(ar ? parseFloat(ar) : null);
+    });
+  });
+}
+

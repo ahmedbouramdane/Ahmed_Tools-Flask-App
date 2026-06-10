@@ -1,0 +1,73 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  TOOL DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+var TOOLS = {
+  image: [
+    { id:'canva', icon:'fas fa-paint-brush', title:'Design Editor', desc:'Drag-drop design editor like Canva — add text, shapes, images & export', color:'pink' },
+    { id:'remove-bg', icon:'fas fa-magic', title:'Remove BG', desc:'AI background removal — perfect for product photos & portraits', color:'indigo' },
+    { id:'compress', icon:'fas fa-compress-alt', title:'Compress', desc:'Compress PNG, JPG & WebP up to 80% smaller, quality preserved', color:'emerald' },
+    { id:'resize', icon:'fas fa-expand-arrows-alt', title:'Resize', desc:'Resize to exact dimensions with live preview & aspect ratio lock', color:'blue' },
+    { id:'convert', icon:'fas fa-exchange-alt', title:'Convert', desc:'Convert between PNG, JPEG, WebP, GIF & BMP in one click', color:'purple' },
+    { id:'enhance', icon:'fas fa-magic', title:'AI Enhance', desc:'Upscale images 2x-4x with AI super-resolution for sharper results', color:'rose' },
+    { id:'filters', icon:'fas fa-filter', title:'Filters', desc:'Apply grayscale, sepia, blur, sharpen & edge detect with live preview', color:'amber' },
+    { id:'crop', icon:'fas fa-crop-alt', title:'Crop', desc:'Crop with custom coordinates — left, top, right, bottom controls', color:'cyan' },
+    { id:'to-pdf', icon:'fas fa-file-pdf', title:'To PDF', desc:'Combine multiple images into a single PDF document instantly', color:'red' },
+  ],
+  pdf: [
+    { id:'merge', icon:'fas fa-object-group', title:'Merge', desc:'Merge two or more PDF files into one unified document', color:'indigo' },
+    { id:'split', icon:'fas fa-object-ungroup', title:'Split', desc:'Split a PDF into individual pages — extract specific pages', color:'emerald' },
+    { id:'protect', icon:'fas fa-lock', title:'Protect', desc:'Password-protect PDF files with AES encryption', color:'blue' },
+    { id:'unlock', icon:'fas fa-unlock', title:'Unlock', desc:'Remove password protection from PDF files with known password', color:'purple' },
+    { id:'watermark', icon:'fas fa-stamp', title:'Watermark', desc:'Add custom text watermarks (CONFIDENTIAL, DRAFT) to every page', color:'rose' },
+  ],
+  security: [
+    { id:'password-gen', icon:'fas fa-key', title:'Password Gen', desc:'Generate cryptographically strong passwords with custom options', color:'indigo' },
+    { id:'password-check', icon:'fas fa-shield-alt', title:'Check', desc:'Analyze password strength with real-time scoring & tips', color:'emerald' },
+    { id:'base64', icon:'fas fa-code', title:'Base64', desc:'Encode text to Base64 or decode back to readable text', color:'blue' },
+    { id:'hash', icon:'fas fa-hashtag', title:'Hash', desc:'Generate MD5, SHA-1, SHA-256 & SHA-512 hashes for any text', color:'purple' },
+    { id:'uuid', icon:'fas fa-fingerprint', title:'UUID', desc:'Create UUID v4, UUID v1 & cryptographically random tokens', color:'rose' },
+    { id:'encrypt', icon:'fas fa-shield', title:'Encrypt', desc:'Encrypt and decrypt text messages using Base64 encoding', color:'amber' },
+  ],
+  web: [
+    { id:'qr', icon:'fas fa-qrcode', title:'QR Code', desc:'Generate QR codes for URLs, WiFi, vCard, email & more with error correction & custom colors', color:'indigo' },
+    { id:'barcode', icon:'fas fa-barcode', title:'Barcode', desc:'Generate barcodes in 16 formats — Code128, EAN, UPC, Codabar, ITF & more', color:'emerald' },
+    { id:'url-shortener', icon:'fas fa-link', title:'URL Shorten', desc:'Shorten long URLs into clean, shareable links via is.gd', color:'blue' },
+    { id:'json', icon:'fas fa-brackets-curly', title:'JSON', desc:'Validate, format, minify, syntax-highlight & tree-view JSON', color:'purple' },
+    { id:'timestamp', icon:'fas fa-clock', title:'Timestamp', desc:'Convert Unix timestamps to human-readable dates and vice versa', color:'rose' },
+    { id:'color-convert', icon:'fas fa-palette', title:'Color Convert', desc:'Convert between Hex, RGB, HSL, HSV & named colors with live preview', color:'amber' },
+  ],
+  text: [
+    { id:'case', icon:'fas fa-font', title:'Case', desc:'Transform between UPPER, lower, Title, camelCase & more', color:'indigo' },
+    { id:'counter', icon:'fas fa-calculator', title:'Word Count', desc:'Count words, characters, sentences & lines in real-time', color:'emerald' },
+    { id:'dedupe', icon:'fas fa-eraser', title:'Dedupe', desc:'Remove duplicate lines while preserving original order', color:'blue' },
+    { id:'reverse', icon:'fas fa-arrow-right-arrow-left', title:'Reverse', desc:'Reverse text or sort lines alphabetically A-Z or Z-A', color:'purple' },
+    { id:'lorem', icon:'fas fa-paragraph', title:'Lorem', desc:'Generate placeholder text paragraphs for designs & mockups', color:'rose' },
+    { id:'clean', icon:'fas fa-broom', title:'Clean', desc:'Remove extra spaces, empty lines & special characters', color:'amber' },
+  ],
+  math: [
+    { id:'latex', icon:'fas fa-square-root-alt', title:'LaTeX', desc:'Write LaTeX with live KaTeX preview, symbol toolbar & PDF export', color:'indigo' },
+    { id:'calculator', icon:'fas fa-calculator', title:'Calculator', desc:'Casio-style scientific calculator with trig, log, memory & graphing', color:'emerald' },
+  ],
+  ai: [
+    { id:'summarize', icon:'fas fa-compress-arrows-alt', title:'Summarize', desc:'Condense long articles & reports into 3-5 concise sentences', color:'indigo' },
+    { id:'translate', icon:'fas fa-language', title:'Translate', desc:'Translate between 15 languages with real-time style options', color:'emerald' },
+    { id:'keywords', icon:'fas fa-tags', title:'Keywords', desc:'Extract the most important keywords and phrases from any text', color:'blue' },
+    { id:'rewrite', icon:'fas fa-feather-alt', title:'Rewrite', desc:'Rewrite sentences with improved clarity, tone & professionalism', color:'purple' },
+    { id:'caption', icon:'fas fa-camera', title:'Caption', desc:'Generate engaging social media captions for Instagram & more', color:'rose' },
+    { id:'grammar', icon:'fas fa-spell-check', title:'Grammar', desc:'Fix grammar, spelling & punctuation errors instantly', color:'amber' },
+  ],
+  dev: [
+    { id:'playground', icon:'fas fa-laptop-code', title:'Playground', desc:'Interactive HTML/CSS/JS sandbox with real-time preview, split editor, terminal & ZIP export', color:'emerald' },
+    { id:'html-preview', icon:'fas fa-eye', title:'HTML Preview', desc:'Live preview of HTML/CSS/JS snippets with auto-refresh & responsive iframe', color:'pink' },
+    { id:'regex', icon:'fas fa-code-branch', title:'Regex Tester', desc:'Test regular expressions in real-time with match highlighting & flags', color:'blue' },
+    { id:'sass', icon:'fab fa-sass', title:'Sass', desc:'Compile Sass/SCSS to CSS — supports variables, nesting & mixins', color:'pink' },
+    { id:'less', icon:'fab fa-less', title:'Less', desc:'Compile Less to CSS — supports variables, mixins & functions', color:'blue' },
+    { id:'pug', icon:'fab fa-pied-piper-alt', title:'Pug', desc:'Compile Pug/Jade templates to clean HTML with live preview', color:'purple' },
+    { id:'coffeescript', icon:'fas fa-coffee', title:'CoffeeScript', desc:'Compile CoffeeScript to JS — classes, arrows & more', color:'amber' },
+    { id:'typescript', icon:'fas fa-file-code', title:'TypeScript', desc:'Compile TypeScript to JS — interfaces, generics & types', color:'blue' },
+    { id:'jsx', icon:'fab fa-react', title:'JSX', desc:'Compile JSX/React to JS with Babel and live preview', color:'cyan' },
+    { id:'formatter', icon:'fas fa-indent', title:'Formatter', desc:'Beautify JSON, JavaScript, HTML, CSS & Python code instantly', color:'indigo' },
+  ]
+};
+

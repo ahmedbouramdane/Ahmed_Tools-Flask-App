@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Posts Feed - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}Posts Feed - Ahmed-Stack{% endblock %}
 
 {% macro render_post(post) %}
 {% set post_images = post.images if post.images else [] %}
@@ -13,7 +13,7 @@
 {% set user_reaction = post.user_reaction(current_user.id) %}
 {% set total_reacts = post.total_reactions %}
 {% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
-<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-images='{{ post_image_urls | tojson | safe }}' data-user-reaction="{{ user_reaction or '' }}">
+<article class="post-fade-in bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-images='{{ post_image_urls | tojson | safe }}' data-user-reaction="{{ user_reaction or '' }}">
   <div class="p-4 flex items-center justify-between">
     <div class="flex items-center gap-3">
       {% if post.author.avatar_url %}
@@ -41,21 +41,21 @@
       </div>
     </div>
     <div class="relative">
-      <button onclick="togglePostMenu({{ post.uuid }})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
+      <button onclick="togglePostMenu('{{ post.uuid }}')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
         <i class="fas fa-ellipsis-v"></i>
       </button>
       <div id="post-menu-{{ post.uuid }}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
         {% if post.user_id == current_user.id %}
-          <button onclick="openEditPostModal({{ post.uuid }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+          <button onclick="openEditPostModal('{{ post.uuid }}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
             <i class="fas fa-edit"></i> Edit
           </button>
         {% endif %}
-        <button onclick="copyPostLink({{ post.uuid }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+        <button onclick="copyPostLink('{{ post.uuid }}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
           <i class="fas fa-link"></i> Copy link
         </button>
         {% if post.user_id == current_user.id %}
           <hr class="border-gray-200 dark:border-gray-700 my-1">
-          <button onclick="deletePost({{ post.uuid }})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+          <button onclick="deletePost('{{ post.uuid }}')" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
             <i class="fas fa-trash"></i> Delete
           </button>
         {% endif %}
@@ -75,14 +75,18 @@
         <ul class="splide__list">
           {% for img in post_images %}
           <li class="splide__slide">
-            <img src="{{ img.image_url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, {{ loop.index0 }})" loading="lazy">
+            <div class="img-loading h-80">
+              <img src="{{ img.image_url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery('{{ post.uuid }}', {{ loop.index0 }})" loading="lazy" onload="this.parentElement.classList.add('loaded')">
+            </div>
           </li>
           {% endfor %}
         </ul>
       </div>
     </div>
     {% else %}
-    <img src="{{ single_img }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, 0)" loading="lazy">
+    <div class="img-loading">
+      <img src="{{ single_img }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery('{{ post.uuid }}', 0)" loading="lazy" onload="this.parentElement.classList.add('loaded')">
+    </div>
     {% endif %}
   </div>
   {% endif %}
@@ -144,10 +148,10 @@
           <span id="like-count-{{ post.uuid }}">{{ total_reacts }}</span>
         </button>
       </div>
-      <button onclick="toggleComments({{ post.uuid }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+      <button onclick="toggleComments('{{ post.uuid }}')" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
         <i class="far fa-comment"></i><span id="comment-btn-count-{{ post.uuid }}">{{ post.comments | length }}</span>
       </button>
-      <button onclick="sharePost({{ post.uuid }})" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+      <button onclick="sharePost('{{ post.uuid }}')" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
         <i class="far fa-share-square"></i><span>Share</span>
       </button>
     </div>
@@ -159,17 +163,17 @@
       {% for comment in top_comments %}
       <div class="comment-thread" data-comment-id="{{ comment.id }}">
         <div class="flex gap-2" id="comment-{{ comment.id }}">
-          <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">{{ comment.author.username[0] | upper }}</div>
+          {% if comment.author.avatar_url %}<img src="{{ comment.author.avatar_url }}" alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0">{% else %}<div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">{{ comment.author.username[0] | upper }}</div>{% endif %}
           <div class="flex-1 min-w-0">
             <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
               <div class="flex items-center justify-between">
                 <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ comment.author.username }}</span>
                 <div class="flex items-center gap-1">
                   {% if comment.user_id == current_user.id %}
-                  <button onclick="editComment({{ comment.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs" title="Edit"><i class="fas fa-pen"></i></button>
+                  <button onclick="editComment({{ comment.id }}, '{{ post.uuid }}')" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs" title="Edit"><i class="fas fa-pen"></i></button>
                   {% endif %}
                   {% if comment.user_id == current_user.id or post.user_id == current_user.id %}
-                  <button onclick="deleteComment({{ comment.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs" title="Delete"><i class="fas fa-times"></i></button>
+                  <button onclick="deleteComment({{ comment.id }}, '{{ post.uuid }}')" class="text-gray-400 hover:text-red-500 p-0.5 text-xs" title="Delete"><i class="fas fa-times"></i></button>
                   {% endif %}
                 </div>
               </div>
@@ -177,22 +181,22 @@
             </div>
             <div class="flex items-center gap-3 mt-0.5 ml-1">
               <span class="text-xs text-gray-400 dark:text-gray-500">{{ comment.created_at.strftime('%H:%M') }}</span>
-              <button onclick="openReply({{ comment.id }}, {{ post.uuid }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+              <button onclick="openReply({{ comment.id }}, '{{ post.uuid }}')" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
             </div>
             <div class="ml-5 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3 comment-replies-container">
               {% for reply in comment.replies %}
               <div class="flex gap-2" id="comment-{{ reply.id }}">
-                <div class="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{{ reply.author.username[0] | upper }}</div>
+                {% if reply.author.avatar_url %}<img src="{{ reply.author.avatar_url }}" alt="" class="w-6 h-6 rounded-full object-cover flex-shrink-0">{% else %}<div class="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{{ reply.author.username[0] | upper }}</div>{% endif %}
                 <div class="flex-1 min-w-0">
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
                     <div class="flex items-center justify-between">
                       <span class="font-semibold text-xs text-gray-800 dark:text-white">{{ reply.author.username }}</span>
                       <div class="flex items-center gap-1">
                         {% if reply.user_id == current_user.id %}
-                        <button onclick="editComment({{ reply.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>
+                        <button onclick="editComment({{ reply.id }}, '{{ post.uuid }}')" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>
                         {% endif %}
                         {% if reply.user_id == current_user.id or post.user_id == current_user.id %}
-                        <button onclick="deleteComment({{ reply.id }}, {{ post.uuid }})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                        <button onclick="deleteComment({{ reply.id }}, '{{ post.uuid }}')" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
                         {% endif %}
                       </div>
                     </div>
@@ -200,14 +204,14 @@
                   </div>
                   <div class="flex items-center gap-3 mt-0.5 ml-1">
                     <span class="text-xs text-gray-400 dark:text-gray-500">{{ reply.created_at.strftime('%H:%M') }}</span>
-                    <button onclick="openReply({{ reply.id }}, {{ post.uuid }})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                    <button onclick="openReply({{ reply.id }}, '{{ post.uuid }}')" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
                   </div>
                 </div>
               </div>
               {% endfor %}
             </div>
             <div id="reply-form-{{ comment.id }}" class="hidden mt-2 ml-5">
-              <form onsubmit="addReply(event, {{ post.uuid }}, {{ comment.id }})" class="flex gap-2">
+              <form onsubmit="addReply(event, '{{ post.uuid }}', {{ comment.id }})" class="flex gap-2">
                 <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
                 <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium transition"><i class="fas fa-paper-plane"></i></button>
               </form>
@@ -219,7 +223,7 @@
       <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-{{ post.uuid }}">No comments yet.</p>
       {% endfor %}
     </div>
-    <form onsubmit="addComment(event, {{ post.uuid }})" class="flex gap-2">
+    <form onsubmit="addComment(event, '{{ post.uuid }}')" class="flex gap-2">
       <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
       <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
     </form>
@@ -381,6 +385,9 @@
     <a href="{{ url_for('posts.explore') }}" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 text-sm font-medium">Explore <i class="fas fa-compass ml-1"></i></a>
   </div>
 
+  <div class="relative">
+  <!-- Content (always visible, behind skeleton overlay) -->
+  <div>
   <!-- Posts Container -->
   <div class="space-y-6" id="posts-container">
     {% if posts.items %}
@@ -388,6 +395,12 @@
     {% else %}
       <div class="text-center py-12"><i class="fas fa-newspaper text-5xl text-gray-300 dark:text-gray-600 mb-4"></i><p class="text-gray-500 dark:text-gray-400 text-lg">No posts yet. Be the first to share something!</p></div>
     {% endif %}
+  </div>
+
+  <!-- Skeleton loading placeholder -->
+  <div id="skeleton-container" class="hidden space-y-4">
+    <div class="skeleton-card"><div class="flex items-center gap-3 mb-4"><div class="skeleton skeleton-avatar"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-image mt-4"></div><div class="flex gap-3 mt-4"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-btn"></div></div></div>
+    <div class="skeleton-card"><div class="flex items-center gap-3 mb-4"><div class="skeleton skeleton-avatar"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-text" style="width:50%"></div><div class="flex gap-3 mt-4"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-btn"></div></div></div>
   </div>
 
   <div id="load-more-container" class="flex justify-center mt-8 mb-8">
@@ -402,7 +415,15 @@
   </div>
   <input type="hidden" id="current-page" value="{{ posts.page }}">
   <input type="hidden" id="has-next" value="{{ 'true' if posts.has_next else 'false' }}">
-</div>
+  </div>
+
+  <!-- Initial page skeleton overlay (auto-fades via CSS) -->
+  <div id="page-skeleton" class="page-skeleton space-y-4">
+    <div class="skeleton-card"><div class="flex items-center gap-3 mb-4"><div class="skeleton skeleton-avatar"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-image mt-4"></div><div class="flex gap-3 mt-4"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-btn"></div></div></div>
+    <div class="skeleton-card"><div class="flex items-center gap-3 mb-4"><div class="skeleton skeleton-avatar"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-text" style="width:50%"></div><div class="flex gap-3 mt-4"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-btn"></div></div></div>
+    <div class="skeleton-card"><div class="flex items-center gap-3 mb-4"><div class="skeleton skeleton-avatar"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-image mt-4"></div><div class="flex gap-3 mt-4"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-btn"></div></div></div>
+  </div>
+  </div>
 
 <!-- Edit Post Modal -->
 <div id="edit-post-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
@@ -506,19 +527,37 @@ socket.on('post_liked', (data) => {
     if (likeBtn) {
       const countSpan = document.getElementById(`like-count-${data.post_id}`);
       if (countSpan) countSpan.textContent = total;
-      const oldIcon = document.getElementById(`like-icon-${data.post_id}`);
-      if (oldIcon) oldIcon.remove();
-      const newIcon = document.createElement(data.liked ? 'span' : 'i');
-      newIcon.id = `like-icon-${data.post_id}`;
-      if (data.liked) {
-        newIcon.className = 'text-lg leading-none';
-        newIcon.textContent = '👍';
-      } else {
-        newIcon.className = 'far fa-thumbs-up';
+      let icon = document.getElementById(`like-icon-${data.post_id}`);
+      const liked = data.liked;
+      if (!icon) {
+        icon = document.createElement(liked ? 'span' : 'i');
+        icon.id = `like-icon-${data.post_id}`;
+        likeBtn.insertBefore(icon, likeBtn.firstChild);
       }
-      likeBtn.insertBefore(newIcon, likeBtn.firstChild);
-      newIcon.classList.add('like-animate');
-      if (data.liked) {
+      if (liked) {
+        if (icon.tagName !== 'SPAN') {
+          const span = document.createElement('span');
+          span.id = `like-icon-${data.post_id}`;
+          span.className = 'text-lg leading-none';
+          span.textContent = '👍';
+          likeBtn.replaceChild(span, icon);
+          icon = span;
+        } else {
+          icon.textContent = '👍';
+        }
+      } else {
+        if (icon.tagName !== 'I') {
+          const i = document.createElement('i');
+          i.id = `like-icon-${data.post_id}`;
+          i.className = 'far fa-thumbs-up';
+          likeBtn.replaceChild(i, icon);
+          icon = i;
+        }
+      }
+      icon.classList.remove('like-animate');
+      void icon.offsetWidth;
+      icon.classList.add('like-animate');
+      if (liked) {
         likeBtn.classList.add('text-blue-500', 'font-semibold');
         likeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
       } else {
@@ -547,14 +586,15 @@ socket.on('new_comment', (data) => {
   if (document.getElementById(`comment-${data.comment_id}`)) return;
   const currentUserId = {{ current_user.id }};
   const authorName = data.author ? data.author.username : '{{ current_user.username }}';
+  const authorAvatar = data.author && data.author.avatar_url ? data.author.avatar_url : '';
   const initial = authorName.charAt(0).toUpperCase();
   const isOwn = data.author && data.author.id === currentUserId;
-  const editBtn = isOwn ? `<button onclick="editComment(${data.comment_id}, ${data.post_id})" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>` : '';
-  const deleteBtn = isOwn ? `<button onclick="deleteComment(${data.comment_id}, ${data.post_id})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>` : '';
+  const editBtn = isOwn ? `<button onclick="editComment(${data.comment_id}, '${data.post_id}')" class="text-gray-400 hover:text-indigo-500 p-0.5 text-xs"><i class="fas fa-pen"></i></button>` : '';
+  const deleteBtn = isOwn ? `<button onclick="deleteComment(${data.comment_id}, '${data.post_id}')" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>` : '';
 
   const commentHtml = `
     <div class="flex gap-2" id="comment-${data.comment_id}">
-      <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+      ${authorAvatar ? `<img src="${authorAvatar}" alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0">` : `<div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">${initial}</div>`}
       <div class="flex-1 min-w-0">
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
           <div class="flex items-center justify-between">
@@ -565,10 +605,10 @@ socket.on('new_comment', (data) => {
         </div>
         <div class="flex items-center gap-3 mt-0.5 ml-1">
           <span class="text-xs text-gray-400 dark:text-gray-500">${data.created_at || 'just now'}</span>
-          <button onclick="openReply(${data.comment_id}, ${data.post_id})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+          <button onclick="openReply(${data.comment_id}, '${data.post_id}')" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
         </div>
         <div id="reply-form-${data.comment_id}" class="hidden mt-2 ml-5">
-          <form onsubmit="addReply(event, ${data.post_id}, ${data.comment_id})" class="flex gap-2">
+          <form onsubmit="addReply(event, '${data.post_id}', ${data.comment_id})" class="flex gap-2">
             <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium transition"><i class="fas fa-paper-plane"></i></button>
           </form>
@@ -694,26 +734,44 @@ socket.on('post_reacted', (data) => {
   if ((data.user && data.user.id === currentUserId) || data.user_id === currentUserId) {
     if (postEl) postEl.dataset.userReaction = data.reaction || '';
     if (likeBtn) {
-      const oldIcon = document.getElementById(`like-icon-${data.post_id}`);
-      if (oldIcon) oldIcon.remove();
-      const newIcon = document.createElement(data.reaction ? 'span' : 'i');
-      newIcon.id = `like-icon-${data.post_id}`;
-      if (data.reaction) {
-        newIcon.className = 'text-lg leading-none';
-        newIcon.textContent = emojiMap[data.reaction] || '👍';
-      } else {
-        newIcon.className = 'far fa-thumbs-up';
+      let icon = document.getElementById(`like-icon-${data.post_id}`);
+      const r = data.reaction;
+      if (!icon) {
+        icon = document.createElement(r ? 'span' : 'i');
+        icon.id = `like-icon-${data.post_id}`;
+        likeBtn.insertBefore(icon, likeBtn.firstChild);
       }
-      likeBtn.insertBefore(newIcon, likeBtn.firstChild);
+      if (r) {
+        if (icon.tagName !== 'SPAN') {
+          const span = document.createElement('span');
+          span.id = `like-icon-${data.post_id}`;
+          span.className = 'text-lg leading-none';
+          span.textContent = emojiMap[r] || '👍';
+          likeBtn.replaceChild(span, icon);
+          icon = span;
+        } else {
+          icon.textContent = emojiMap[r] || '👍';
+        }
+      } else {
+        if (icon.tagName !== 'I') {
+          const i = document.createElement('i');
+          i.id = `like-icon-${data.post_id}`;
+          i.className = 'far fa-thumbs-up';
+          likeBtn.replaceChild(i, icon);
+          icon = i;
+        }
+      }
+      icon.classList.remove('like-animate');
+      void icon.offsetWidth;
+      icon.classList.add('like-animate');
       likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
-      if (data.reaction) {
-        if (data.reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
-        else if (data.reaction === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
+      if (r) {
+        if (r === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
+        else if (r === 'love') likeBtn.classList.add('text-red-500', 'font-semibold');
         else likeBtn.classList.add('text-yellow-500', 'font-semibold');
       } else {
         likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
       }
-      newIcon.classList.add('like-animate');
     }
   }
   const reactBar = document.querySelector(`[data-reaction-bar="${data.post_id}"]`);
@@ -750,7 +808,7 @@ function renderPostHTML(data) {
   const imageHtml = data.image_urls && data.image_urls.length > 0 ? renderImagesHTML(data.post_id, data.image_urls) : (data.image_url ? renderImagesHTML(data.post_id, [data.image_url]) : '');
   const time = data.created_at || new Date().toLocaleString();
   const imagesJson = data.image_urls ? JSON.stringify(data.image_urls).replace(/'/g, "&#39;") : '[]';
-  return `<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${data.post_id}" data-images='${imagesJson}' data-user-reaction="">
+  return `<article class="post-fade-in bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${data.post_id}" data-images='${imagesJson}' data-user-reaction="">
     <div class="p-4 flex items-center justify-between">
       <div class="flex items-center gap-3">${avatar}
         <div>
@@ -759,11 +817,11 @@ function renderPostHTML(data) {
         </div>
       </div>
       <div class="relative">
-        <button onclick="togglePostMenu(${data.post_id})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition"><i class="fas fa-ellipsis-v"></i></button>
+        <button onclick="togglePostMenu('${data.post_id}')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition"><i class="fas fa-ellipsis-v"></i></button>
         <div id="post-menu-${data.post_id}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
-          ${isOwner ? `<button onclick="openEditPostModal(${data.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-edit"></i> Edit</button>` : ''}
-          <button onclick="copyPostLink(${data.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-link"></i> Copy link</button>
-          ${isOwner ? `<hr class="border-gray-200 dark:border-gray-700 my-1"><button onclick="deletePost(${data.post_id})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-trash"></i> Delete</button>` : ''}
+          ${isOwner ? `<button onclick="openEditPostModal('${data.post_id}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-edit"></i> Edit</button>` : ''}
+          <button onclick="copyPostLink('${data.post_id}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-link"></i> Copy link</button>
+          ${isOwner ? `<hr class="border-gray-200 dark:border-gray-700 my-1"><button onclick="deletePost('${data.post_id}')" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-trash"></i> Delete</button>` : ''}
         </div>
       </div>
     </div>
@@ -797,7 +855,7 @@ function renderPostHTML(data) {
       <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-${data.post_id}">
         <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-${data.post_id}">No comments yet.</p>
       </div>
-      <form onsubmit="addComment(event, ${data.post_id})" class="flex gap-2">
+      <form onsubmit="addComment(event, '${data.post_id}')" class="flex gap-2">
         <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
       </form>
@@ -808,10 +866,10 @@ function renderPostHTML(data) {
 function renderImagesHTML(postId, urls) {
   if (!urls || urls.length === 0) return '';
   if (urls.length === 1) {
-    return `<div class="w-full"><img src="${urls[0]}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery(${postId}, 0)" loading="lazy"></div>`;
+    return `<div class="w-full"><div class="img-loading"><img src="${urls[0]}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery('${postId}', 0)" loading="lazy" onload="this.parentElement.classList.add('loaded')"></div></div>`;
   }
   let slides = urls.map((u, i) =>
-    `<li class="splide__slide"><img src="${u}" alt="Post image ${i+1}" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery(${postId}, ${i})" loading="lazy"></li>`
+    `<li class="splide__slide"><div class="img-loading h-80"><img src="${u}" alt="Post image ${i+1}" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery('${postId}', ${i})" loading="lazy" onload="this.parentElement.classList.add('loaded')"></div></li>`
   ).join('');
   return `<div class="w-full post-images-container" data-post-id="${postId}"><div class="splide" id="splide-${postId}"><div class="splide__track"><ul class="splide__list">${slides}</ul></div></div></div>`;
 }
@@ -990,13 +1048,13 @@ function reactToPost(postId, reaction, event) {
   try {
     cancelHideReactions(postId);
     startHideReactions(postId);
-    
+
     const postEl = document.getElementById(`post-${postId}`);
     const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
-    
+
     let targetReaction = reaction;
     let optimisticReaction = reaction;
-    
+
     if (reaction === 'main') {
       if (prevReaction) {
         targetReaction = prevReaction;
@@ -1012,27 +1070,46 @@ function reactToPost(postId, reaction, event) {
         optimisticReaction = reaction;
       }
     }
-    
-    const icon = document.getElementById(`like-icon-${postId}`);
-    if (icon) icon.classList.add('like-animate');
+
     const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
-    
+
+    // Remove old like-animate from stale icon if any
+    const oldIcon = document.getElementById(`like-icon-${postId}`);
+    if (oldIcon) oldIcon.classList.remove('like-animate');
+
     const setReact = (r) => {
       const bt = document.getElementById(`like-btn-${postId}`);
       const pe = document.getElementById(`post-${postId}`);
-      const oldIcon = document.getElementById(`like-icon-${postId}`);
+      let icon = document.getElementById(`like-icon-${postId}`);
       if (bt) {
-        if (oldIcon) oldIcon.remove();
-        const newIcon = document.createElement(r ? 'span' : 'i');
-        newIcon.id = `like-icon-${postId}`;
-        if (r) {
-          newIcon.className = 'text-lg leading-none';
-          newIcon.textContent = emojiMap[r] || '👍';
-        } else {
-          newIcon.className = 'far fa-thumbs-up';
+        if (!icon) {
+          icon = document.createElement(r ? 'span' : 'i');
+          icon.id = `like-icon-${postId}`;
+          bt.insertBefore(icon, bt.firstChild);
         }
-        bt.insertBefore(newIcon, bt.firstChild);
-        newIcon.classList.add('like-animate');
+        if (r) {
+          if (icon.tagName !== 'SPAN') {
+            const span = document.createElement('span');
+            span.id = `like-icon-${postId}`;
+            span.className = 'text-lg leading-none';
+            span.textContent = emojiMap[r] || '👍';
+            bt.replaceChild(span, icon);
+            icon = span;
+          } else {
+            icon.textContent = emojiMap[r] || '👍';
+          }
+        } else {
+          if (icon.tagName !== 'I') {
+            const i = document.createElement('i');
+            i.id = `like-icon-${postId}`;
+            i.className = 'far fa-thumbs-up';
+            bt.replaceChild(i, icon);
+            icon = i;
+          }
+        }
+        icon.classList.remove('like-animate');
+        void icon.offsetWidth;
+        icon.classList.add('like-animate');
         bt.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
         if (r) {
           if (r === 'like') bt.classList.add('text-blue-500', 'font-semibold');
@@ -1044,7 +1121,7 @@ function reactToPost(postId, reaction, event) {
       }
       if (pe) pe.dataset.userReaction = r || '';
     };
-    
+
     const setCounts = (counts) => {
       const ct = document.getElementById(`like-count-${postId}`);
       const se = document.getElementById(`stats-like-${postId}`);
@@ -1073,27 +1150,20 @@ function reactToPost(postId, reaction, event) {
         rb.innerHTML = Object.entries(counts).map(([r, c]) => c > 0 ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400" data-reaction-count="' + postId + '-' + r + '">' + (emojiMap[r] || r) + ' ' + c + '</span>' : '').filter(Boolean).join(' ');
       }
     };
-    
+
     setReact(optimisticReaction);
-    
-    // Optimistic count adjustment
-    const currentCountEl = document.getElementById(`like-count-${postId}`);
-    if (currentCountEl) {
-      let currentCount = parseInt(currentCountEl.textContent) || 0;
-      if (prevReaction && !optimisticReaction) {
-        currentCount = Math.max(0, currentCount - 1);
-      } else if (!prevReaction && optimisticReaction) {
-        currentCount = currentCount + 1;
-      }
-      currentCountEl.textContent = currentCount;
-    }
-    
+
+    // Server response handler
     const handleResp = (resp) => {
       if (!resp || !resp.success) { setReact(prevReaction); return; }
-      setReact(resp.removed ? '' : (resp.reaction || ''));
-      setCounts(resp.counts);
+      // Socket path: the post_reacted listener syncs the UI for all clients
+      // HTTP fallback: update UI here (no socket listener available)
+      if (!(socket && socket.connected)) {
+        setReact(resp.removed ? '' : (resp.reaction || ''));
+        setCounts(resp.counts);
+      }
     };
-    
+
     if (socket && socket.connected) {
       socket.emit('react_to_post', { post_id: postId, reaction: targetReaction }, handleResp);
     } else {
@@ -1138,29 +1208,31 @@ function addComment(e, postId) {
           if (list) {
             const noComments = document.getElementById(`no-comments-${postId}`);
             if (noComments) noComments.remove();
-            const initial = (data.comment.author ? data.comment.author.username : '{{ current_user.username }}').charAt(0).toUpperCase();
+            const author = data.comment.author || {};
+            const initial = (author.username || '{{ current_user.username }}').charAt(0).toUpperCase();
+            const avatar = author.avatar_url ? `<img src="${author.avatar_url}" alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0">` : `<div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">${initial}</div>`;
             const wrapper = document.createElement('div');
             wrapper.className = 'comment-thread';
             wrapper.dataset.commentId = data.comment_id;
             wrapper.innerHTML = `
               <div class="flex gap-2" id="comment-${data.comment_id}">
-                <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+                ${avatar}
                 <div class="flex-1 min-w-0">
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
                     <div class="flex items-center justify-between">
-                      <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(data.comment.author ? data.comment.author.username : '{{ current_user.username }}')}</span>
+                      <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(author.username || '{{ current_user.username }}')}</span>
                       <div class="flex items-center gap-1">
-                        <button onclick="deleteComment(${data.comment_id}, ${postId})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                        <button onclick="deleteComment(${data.comment_id}, '${postId}')" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
                       </div>
                     </div>
                     <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-${data.comment_id}">${escapeHtml(data.comment.content)}</p>
                   </div>
                   <div class="flex items-center gap-3 mt-0.5 ml-1">
                     <span class="text-xs text-gray-400 dark:text-gray-500">${data.comment.created_at || 'just now'}</span>
-                    <button onclick="openReply(${data.comment_id}, ${postId})" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
+                    <button onclick="openReply(${data.comment_id}, '${postId}')" class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 font-medium">Reply</button>
                   </div>
                   <div id="reply-form-${data.comment_id}" class="hidden mt-2 ml-5">
-                    <form onsubmit="addReply(event, ${postId}, ${data.comment_id})" class="flex gap-2">
+                    <form onsubmit="addReply(event, '${postId}', ${data.comment_id})" class="flex gap-2">
                       <input type="text" name="content" placeholder="Write a reply..." class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
                       <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full text-xs font-medium"><i class="fas fa-paper-plane"></i></button>
                     </form>
@@ -1223,17 +1295,18 @@ function addReply(e, postId, parentId) {
           if (parentThread) {
             const replyContainer = parentThread.querySelector('.comment-replies-container');
             if (replyContainer) {
-              const authorName = data.comment.author ? data.comment.author.username : '{{ current_user.username }}';
-              const initial = authorName.charAt(0).toUpperCase();
+              const author = data.comment.author || {};
+              const authorName = author.username || '{{ current_user.username }}';
+              const replyAvatar = author.avatar_url ? `<img src="${author.avatar_url}" alt="" class="w-6 h-6 rounded-full object-cover flex-shrink-0">` : `<div class="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">${authorName.charAt(0).toUpperCase()}</div>`;
               const replyHtml = `
                 <div class="flex gap-2" id="comment-${data.comment_id}">
-                  <div class="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">${initial}</div>
+                  ${replyAvatar}
                   <div class="flex-1 min-w-0">
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
                       <div class="flex items-center justify-between">
                         <span class="font-semibold text-xs text-gray-800 dark:text-white">${escapeHtml(authorName)}</span>
                         <div class="flex items-center gap-1">
-                          <button onclick="deleteComment(${data.comment_id}, ${postId})" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
+                          <button onclick="deleteComment(${data.comment_id}, '${postId}')" class="text-gray-400 hover:text-red-500 p-0.5 text-xs"><i class="fas fa-times"></i></button>
                         </div>
                       </div>
                       <p class="text-gray-700 dark:text-gray-300 text-sm" id="comment-content-${data.comment_id}">${escapeHtml(data.comment.content)}</p>
@@ -1475,71 +1548,6 @@ function saveEditedPost(e) {
 }
 
 // ===== Splide Init =====
-var currentGalleryIndex = 0;
-var currentGalleryPostId = null;
-
-function openImageGallery(postId, index) {
-  currentGalleryPostId = postId;
-  currentGalleryIndex = index;
-  const postEl = document.getElementById(`post-${postId}`);
-  if (!postEl) return;
-  let images = [];
-  try { images = JSON.parse(postEl.dataset.images || '[]'); } catch(e) {}
-  if (images.length === 0) {
-    const imgs = postEl.querySelectorAll('.post-images-container img, .splide__slide img');
-    images = Array.from(imgs).map(img => img.getAttribute('src')).filter(Boolean);
-  }
-  if (images.length === 0) return;
-  showGalleryModal(images, index);
-}
-
-function showGalleryModal(images, startIndex) {
-  let currentIdx = startIndex;
-  const overlay = document.createElement('div');
-  overlay.className = 'fixed inset-0 bg-black/90 z-[100] flex items-center justify-center';
-  overlay.innerHTML = `
-    <button class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300 z-10" onclick="this.closest('.fixed').remove()">&times;</button>
-    <button class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300 z-10 ${images.length <= 1 ? 'hidden' : ''}" onclick="galleryNav(-1)">&lsaquo;</button>
-    <button class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300 z-10 ${images.length <= 1 ? 'hidden' : ''}" onclick="galleryNav(1)">&rsaquo;</button>
-    <div class="text-white text-sm absolute bottom-4 left-1/2 -translate-x-1/2"><span id="gallery-counter">${startIndex + 1}</span> / ${images.length}</div>
-    <img id="gallery-img" src="${images[startIndex]}" class="max-w-[90vw] max-h-[90vh] object-contain">
-  `;
-  overlay._images = images;
-  overlay._index = startIndex;
-  document.body.appendChild(overlay);
-  document.addEventListener('keydown', galleryKeyHandler);
-}
-
-function galleryNav(dir) {
-  const overlay = document.querySelector('.fixed.inset-0.bg-black\\/90');
-  if (!overlay) return;
-  const images = overlay._images || [];
-  let idx = overlay._index + dir;
-  if (idx < 0) idx = images.length - 1;
-  if (idx >= images.length) idx = 0;
-  overlay._index = idx;
-  const img = document.getElementById('gallery-img');
-  if (img) img.src = images[idx];
-  const counter = document.getElementById('gallery-counter');
-  if (counter) counter.textContent = idx + 1;
-}
-
-function galleryKeyHandler(e) {
-  if (e.key === 'Escape') {
-    const overlay = document.querySelector('.fixed.inset-0.bg-black\\/90');
-    if (overlay) overlay.remove();
-    document.removeEventListener('keydown', galleryKeyHandler);
-  } else if (e.key === 'ArrowLeft') galleryNav(-1);
-  else if (e.key === 'ArrowRight') galleryNav(1);
-}
-
-document.addEventListener('click', function(e) {
-  if (e.target.classList.contains('fixed') && e.target.classList.contains('bg-black\\/90')) {
-    e.target.remove();
-    document.removeEventListener('keydown', galleryKeyHandler);
-  }
-});
-
 var splidePending = [];
 
 function initSplideForPost(postId) {
@@ -1607,12 +1615,17 @@ var isLoadingMore = false;
 function loadMorePosts() {
   if (isLoadingMore) return;
   isLoadingMore = true;
+
+  // Disconnect observer during loading to prevent rapid re-triggers
+  if (scrollLoadObserver) scrollLoadObserver.disconnect();
+
   const btn = document.getElementById('load-more-btn');
   const spinner = document.getElementById('load-more-spinner');
   const text = document.getElementById('load-more-text');
   if (btn) btn.disabled = true;
   if (spinner) spinner.classList.remove('hidden');
   if (text) text.textContent = 'Loading...';
+  showSkeletons();
 
   const page = parseInt(document.getElementById('current-page').value) + 1;
   fetch(`/posts?page=${page}`, { credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
@@ -1626,6 +1639,7 @@ function loadMorePosts() {
         if (document.getElementById(`post-${p.post_id}`)) return;
         renderAndAppendPost(p, container, emojiMap);
       });
+      hideSkeletons();
       document.getElementById('current-page').value = data.page;
       if (!data.has_next) {
         const loadMore = document.getElementById('load-more-container');
@@ -1634,16 +1648,32 @@ function loadMorePosts() {
         if (btn) btn.disabled = false;
         if (spinner) spinner.classList.add('hidden');
         if (text) text.textContent = 'Load More';
+        // Reconnect observer for next page
+        const sentinel = document.getElementById('scroll-sentinel');
+        if (sentinel && scrollLoadObserver) scrollLoadObserver.observe(sentinel);
       }
       isLoadingMore = false;
     })
     .catch(() => {
+      hideSkeletons();
       if (btn) btn.disabled = false;
       if (spinner) spinner.classList.add('hidden');
       if (text) text.textContent = 'Load More';
+      // Reconnect observer on error
+      const sentinel = document.getElementById('scroll-sentinel');
+      if (sentinel && scrollLoadObserver) scrollLoadObserver.observe(sentinel);
       isLoadingMore = false;
       Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Failed to load posts', showConfirmButton: false, timer: 2000 });
     });
+}
+
+function showSkeletons() {
+  const container = document.getElementById('skeleton-container');
+  if (container) container.classList.remove('hidden');
+}
+function hideSkeletons() {
+  const container = document.getElementById('skeleton-container');
+  if (container) container.classList.add('hidden');
 }
 
 function renderAndAppendPost(p, container, emojiMap) {
@@ -1667,7 +1697,7 @@ function renderAndAppendPost(p, container, emojiMap) {
   
   const likeIconHtml = userReact ? '<span class="text-lg leading-none" id="like-icon-' + p.post_id + '">' + (emojiMap[userReact] || '👍') + '</span>' : '<i class="far fa-thumbs-up" id="like-icon-' + p.post_id + '"></i>';
   const editMenu = p.is_owner
-    ? `<button onclick="openEditPostModal(${p.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-edit"></i> Edit</button><hr class="border-gray-200 dark:border-gray-700 my-1"><button onclick="deletePost(${p.post_id})" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-trash"></i> Delete</button>`
+    ? `<button onclick="openEditPostModal('${p.post_id}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-edit"></i> Edit</button><hr class="border-gray-200 dark:border-gray-700 my-1"><button onclick="deletePost('${p.post_id}')" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-trash"></i> Delete</button>`
     : '';
 
   let statsLikeInner = `<span class="mr-1">👍</span> ${p.likes_count}`;
@@ -1685,7 +1715,7 @@ function renderAndAppendPost(p, container, emojiMap) {
   }
 
     const displayName = p.author.full_name || p.author.username;
-    const html = `<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${p.post_id}" data-images='${imagesJson}' data-user-reaction="${userReact}">
+    const html = `<article class="post-fade-in bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-${p.post_id}" data-images='${imagesJson}' data-user-reaction="${userReact}">
     <div class="p-4 flex items-center justify-between">
       <div class="flex items-center gap-3">${avatarHtml}
         <div>
@@ -1694,10 +1724,10 @@ function renderAndAppendPost(p, container, emojiMap) {
         </div>
       </div>
       <div class="relative">
-        <button onclick="togglePostMenu(${p.post_id})" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition"><i class="fas fa-ellipsis-v"></i></button>
+        <button onclick="togglePostMenu('${p.post_id}')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition"><i class="fas fa-ellipsis-v"></i></button>
         <div id="post-menu-${p.post_id}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
           ${editMenu}
-          <button onclick="copyPostLink(${p.post_id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-link"></i> Copy link</button>
+          <button onclick="copyPostLink('${p.post_id}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><i class="fas fa-link"></i> Copy link</button>
         </div>
       </div>
     </div>
@@ -1731,7 +1761,7 @@ function renderAndAppendPost(p, container, emojiMap) {
       <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="comments-list-${p.post_id}">
         <p class="text-gray-400 dark:text-gray-500 text-sm text-center py-2" id="no-comments-${p.post_id}">No comments yet.</p>
       </div>
-      <form onsubmit="addComment(event, ${p.post_id})" class="flex gap-2">
+      <form onsubmit="addComment(event, '${p.post_id}')" class="flex gap-2">
         <input type="text" name="content" placeholder="Write a comment..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-sm font-medium transition"><i class="fas fa-paper-plane"></i></button>
       </form>
@@ -1750,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (loadMore) loadMore.parentNode.insertBefore(sentinel, loadMore.nextSibling);
   if (window.IntersectionObserver) {
     scrollLoadObserver = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && document.getElementById('has-next')?.value === 'true') {
+      if (entries[0].isIntersecting && document.getElementById('has-next')?.value === 'true' && !isLoadingMore) {
         loadMorePosts();
       }
     }, { rootMargin: '200px' });
@@ -1765,3 +1795,4 @@ function escapeHtml(text) {
 }
 </script>
 {% endblock %}
+

@@ -1,103 +1,132 @@
 {% extends "base.html" %}
-{% block title %}{{ user.full_name or user.username }} - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}{{ user.full_name or user.username }} - Ahmed-Stack{% endblock %}
 {% block content %}
 {% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
 {% set is_owner = (user.id == current_user.id) %}
 <div class="max-w-4xl mx-auto px-4 py-6">
+
+  <!-- Initial page skeleton -->
+  <div id="page-skeleton" class="page-skeleton space-y-4">
+    <div class="skeleton-card p-0 overflow-hidden">
+      <div class="skeleton h-48 rounded-none" style="border-radius:0"></div>
+      <div class="p-6">
+        <div class="flex gap-4 items-end -mt-14">
+          <div class="skeleton skeleton-avatar-lg w-28 h-28 border-4 border-white"></div>
+          <div class="flex-1">
+            <div class="skeleton skeleton-text" style="width:50%"></div>
+            <div class="skeleton skeleton-text-sm" style="width:30%"></div>
+            <div class="skeleton skeleton-text-sm" style="width:70%"></div>
+            <div class="skeleton skeleton-text" style="width:40%;height:32px;margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="skeleton-card"><div class="skeleton skeleton-text" style="width:30%"></div><div class="skeleton skeleton-image mt-3"></div><div class="flex gap-3 mt-3"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-btn"></div></div></div>
+    <div class="skeleton-card"><div class="flex items-center gap-3 mb-4"><div class="skeleton skeleton-avatar"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:70%"></div><div class="skeleton skeleton-image mt-4"></div></div>
+  </div>
+
+  <div class="relative">
+  <!-- Content (always visible, behind skeleton overlay) -->
+  <div>
   <!-- Profile Card -->
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
     <!-- Cover Photo -->
-    <div class="h-48 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
+    <div class="h-48 rounded-t-2xl relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
       {% if user.cover_url %}
-        <img src="{{ user.cover_url }}" alt="Cover" class="w-full h-full object-cover">
+        <div class="img-loading absolute inset-0">
+          <img src="{{ user.cover_url }}" alt="Cover" class="w-full h-full object-cover" onload="this.parentElement.classList.add('loaded')">
+        </div>
       {% endif %}
     </div>
 
-    <!-- Profile Info -->
-    <div class="px-6 pb-6">
-      <div class="flex flex-col sm:flex-row items-center sm:items-end -mt-12">
+    <!-- Avatar + Buttons Row (overlaps cover bottom) -->
+    <div class="px-4 sm:px-6">
+      <div class="flex items-start justify-between -mt-12 sm:-mt-10">
         <!-- Avatar -->
-        <div class="relative">
+        <div class="relative z-10">
           {% if user.avatar_url %}
-            <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 object-cover shadow-lg">
+            <div class="img-loading w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-gray-800 shadow-lg flex-shrink-0">
+              <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-full h-full rounded-full object-cover" onload="this.parentElement.classList.add('loaded')">
+            </div>
           {% else %}
-            <div class="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-3xl shadow-lg">
+            <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-gray-800 bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-3xl shadow-lg">
               {{ user.username[0] | upper }}
             </div>
           {% endif %}
         </div>
 
-        <!-- Name and Actions -->
-        <div class="flex-1 mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left">
-          <h1 class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.full_name or user.username }}</h1>
-          <p class="text-gray-500 dark:text-gray-400 text-sm flex items-center justify-center sm:justify-start gap-1">
-            <i class="fas fa-at text-indigo-500"></i> {{ user.username }}
-          </p>
-          {% if user.bio %}
-            <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">{{ user.bio }}</p>
-          {% endif %}
-          <div class="flex items-center justify-center sm:justify-start gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
-            <span><strong class="text-gray-800 dark:text-white">{{ user.followers | length }}</strong> followers</span>
-            <span><strong class="text-gray-800 dark:text-white">{{ user.following | length }}</strong> following</span>
-            <span><strong class="text-gray-800 dark:text-white">{{ posts.total }}</strong> posts</span>
-          </div>
-
-          <!-- Skills -->
-          {% if user.skills %}
-            <div class="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
-              {% for skill in user.skills.split(',') %}
-                {% if skill.strip() %}
-                  <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-medium">
-                    {{ skill.strip() }}
-                  </span>
-                {% endif %}
-              {% endfor %}
-            </div>
-          {% endif %}
-
-          <!-- Social Links -->
-          {% if user.linkedin_url or user.github_url or user.twitter_url or user.website_url %}
-            <div class="flex flex-wrap gap-3 mt-3 justify-center sm:justify-start">
-              {% if user.linkedin_url %}
-                <a href="{{ user.linkedin_url }}" target="_blank" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition">
-                  <i class="fab fa-linkedin text-lg"></i>
-                </a>
-              {% endif %}
-              {% if user.github_url %}
-                <a href="{{ user.github_url }}" target="_blank" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition">
-                  <i class="fab fa-github text-lg"></i>
-                </a>
-              {% endif %}
-              {% if user.twitter_url %}
-                <a href="{{ user.twitter_url }}" target="_blank" class="text-gray-500 hover:text-blue-400 dark:text-gray-400 dark:hover:text-blue-300 transition">
-                  <i class="fab fa-twitter text-lg"></i>
-                </a>
-              {% endif %}
-              {% if user.website_url %}
-                <a href="{{ user.website_url }}" target="_blank" class="text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition">
-                  <i class="fas fa-globe text-lg"></i>
-                </a>
-              {% endif %}
-            </div>
-          {% endif %}
-        </div>
-
         <!-- Action Buttons -->
-        <div class="mt-4 sm:mt-0 sm:ml-4 flex flex-col sm:flex-row gap-2">
+        <div class="flex gap-2 flex-shrink-0 z-10">
           {% if is_owner %}
-            <button onclick="toggleEditProfile()" id="edit-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-semibold shadow transition">
+            <button onclick="toggleEditProfile()" id="edit-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl font-semibold shadow transition text-sm">
               <i class="fas fa-edit mr-2"></i> Edit Profile
             </button>
           {% else %}
-            <button onclick="toggleFollow({{ user.id }}, this)" class="px-6 py-2 rounded-lg font-medium transition {{ 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-red-100 hover:text-red-600' if is_following else 'bg-indigo-600 hover:bg-indigo-700 text-white' }}">
+            <button onclick="toggleFollow({{ user.id }}, this)" class="px-5 py-2 rounded-lg font-medium transition text-sm whitespace-nowrap {{ 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-red-100 hover:text-red-600' if is_following else 'bg-indigo-600 hover:bg-indigo-700 text-white' }}">
               {{ 'Following' if is_following else 'Follow' }}
             </button>
-            <a href="{{ url_for('user_chat.start_chat', user_id=user.id) }}" class="px-6 py-2 rounded-lg font-medium transition bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2">
+            <a href="/user_chat?user={{ user.username }}" class="px-5 py-2 rounded-lg font-medium transition bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 text-sm whitespace-nowrap">
               <i class="fas fa-comment-dots"></i> Message
             </a>
           {% endif %}
         </div>
       </div>
+    </div>
+
+    <!-- Name & Details (always below cover) -->
+    <div class="px-4 sm:px-6 pb-6 text-center sm:text-left">
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white break-words mt-2">{{ user.full_name or user.username }}</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 truncate">@{{ user.username }}</p>
+      {% if user.email and is_owner %}
+        <p class="text-xs text-gray-400 dark:text-gray-500 truncate">{{ user.email }}</p>
+      {% endif %}
+      {% if user.bio %}
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 break-words">{{ user.bio }}</p>
+      {% endif %}
+      <!-- Stats row -->
+      <div class="flex items-center gap-4 sm:gap-6 mt-3 justify-center sm:justify-start text-sm">
+        <span class="text-gray-500 dark:text-gray-400"><strong class="text-gray-800 dark:text-white font-semibold">{% if posts_count is defined %}{{ posts_count }}{% else %}{{ posts.total }}{% endif %}</strong> posts</span>
+        <span class="text-gray-500 dark:text-gray-400"><strong class="text-gray-800 dark:text-white font-semibold" id="followers-count">{{ followers_count or user.followers | length }}</strong> followers</span>
+        <span class="text-gray-500 dark:text-gray-400"><strong class="text-gray-800 dark:text-white font-semibold">{{ following_count or user.following | length }}</strong> following</span>
+      </div>
+      <!-- Skills -->
+      {% if user.skills %}
+        <div class="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+          {% for skill in user.skills.split(',') %}
+            {% if skill.strip() %}
+              <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-medium">
+                {{ skill.strip() }}
+              </span>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <!-- Social Links -->
+      {% if user.linkedin_url or user.github_url or user.twitter_url or user.website_url %}
+        <div class="flex flex-wrap gap-3 mt-3 justify-center sm:justify-start">
+          {% if user.linkedin_url %}
+            <a href="{{ user.linkedin_url }}" target="_blank" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition">
+              <i class="fab fa-linkedin text-lg"></i>
+            </a>
+          {% endif %}
+          {% if user.github_url %}
+            <a href="{{ user.github_url }}" target="_blank" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition">
+              <i class="fab fa-github text-lg"></i>
+            </a>
+          {% endif %}
+          {% if user.twitter_url %}
+            <a href="{{ user.twitter_url }}" target="_blank" class="text-gray-500 hover:text-blue-400 dark:text-gray-400 dark:hover:text-blue-300 transition">
+              <i class="fab fa-twitter text-lg"></i>
+            </a>
+          {% endif %}
+          {% if user.website_url %}
+            <a href="{{ user.website_url }}" target="_blank" class="text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition">
+              <i class="fas fa-globe text-lg"></i>
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
     </div>
   </div>
 
@@ -107,7 +136,7 @@
     <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
       <i class="fas fa-user-edit text-indigo-600"></i> Edit Profile
     </h3>
-    <form method="POST" action="{{ url_for('profile.update_profile') }}">
+    <form method="POST" action="{{ url_for('profile.update_profile') }}" enctype="multipart/form-data" onsubmit="submitEditProfile(this); return false;">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium mb-1">Full Name</label>
@@ -126,12 +155,42 @@
           <textarea name="bio" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-xl">{{ user.bio or '' }}</textarea>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Avatar URL</label>
-          <input type="url" name="avatar_url" value="{{ user.avatar_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="https://...">
+          <label class="block text-sm font-medium mb-1">Avatar</label>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <input type="url" name="avatar_url" value="{{ user.avatar_url or '' }}" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl" placeholder="Image URL">
+              <button type="button" onclick="document.getElementById('avatar-upload-input').click()" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm whitespace-nowrap">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+            </div>
+            <input type="file" id="avatar-upload-input" class="hidden" accept="image/*" onchange="uploadProfileImage(this, 'avatar_url', 'avatar-preview')">
+            <div id="avatar-preview" class="flex items-center gap-2 {{ 'hidden' if not user.avatar_url }}">
+              {% if user.avatar_url %}
+              <img src="{{ user.avatar_url }}" class="w-10 h-10 rounded-full object-cover border border-gray-200">
+              {% endif %}
+              <span class="text-xs text-gray-400">Click Upload to select a file</span>
+            </div>
+          </div>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Cover Image URL</label>
-          <input type="url" name="cover_url" value="{{ user.cover_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="https://... (or leave empty for gradient)">
+          <label class="block text-sm font-medium mb-1">Cover Image</label>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <input type="url" name="cover_url" value="{{ user.cover_url or '' }}" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl" placeholder="Image URL (leave empty for gradient)">
+              <button type="button" onclick="document.getElementById('cover-upload-input').click()" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm whitespace-nowrap">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+            </div>
+            <input type="file" id="cover-upload-input" class="hidden" accept="image/*" onchange="uploadProfileImage(this, 'cover_url', 'cover-preview')">
+            <div id="cover-preview" class="flex items-center gap-2 {{ 'hidden' if not user.cover_url }}">
+              {% if user.cover_url %}
+              <div class="w-20 h-10 rounded-lg overflow-hidden border border-gray-200">
+                <img src="{{ user.cover_url }}" class="w-full h-full object-cover">
+              </div>
+              {% endif %}
+              <span class="text-xs text-gray-400">Click Upload to select a file</span>
+            </div>
+          </div>
         </div>
         <div class="md:col-span-2">
           <label class="block text-sm font-medium mb-1">Skills (comma-separated)</label>
@@ -154,6 +213,13 @@
           <input type="url" name="website_url" value="{{ user.website_url or '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-xl">
         </div>
       </div>
+      <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          <i class="fas fa-lock text-indigo-600 mr-1"></i> Current Password <span class="text-red-500">*</span>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Enter your current password to save profile changes.</p>
+        <input type="password" name="current_password" required class="w-full px-4 py-2 border border-gray-300 rounded-xl" placeholder="Enter your current password">
+      </div>
       <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-xl shadow transition">
         <i class="fas fa-save mr-2"></i> Save Changes
       </button>
@@ -171,7 +237,7 @@
       </button>
     </div>
     <div id="change-password-form" class="hidden mt-4">
-      <form method="POST" action="{{ url_for('profile.change_password') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <form method="POST" action="{{ url_for('profile.change_password') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="submitChangePassword(this); return false;">
         <div>
           <label class="block text-sm font-medium mb-1">Current Password</label>
           <input type="password" name="old_password" required class="w-full px-4 py-2 border border-gray-300 rounded-xl">
@@ -215,7 +281,12 @@
         {% elif profile_user_reaction == 'angry' %}
           {% set btn_color = 'text-orange-500 font-semibold' %}
         {% endif %}
-        <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-user-reaction="{{ profile_user_reaction or '' }}">
+        {% set profile_post_images = post.images if post.images else [] %}
+        {% set profile_post_image_urls = profile_post_images | map(attribute='image_url') | list %}
+        {% if not profile_post_image_urls and post.image_url %}
+          {% set profile_post_image_urls = [post.image_url] %}
+        {% endif %}
+        <article class="post-fade-in bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative" id="post-{{ post.uuid }}" data-images='{{ profile_post_image_urls | tojson | safe }}' data-user-reaction="{{ profile_user_reaction or '' }}">
           <!-- Post Header -->
           <div class="p-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -227,25 +298,51 @@
                 </div>
               {% endif %}
               <div>
-                <span class="font-semibold text-gray-800 dark:text-white text-sm">{{ user.full_name or user.username }}</span>
+                <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-sm leading-tight">{{ user.full_name or user.username }}</a>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
                   <span class="text-gray-400">@{{ user.username }}</span>
                   <span class="mx-1">·</span>
-                  {{ post.created_at.strftime('%b %d, %Y at %H:%M') }}
+                  <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="hover:underline">{{ post.created_at.strftime('%b %d, %Y at %H:%M') }}</a>
+                  {% if post.updated_at and post.updated_at != post.created_at %}
+                    <span class="italic">(edited)</span>
+                  {% endif %}
+                  {% if post.visibility == 'public' %}<i class="fas fa-globe ml-1" title="Public"></i>
+                  {% elif post.visibility == 'friends' %}<i class="fas fa-user-friends ml-1" title="Friends"></i>
+                  {% else %}<i class="fas fa-lock ml-1" title="Private"></i>{% endif %}
                 </p>
+              </div>
+            </div>
+            <div class="relative">
+              <button onclick="togglePostMenu('{{ post.uuid }}')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 transition">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <div id="post-menu-{{ post.uuid }}" class="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] z-50 hidden">
+                {% if post.user_id == current_user.id %}
+                  <button onclick="openEditPostModal('{{ post.uuid }}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fas fa-edit"></i> Edit
+                  </button>
+                  <button onclick="deletePost('{{ post.uuid }}')" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                {% endif %}
+                <button onclick="copyPostLink('{{ post.uuid }}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                  <i class="fas fa-link"></i> Copy link
+                </button>
               </div>
             </div>
           </div>
 
           <!-- Post Content -->
           <div class="px-4 pb-3">
-            <p class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content[:300] }}{% if post.content | length > 300 %}...{% endif %}</p>
+            <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap block">{{ post.content[:300] }}{% if post.content | length > 300 %}...{% endif %}</a>
           </div>
 
           <!-- Post Image -->
           {% if post.image_url %}
             <div class="w-full">
-              <img src="{{ post.image_url }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="window.open(this.src, '_blank')">
+              <div class="img-loading">
+                <img src="{{ post.image_url }}" alt="Post image" class="w-full max-h-96 object-cover cursor-pointer" onclick="openImageGallery('{{ post.uuid }}', 0); event.preventDefault();" onload="this.parentElement.classList.add('loaded')">
+              </div>
             </div>
           {% endif %}
 
@@ -258,9 +355,6 @@
           <!-- Post Actions -->
           <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
             <div class="flex items-center justify-between">
-              <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
-                <i class="fas fa-eye"></i><span>View</span>
-              </a>
               <button onclick="toggleLikeFromProfile('{{ post.uuid }}')" id="profile-like-btn-{{ post.uuid }}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ btn_color }}">
                 {% if profile_user_reaction %}<span class="text-lg leading-none" id="profile-like-icon-{{ post.uuid }}">{{ emoji_map.get(profile_user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="profile-like-icon-{{ post.uuid }}"></i>{% endif %}<span class="ml-1" id="profile-like-count-{{ post.uuid }}">{{ profile_total_reacts }}</span>
               </button>
@@ -298,32 +392,246 @@
 </div>
 
 <script>
+// ═════════════════════════════════════════════════════════════════════════
+// Password toggle (eye icon) for all password inputs
+// ═════════════════════════════════════════════════════════════════════════
+function addPasswordToggles() {
+  document.querySelectorAll('input[type="password"]').forEach(function(input) {
+    if (input.parentElement.querySelector('.pw-toggle')) return;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'relative';
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'pw-toggle absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition text-lg leading-none p-0.5';
+    toggle.innerHTML = '<i class="fas fa-eye"></i>';
+    toggle.setAttribute('tabindex', '-1');
+    toggle.addEventListener('click', function() {
+      var isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      toggle.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+    });
+    wrapper.appendChild(toggle);
+  });
+}
+document.addEventListener('DOMContentLoaded', addPasswordToggles);
+
+// ═════════════════════════════════════════════════════════════════════════
+// Toast helper
+// ═════════════════════════════════════════════════════════════════════════
+function showToast(icon, title) {
+  Swal.fire({ toast: true, position: 'top-end', icon: icon, title: title, showConfirmButton: false, timer: 3000 });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Edit Profile toggle
+// ═════════════════════════════════════════════════════════════════════════
 function toggleEditProfile() {
-  const form = document.getElementById('edit-profile-form');
-  const btn = document.getElementById('edit-profile-btn');
+  var form = document.getElementById('edit-profile-form');
+  var btn = document.getElementById('edit-profile-btn');
   form.classList.toggle('hidden');
   btn.innerHTML = form.classList.contains('hidden')
     ? '<i class="fas fa-edit mr-2"></i> Edit Profile'
     : '<i class="fas fa-times mr-2"></i> Close';
+  if (!form.classList.contains('hidden')) addPasswordToggles();
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// AJAX submit: Edit Profile
+// ═════════════════════════════════════════════════════════════════════════
+function submitEditProfile(form) {
+  var btn = form.querySelector('button[type="submit"]');
+  var fields = form.querySelectorAll('[required]');
+  var valid = true;
+  fields.forEach(function(f) {
+    f.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+    if (!f.value.trim()) {
+      f.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+      valid = false;
+    }
+  });
+  if (!valid) { showToast('error', 'Please fill in all required fields'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+  fetch(form.action, {
+    method: 'POST',
+    body: new FormData(form),
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Changes';
+    if (data.success) {
+      showToast('success', data.message);
+      // Update profile display without reload
+      updateProfileDisplay();
+      // Close form
+      toggleEditProfile();
+    } else {
+      showToast('error', data.message);
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Changes';
+    showToast('error', 'Network error. Please try again.');
+  });
+}
+
+function updateProfileDisplay() {
+  var nameInput = document.querySelector('input[name="full_name"]');
+  var avatarInput = document.querySelector('input[name="avatar_url"]');
+  var coverInput = document.querySelector('input[name="cover_url"]');
+  var bioText = document.querySelector('textarea[name="bio"]');
+  var skillsInput = document.querySelector('input[name="skills"]');
+
+  // Update title
+  if (nameInput && nameInput.value) {
+    var titleEl = document.querySelector('h1');
+    if (titleEl) titleEl.textContent = nameInput.value;
+    document.title = nameInput.value + ' - Ahmed-Stack';
+  }
+  // Update avatar
+  if (avatarInput && avatarInput.value) {
+    var avatars = document.querySelectorAll('img[alt*="' + (nameInput ? nameInput.value : '') + '"], .w-24 img, .w-28 img');
+    document.querySelectorAll('.rounded-full.border-4 img, .w-24.h-24 img, .w-28.h-28 img').forEach(function(img) {
+      img.src = avatarInput.value;
+    });
+  }
+  // Update cover
+  if (coverInput && coverInput.value) {
+    var coverDiv = document.querySelector('.h-48.rounded-t-2xl .img-loading img');
+    if (coverDiv) coverDiv.src = coverInput.value;
+  }
+  // Update bio
+  if (bioText && bioText.value) {
+    var bioEl = document.querySelector('.text-sm.text-gray-600.mt-1');
+    if (bioEl) bioEl.textContent = bioText.value;
+  }
+  // Update skills
+  if (skillsInput && skillsInput.value) {
+    var skillsContainer = document.querySelector('.flex.flex-wrap.gap-2.mt-3');
+    if (skillsContainer) {
+      skillsContainer.innerHTML = skillsInput.value.split(',').map(function(s) {
+        return s.trim() ? '<span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-medium">' + escapeHtml(s.trim()) + '</span>' : '';
+      }).join('');
+    }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Change Password toggle
+// ═════════════════════════════════════════════════════════════════════════
 function togglePasswordForm() {
-  const form = document.getElementById('change-password-form');
-  const btn = document.getElementById('password-toggle-btn');
+  var form = document.getElementById('change-password-form');
+  var btn = document.getElementById('password-toggle-btn');
   form.classList.toggle('hidden');
   btn.innerHTML = form.classList.contains('hidden')
     ? '<i class="fas fa-chevron-down mr-1"></i> Show'
     : '<i class="fas fa-chevron-up mr-1"></i> Hide';
+  if (!form.classList.contains('hidden')) addPasswordToggles();
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// Validate password strength in real-time
+// ═════════════════════════════════════════════════════════════════════════
+document.addEventListener('input', function(e) {
+  if (e.target.name === 'new_password') {
+    var val = e.target.value;
+    var meter = e.target.parentElement.querySelector('.pw-meter');
+    if (!meter) {
+      meter = document.createElement('div');
+      meter.className = 'pw-meter mt-1.5';
+      e.target.parentElement.appendChild(meter);
+    }
+    var strength = 0;
+    if (val.length >= 6) strength++;
+    if (val.length >= 10) strength++;
+    if (/[A-Z]/.test(val)) strength++;
+    if (/[0-9]/.test(val)) strength++;
+    if (/[^A-Za-z0-9]/.test(val)) strength++;
+    var colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500'];
+    var labels = ['Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+    var pct = Math.min(strength, 5) / 5 * 100;
+    meter.innerHTML = val.length > 0
+      ? '<div class="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"><div class="h-full rounded-full transition-all duration-300 ' + colors[Math.min(Math.max(strength - 1, 0), 4)] + '" style="width:' + pct + '%"></div></div><div class="text-[11px] mt-0.5 ' + (strength < 2 ? 'text-red-500' : strength < 4 ? 'text-yellow-500' : 'text-green-500') + '">' + (strength > 0 ? labels[Math.min(strength - 1, 4)] : '') + '</div>'
+      : '';
+  }
+  // Confirm password match
+  if (e.target.name === 'confirm_password' || e.target.name === 'new_password') {
+    var newPw = document.querySelector('input[name="new_password"]');
+    var confirmPw = document.querySelector('input[name="confirm_password"]');
+    if (newPw && confirmPw && confirmPw.value.length > 0) {
+      var match = confirmPw.parentElement.querySelector('.pw-match');
+      if (!match) {
+        match = document.createElement('div');
+        match.className = 'pw-match text-[11px] mt-0.5';
+        confirmPw.parentElement.appendChild(match);
+      }
+      if (newPw.value === confirmPw.value) {
+        match.innerHTML = '<span class="text-green-500"><i class="fas fa-check mr-1"></i>Passwords match</span>';
+      } else {
+        match.innerHTML = '<span class="text-red-500"><i class="fas fa-times mr-1"></i>Passwords do not match</span>';
+      }
+    }
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// AJAX submit: Change Password
+// ═════════════════════════════════════════════════════════════════════════
+function submitChangePassword(form) {
+  var oldPw = form.querySelector('input[name="old_password"]');
+  var newPw = form.querySelector('input[name="new_password"]');
+  var confirmPw = form.querySelector('input[name="confirm_password"]');
+
+  [oldPw, newPw, confirmPw].forEach(function(f) { f.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); });
+
+  if (!oldPw.value.trim()) { oldPw.classList.add('border-red-500', 'ring-1', 'ring-red-500'); showToast('error', 'Current password is required'); return; }
+  if (newPw.value.length < 6) { newPw.classList.add('border-red-500', 'ring-1', 'ring-red-500'); showToast('error', 'New password must be at least 6 characters'); return; }
+  if (newPw.value !== confirmPw.value) { confirmPw.classList.add('border-red-500', 'ring-1', 'ring-red-500'); showToast('error', 'Passwords do not match'); return; }
+
+  var btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Updating...';
+  fetch(form.action, {
+    method: 'POST',
+    body: new FormData(form),
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check mr-2"></i> Update Password';
+    if (data.success) {
+      showToast('success', data.message);
+      form.reset();
+      togglePasswordForm();
+    } else {
+      showToast('error', data.message);
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check mr-2"></i> Update Password';
+    showToast('error', 'Network error. Please try again.');
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Follow
+// ═════════════════════════════════════════════════════════════════════════
 function toggleFollow(userId, button) {
   fetch('/follow/' + userId, {
     method: 'POST',
     credentials: 'include',
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
   })
-  .then(response => response.json())
-  .then(data => {
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
     if (data.success) {
       if (data.following) {
         button.textContent = 'Following';
@@ -334,24 +642,27 @@ function toggleFollow(userId, button) {
         button.classList.remove('bg-gray-200', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300', 'hover:bg-red-100', 'hover:text-red-600');
         button.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'text-white');
       }
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: data.following ? 'Now following!' : 'Unfollowed', showConfirmButton: false, timer: 2000 });
+      showToast('success', data.following ? 'Now following!' : 'Unfollowed');
     }
   })
-  .catch(error => console.error('Error:', error));
+  .catch(function() { showToast('error', 'Could not update follow status'); });
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// Post interactions
+// ═════════════════════════════════════════════════════════════════════════
 function setProfileLikeIcon(postId, reaction) {
-  const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
-  const el = document.getElementById('profile-like-icon-' + postId);
+  var emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+  var el = document.getElementById('profile-like-icon-' + postId);
   if (!el) return;
   if (reaction) {
-    const span = document.createElement('span');
+    var span = document.createElement('span');
     span.className = 'text-lg leading-none';
     span.id = 'profile-like-icon-' + postId;
     span.textContent = emojiMap[reaction] || '👍';
     el.parentNode.replaceChild(span, el);
   } else {
-    const i = document.createElement('i');
+    var i = document.createElement('i');
     i.className = 'far fa-thumbs-up';
     i.id = 'profile-like-icon-' + postId;
     el.parentNode.replaceChild(i, el);
@@ -359,7 +670,7 @@ function setProfileLikeIcon(postId, reaction) {
 }
 
 function setProfileBtnColor(postId, reaction) {
-  const btn = document.getElementById('profile-like-btn-' + postId);
+  var btn = document.getElementById('profile-like-btn-' + postId);
   if (!btn) return;
   btn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
   if (reaction) {
@@ -372,12 +683,12 @@ function setProfileBtnColor(postId, reaction) {
 }
 
 function toggleLikeFromProfile(postId) {
-  const btn = document.getElementById('profile-like-btn-' + postId);
-  const count = document.getElementById('profile-like-count-' + postId);
-  const postEl = document.getElementById('post-' + postId);
-  const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
-  const wasLiked = !!prevReaction;
-  const oldCount = count ? parseInt(count.textContent || '0') : 0;
+  var btn = document.getElementById('profile-like-btn-' + postId);
+  var count = document.getElementById('profile-like-count-' + postId);
+  var postEl = document.getElementById('post-' + postId);
+  var prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
+  var wasLiked = !!prevReaction;
+  var oldCount = count ? parseInt(count.textContent || '0') : 0;
   setProfileBtnColor(postId, wasLiked ? '' : 'like');
   setProfileLikeIcon(postId, wasLiked ? '' : 'like');
   if (count) count.textContent = wasLiked ? oldCount - 1 : oldCount + 1;
@@ -388,10 +699,10 @@ function toggleLikeFromProfile(postId) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
     body: new URLSearchParams({ reaction: 'like' })
   })
-  .then(response => response.json())
-  .then(data => {
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
     if (data.success) {
-      const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : (data.like_count || 0);
+      var total = data.counts ? Object.values(data.counts).reduce(function(a, b) { return a + b; }, 0) : (data.like_count || 0);
       if (count) count.textContent = total;
     } else {
       setProfileBtnColor(postId, prevReaction);
@@ -400,13 +711,99 @@ function toggleLikeFromProfile(postId) {
       if (count) count.textContent = oldCount;
     }
   })
-  .catch(error => {
-    console.error('Error:', error);
+  .catch(function() {
     setProfileBtnColor(postId, prevReaction);
     setProfileLikeIcon(postId, prevReaction);
     if (postEl) postEl.dataset.userReaction = prevReaction;
     if (count) count.textContent = oldCount;
   });
 }
+
+// ═════════════════════════════════════════════════════════════════════════
+// Post menus
+// ═════════════════════════════════════════════════════════════════════════
+function togglePostMenu(postId) {
+  closeAllMenus();
+  var menu = document.getElementById('post-menu-' + postId);
+  if (menu) menu.classList.toggle('hidden');
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('[id^="post-menu-"]').forEach(function(m) { m.classList.add('hidden'); });
+}
+
+function copyPostLink(postId) {
+  var url = window.location.origin + '/posts/' + postId;
+  navigator.clipboard.writeText(url).then(function() { showToast('success', 'Link copied!'); });
+  closeAllMenus();
+}
+
+function deletePost(postId) {
+  closeAllMenus();
+  Swal.fire({
+    title: 'Delete Post?',
+    text: 'This action cannot be undone.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Delete'
+  }).then(function(result) {
+    if (result.isConfirmed) {
+      fetch('/posts/' + postId + '/delete', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.success) {
+          var el = document.getElementById('post-' + postId);
+          if (el) el.remove();
+          showToast('success', 'Post deleted');
+        }
+      });
+    }
+  });
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('[id^="post-menu-"]') && !e.target.closest('button[onclick^="togglePostMenu"]')) {
+    closeAllMenus();
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// Image upload for avatar/cover
+// ═════════════════════════════════════════════════════════════════════════
+function uploadProfileImage(input, fieldId, previewId) {
+  if (!input.files.length) return;
+  var file = input.files[0];
+  var fd = new FormData();
+  fd.append('file', file);
+  fetch('/profile/upload-image', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.url) {
+        document.querySelector('input[name="' + fieldId + '"]').value = data.url;
+        var preview = document.getElementById(previewId);
+        preview.classList.remove('hidden');
+        var img = preview.querySelector('img');
+        if (img) { img.src = data.url; }
+        else {
+          var newImg = document.createElement('img');
+          newImg.src = data.url;
+          newImg.className = previewId === 'avatar-preview' ? 'w-10 h-10 rounded-full object-cover border border-gray-200' : 'w-20 h-10 rounded-lg object-cover';
+          preview.insertBefore(newImg, preview.querySelector('span'));
+        }
+        showToast('success', 'Image uploaded!');
+      }
+    })
+    .catch(function() { showToast('error', 'Could not upload image'); });
+  input.value = '';
+}
+
+function escapeHtml(text) {
+  var map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"};
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
 </script>
+</div></div>
 {% endblock %}

@@ -1,19 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Explore - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}Explore - Ahmed-Stack{% endblock %}
 {% block content %}
 {% set emoji_map = {'like': '👍', 'love': '❤️', 'haha': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'} %}
-<div class="max-w-6xl mx-auto px-2 sm:px-4 py-6">
-  <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-    <i class="fas fa-compass text-indigo-600"></i> Explore
-  </h2>
+<div class="max-w-6xl mx-auto px-3 sm:px-4 py-6">
+
+  <div class="relative">
+  <div>
+  <!-- Header with back arrow -->
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{{ url_for('posts.posts_feed') }}" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all duration-200 hover:scale-110 flex-shrink-0" title="Back to Feed">
+      <i class="fas fa-arrow-left text-sm"></i>
+    </a>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-1">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+        <i class="fas fa-compass text-indigo-600"></i> Explore
+      </h2>
+      <div class="relative max-w-md sm:ml-auto">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" id="explore-search" placeholder="Search posts, people, topics..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition placeholder:text-gray-400">
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Tabs -->
+  <div class="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
+    <button class="px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-medium whitespace-nowrap shadow-sm">Trending</button>
+    <button class="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition">Latest</button>
+    <button class="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition">Popular</button>
+    <button class="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition">For You</button>
+  </div>
 
   <div class="flex flex-col lg:flex-row gap-6">
     <!-- Trending Posts -->
     <div class="flex-1 min-w-0">
-      <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-        <i class="fas fa-fire text-orange-500"></i> Trending Posts
-      </h3>
-      <div class="space-y-4">
+      {% if trending_posts %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         {% for post in trending_posts %}
           {% set explore_user_reaction = post.user_reaction(current_user.id) %}
           {% set explore_total_reacts = post.total_reactions %}
@@ -23,67 +44,114 @@
           {% elif explore_user_reaction %}
             {% set explore_btn_color = 'text-yellow-500' %}
           {% endif %}
-          <article class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 hover:shadow-md transition" id="explore-post-{{ post.uuid }}" data-user-reaction="{{ explore_user_reaction or '' }}">
-            <div class="flex items-start justify-between gap-3 mb-3">
-              <div class="flex items-center gap-3 min-w-0">
-                {% if post.author.avatar_url %}
-                  <img src="{{ post.author.avatar_url }}" alt="{{ post.author.username }}" class="w-10 h-10 rounded-full flex-shrink-0">
-                {% else %}
-                  <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold flex-shrink-0">
-                    {{ post.author.username[0] | upper }}
+          <article class="post-fade-in group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 overflow-hidden" id="explore-post-{{ post.uuid }}" data-user-reaction="{{ explore_user_reaction or '' }}">
+            {% if post.image_url %}
+              <div class="relative overflow-hidden">
+                <div class="img-loading">
+                  <img src="{{ post.image_url }}" alt="Post image" class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onload="this.parentElement.classList.add('loaded')">
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                <span class="absolute top-3 left-3 px-2 py-0.5 bg-black/50 backdrop-blur-sm text-white text-xs rounded-full">Featured</span>
+              </div>
+            {% endif %}
+            <div class="p-4">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  {% if post.author.avatar_url %}
+                    <div class="img-loading w-9 h-9 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-gray-800">
+                      <img src="{{ post.author.avatar_url }}" alt="{{ post.author.username }}" class="w-full h-full rounded-full object-cover" onload="this.parentElement.classList.add('loaded')">
+                    </div>
+                  {% else %}
+                    <div class="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-sm flex-shrink-0 ring-2 ring-white dark:ring-gray-800">
+                      {{ post.author.username[0] | upper }}
+                    </div>
+                  {% endif %}
+                  <div class="min-w-0">
+                    <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="font-semibold text-sm text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 truncate block">{{ post.author.full_name or post.author.username }}</a>
+                    <p class="text-xs text-gray-400 truncate">@{{ post.author.username }} · {{ post.created_at.strftime('%b %d') }}</p>
                   </div>
-                {% endif %}
-                <div class="min-w-0">
-                  <a href="{{ url_for('posts.user_profile', username=post.author.username) }}" class="font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 truncate block">{{ post.author.full_name or post.author.username }}</a>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">@{{ post.author.username }} · {{ post.created_at.strftime('%b %d, %Y') }}</p>
+                </div>
+                <span class="text-xs text-gray-400 flex-shrink-0 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-full" id="explore-like-count-{{ post.uuid }}">👍 {{ explore_total_reacts }}</span>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed line-clamp-3 mb-3">{{ post.content[:200] }}{% if post.content | length > 200 %}...{% endif %}</p>
+              <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+                <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 text-sm font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition">
+                  <i class="fas fa-eye"></i> View
+                </a>
+                <div class="flex items-center gap-1">
+                  <div class="relative like-btn-wrap" onmouseenter="showExploreReactions('{{ post.uuid }}')" onmouseleave="startHideExploreReactions('{{ post.uuid }}')">
+                    <div id="explore-reactions-picker-{{ post.uuid }}" class="reactions-picker dark:bg-gray-800 dark:border dark:border-gray-700" onmouseenter="cancelHideExploreReactions('{{ post.uuid }}')" onmouseleave="startHideExploreReactions('{{ post.uuid }}')">
+                      <button type="button" class="reaction-btn" data-reaction="like" onclick="exploreReact('{{ post.uuid }}', 'like', event)" title="Like">👍<span class="reaction-tooltip">Like</span></button>
+                      <button type="button" class="reaction-btn" data-reaction="love" onclick="exploreReact('{{ post.uuid }}', 'love', event)" title="Love">❤️<span class="reaction-tooltip">Love</span></button>
+                      <button type="button" class="reaction-btn" data-reaction="haha" onclick="exploreReact('{{ post.uuid }}', 'haha', event)" title="Haha">😂<span class="reaction-tooltip">Haha</span></button>
+                      <button type="button" class="reaction-btn" data-reaction="wow" onclick="exploreReact('{{ post.uuid }}', 'wow', event)" title="Wow">😮<span class="reaction-tooltip">Wow</span></button>
+                      <button type="button" class="reaction-btn" data-reaction="sad" onclick="exploreReact('{{ post.uuid }}', 'sad', event)" title="Sad">😢<span class="reaction-tooltip">Sad</span></button>
+                      <button type="button" class="reaction-btn" data-reaction="angry" onclick="exploreReact('{{ post.uuid }}', 'angry', event)" title="Angry">😡<span class="reaction-tooltip">Angry</span></button>
+                    </div>
+                    <button onclick="exploreReact('{{ post.uuid }}', 'main', event)" class="flex items-center gap-1 text-sm {{ explore_btn_color }} hover:text-blue-500 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" id="explore-like-btn-{{ post.uuid }}">
+                      {% if explore_user_reaction %}<span class="text-lg leading-none" id="explore-like-icon-{{ post.uuid }}">{{ emoji_map.get(explore_user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="explore-like-icon-{{ post.uuid }}"></i>{% endif %}
+                    </button>
+                  </div>
+                  <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}#comments" class="text-gray-400 hover:text-indigo-500 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <i class="far fa-comment text-sm"></i>
+                  </a>
                 </div>
               </div>
-              <span class="text-sm text-gray-500 flex-shrink-0" id="explore-like-count-{{ post.uuid }}">👍 {{ explore_total_reacts }}</span>
-            </div>
-            <p class="text-gray-700 dark:text-gray-300 line-clamp-3 mb-3">{{ post.content[:200] }}{% if post.content | length > 200 %}...{% endif %}</p>
-            {% if post.image_url %}
-              <img src="{{ post.image_url }}" alt="Post image" class="w-full h-48 object-cover rounded-lg mb-3">
-            {% endif %}
-            <div class="flex items-center gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <a href="{{ url_for('posts.view_post', post_id=post.uuid) }}" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 text-sm font-medium flex items-center gap-1">
-                <i class="fas fa-eye"></i> Read more
-              </a>
-              <button onclick="toggleLike('{{ post.uuid }}')" class="flex items-center gap-1.5 text-sm {{ explore_btn_color }} hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" id="explore-like-btn-{{ post.uuid }}">
-                {% if explore_user_reaction %}<span class="text-lg leading-none" id="explore-like-icon-{{ post.uuid }}">{{ emoji_map.get(explore_user_reaction, '👍') }}</span>{% else %}<i class="far fa-thumbs-up" id="explore-like-icon-{{ post.uuid }}"></i>{% endif %}
-                <span id="explore-like-text-{{ post.uuid }}">Like</span>
-              </button>
             </div>
           </article>
-        {% else %}
-          <div class="text-center py-12 text-gray-500 dark:text-gray-400">
-            <i class="fas fa-fire text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
-            <p>No trending posts yet. Be the first to post!</p>
-          </div>
         {% endfor %}
       </div>
+      {% else %}
+      <div class="col-span-full text-center py-16 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+          <i class="fas fa-fire text-2xl text-gray-400"></i>
+        </div>
+        <p class="font-medium">No trending posts yet</p>
+        <p class="text-sm mt-1">Be the first to post something great!</p>
+        <a href="{{ url_for('posts.posts_feed') }}" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-xl transition">
+          <i class="fas fa-plus"></i> Create a post
+        </a>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Sidebar -->
-    <div class="w-full lg:w-80 flex-shrink-0">
+    <div class="w-full lg:w-80 flex-shrink-0 space-y-4">
+      <!-- Stats Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="text-center p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20">
+            <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ trending_posts | length }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Trending</p>
+          </div>
+          <div class="text-center p-3 rounded-xl bg-green-50 dark:bg-green-900/20">
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ suggested_users | length }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Suggested</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Suggested Users -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <i class="fas fa-user-plus text-green-500"></i> Suggested Users
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-user-plus text-green-500"></i> People to follow
         </h3>
         <div class="space-y-3">
           {% for user in suggested_users %}
             {% set is_following = user.id in followed_ids %}
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
               <a href="{{ url_for('posts.user_profile', username=user.username) }}" class="flex items-center gap-3 flex-1 min-w-0">
                 {% if user.avatar_url %}
-                  <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-10 h-10 rounded-full flex-shrink-0">
+                  <div class="img-loading w-10 h-10 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-gray-800">
+                    <img src="{{ user.avatar_url }}" alt="{{ user.username }}" class="w-full h-full rounded-full object-cover" onload="this.parentElement.classList.add('loaded')">
+                  </div>
                 {% else %}
-                  <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold flex-shrink-0">
+                  <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold flex-shrink-0 ring-2 ring-white dark:ring-gray-800">
                     {{ user.username[0] | upper }}
                   </div>
                 {% endif %}
                 <div class="min-w-0">
-                  <span class="font-semibold text-gray-800 dark:text-white truncate block text-sm">{{ user.full_name or user.username }}</span>
+                  <span class="font-semibold text-sm text-gray-800 dark:text-white truncate block">{{ user.full_name or user.username }}</span>
                   <p class="text-xs text-gray-500 dark:text-gray-400 truncate">@{{ user.username }}</p>
                 </div>
               </a>
@@ -94,7 +162,7 @@
           {% else %}
             <div class="text-center py-6 text-gray-500 dark:text-gray-400">
               <i class="fas fa-user-friends text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
-              <p>No suggestions yet.</p>
+              <p class="text-sm">No suggestions yet.</p>
             </div>
           {% endfor %}
         </div>
@@ -103,7 +171,34 @@
   </div>
 </div>
 
+  <!-- Initial page skeleton overlay (auto-fades via CSS) -->
+  <div id="page-skeleton" class="page-skeleton space-y-4">
+    <div class="skeleton-card"><div class="skeleton skeleton-text" style="width:40%;height:28px;margin-bottom:8px"></div><div class="skeleton skeleton-text-sm" style="width:60%"></div></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="skeleton-card"><div class="skeleton skeleton-image" style="height:192px"></div><div class="mt-3"><div class="flex items-center gap-3"><div class="skeleton skeleton-avatar" style="width:36px;height:36px"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div></div></div>
+      <div class="skeleton-card"><div class="skeleton skeleton-image" style="height:192px"></div><div class="mt-3"><div class="flex items-center gap-3"><div class="skeleton skeleton-avatar" style="width:36px;height:36px"></div><div class="flex-1"><div class="skeleton skeleton-text-sm"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div></div></div>
+    </div>
+  </div>
+  </div>
+</div>
+
 <script>
+// Explore reaction picker (same pattern as feed)
+var exploreReactionTimers = {};
+function showExploreReactions(postId) {
+  const picker = document.getElementById('explore-reactions-picker-' + postId);
+  if (picker) { picker.classList.add('active'); clearTimeout(exploreReactionTimers[postId]); }
+}
+function startHideExploreReactions(postId) {
+  exploreReactionTimers[postId] = setTimeout(function() {
+    const picker = document.getElementById('explore-reactions-picker-' + postId);
+    if (picker) picker.classList.remove('active');
+  }, 300);
+}
+function cancelHideExploreReactions(postId) {
+  clearTimeout(exploreReactionTimers[postId]);
+}
+
 function followUser(userId, button) {
   fetch('/follow/' + userId, {
     method: 'POST',
@@ -128,8 +223,57 @@ function followUser(userId, button) {
   .catch(error => console.error('Error:', error));
 }
 
-function setExploreLikeIcon(postId, reaction) {
+function exploreReact(postId, emoji, event) {
+  if (event) event.preventDefault();
+  startHideExploreReactions(postId);
+  const btn = document.getElementById('explore-like-btn-' + postId);
+  const count = document.getElementById('explore-like-count-' + postId);
+  const postEl = document.getElementById('explore-post-' + postId);
+  const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
+  const wasLiked = !!prevReaction;
   const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+  const newReaction = (wasLiked && prevReaction === emoji) ? '' : emoji;
+
+  exploreSetBtnColor(postId, newReaction);
+  exploreSetIcon(postId, newReaction, emojiMap);
+
+  const oldCount = count ? parseInt(count.textContent.replace(/[^0-9]/g, '') || '0') : 0;
+  if (newReaction && !wasLiked) {
+    if (count) count.textContent = '👍 ' + (oldCount + 1);
+  } else if (!newReaction && wasLiked) {
+    if (count) count.textContent = '👍 ' + (oldCount - 1);
+  }
+  if (postEl) postEl.dataset.userReaction = newReaction;
+
+  fetch('/posts/' + postId + '/react', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: new URLSearchParams({ reaction: emoji })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.counts) {
+      const total = Object.values(data.counts).reduce((a, b) => a + b, 0);
+      if (count) count.textContent = '👍 ' + total;
+    }
+  })
+  .catch(() => {});
+}
+
+function exploreSetBtnColor(postId, reaction) {
+  const btn = document.getElementById('explore-like-btn-' + postId);
+  if (!btn) return;
+  btn.classList.remove('text-red-500', 'text-blue-500', 'text-yellow-500', 'text-gray-500');
+  if (reaction) {
+    if (reaction === 'like') btn.classList.add('text-blue-500');
+    else btn.classList.add('text-yellow-500');
+  } else {
+    btn.classList.add('text-gray-500');
+  }
+}
+
+function exploreSetIcon(postId, reaction, emojiMap) {
   const el = document.getElementById('explore-like-icon-' + postId);
   if (!el) return;
   if (reaction) {
@@ -144,60 +288,6 @@ function setExploreLikeIcon(postId, reaction) {
     i.id = 'explore-like-icon-' + postId;
     el.parentNode.replaceChild(i, el);
   }
-}
-
-function setExploreBtnColor(postId, reaction) {
-  const btn = document.getElementById('explore-like-btn-' + postId);
-  if (!btn) return;
-  btn.classList.remove('text-red-500', 'text-blue-500', 'text-yellow-500', 'text-gray-500');
-  if (reaction) {
-    if (reaction === 'like') btn.classList.add('text-blue-500');
-    else btn.classList.add('text-yellow-500');
-  } else {
-    btn.classList.add('text-gray-500');
-  }
-}
-
-function toggleLike(postId) {
-  const btn = document.getElementById('explore-like-btn-' + postId);
-  const count = document.getElementById('explore-like-count-' + postId);
-  const likeText = document.getElementById('explore-like-text-' + postId);
-  const postEl = document.getElementById('explore-post-' + postId);
-  const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
-  const wasLiked = !!prevReaction;
-  const oldCount = count ? parseInt(count.textContent.replace(/[^0-9]/g, '') || '0') : 0;
-  setExploreBtnColor(postId, wasLiked ? '' : 'like');
-  setExploreLikeIcon(postId, wasLiked ? '' : 'like');
-  if (likeText) likeText.textContent = wasLiked ? 'Like' : 'Liked';
-  if (count) count.textContent = '👍 ' + (wasLiked ? oldCount - 1 : oldCount + 1);
-  if (postEl) postEl.dataset.userReaction = wasLiked ? '' : 'like';
-  fetch('/posts/' + postId + '/react', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-    body: new URLSearchParams({ reaction: 'like' })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      const total = data.counts ? Object.values(data.counts).reduce((a, b) => a + b, 0) : (data.like_count || 0);
-      if (count) count.textContent = '👍 ' + total;
-    } else {
-      setExploreBtnColor(postId, prevReaction);
-      setExploreLikeIcon(postId, prevReaction);
-      if (likeText) likeText.textContent = prevReaction ? 'Liked' : 'Like';
-      if (postEl) postEl.dataset.userReaction = prevReaction;
-      if (count) count.textContent = '👍 ' + oldCount;
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    setExploreBtnColor(postId, prevReaction);
-    setExploreLikeIcon(postId, prevReaction);
-    if (likeText) likeText.textContent = prevReaction ? 'Liked' : 'Like';
-    if (postEl) postEl.dataset.userReaction = prevReaction;
-    if (count) count.textContent = '👍 ' + oldCount;
-  });
 }
 </script>
 {% endblock %}

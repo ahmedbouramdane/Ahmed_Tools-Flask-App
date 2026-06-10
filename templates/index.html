@@ -1,222 +1,283 @@
 {% extends "base.html" %}
-{% block title %}Home - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}Home - Ahmed-Stack{% endblock %}
 {% block content %}
 <style>
-  .reveal { opacity: 0; }
-  .parallax-bg { background-attachment: fixed; }
-
   @keyframes blobPulse {
-    0%, 100% { transform: scale(1) rotate(0deg); }
-    33% { transform: scale(1.1) rotate(3deg); }
-    66% { transform: scale(0.95) rotate(-2deg); }
+    0%, 100% { transform: translate(0,0) scale(1) rotate(0deg); }
+    25% { transform: translate(15px,-15px) scale(1.08) rotate(2deg); }
+    50% { transform: translate(-10px,10px) scale(0.95) rotate(-2deg); }
+    75% { transform: translate(20px,5px) scale(1.05) rotate(1deg); }
   }
-  .float-blob {
-    animation: blobPulse 12s ease-in-out infinite;
-    will-change: transform;
-  }
-  .float-blob:nth-child(2) {
-    animation-delay: -4s;
-    animation-duration: 14s;
-  }
-
-  .float-blob-2 {
-    animation: blobPulse 16s ease-in-out infinite;
-    will-change: transform;
-  }
-  .float-blob-2:nth-child(2) {
-    animation-delay: -6s;
-    animation-duration: 18s;
-  }
-
+  .float-blob { animation: blobPulse 14s ease-in-out infinite; will-change: transform; transition: translate 0.2s ease-out; }
+  .float-blob:nth-child(2) { animation-delay: -5s; animation-duration: 16s; transition: translate 0.25s ease-out; }
+  .float-blob-2 { animation: blobPulse 18s ease-in-out infinite; will-change: transform; transition: translate 0.25s ease-out; }
+  .float-blob-2:nth-child(2) { animation-delay: -7s; animation-duration: 20s; transition: translate 0.3s ease-out; }
+  .float-blob { translate: var(--px, 0px) var(--py, 0px); }
+  .float-blob-2 { translate: var(--px, 0px) var(--py, 0px); }
   .particle-dot {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #6366f1;
-    opacity: 0.3;
-    pointer-events: none;
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    background: #6366f1; opacity: 0.3; pointer-events: none;
+    translate: var(--px, 0px) var(--py, 0px);
+    transition: translate 0.15s ease-out;
   }
 
+  /* === Feature card === */
+  .feature-card {
+    background: var(--surface); border-radius: 20px; border: 1px solid var(--border);
+    padding: 2rem; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; overflow: hidden;
+  }
+  .feature-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 60px -12px rgba(99, 102, 241, 0.25);
+  }
+  .feature-card:hover .feature-icon { transform: scale(1.15) rotate(-3deg); }
+  .dark .feature-card { background: #1e293b; border-color: #334155; }
+  .dark .feature-card:hover { border-color: rgba(129, 140, 248, 0.4); box-shadow: 0 20px 60px -12px rgba(99, 102, 241, 0.15); }
+  .feature-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: white; margin-bottom: 1.25rem;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .feature-card h3 { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+  .dark .feature-card h3 { color: #f1f5f9; }
+
+  /* === Highlight card === */
   .highlight-card {
-    background: var(--surface);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    padding: 1.5rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface); border-radius: 16px; border: 1px solid var(--border);
+    padding: 1.5rem; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; overflow: hidden;
   }
-  .highlight-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-    border-color: #6366f1;
+  .highlight-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--card-color, #6366f1), transparent);
+    opacity: 0; transition: opacity 0.35s ease; pointer-events: none;
   }
-  .dark .highlight-card {
-    background: #1e293b;
-    border-color: #334155;
+  .highlight-card:hover { transform: translateY(-5px); box-shadow: 0 16px 48px -8px rgba(0,0,0,0.08); }
+  .highlight-card:hover::before { opacity: 0.04; }
+  .highlight-card:hover .highlight-icon { transform: scale(1.1) rotate(2deg); }
+  .dark .highlight-card { background: #1e293b; border-color: #334155; }
+  .dark .highlight-card:hover { border-color: var(--card-color, #6366f1); box-shadow: 0 16px 48px -8px rgba(0,0,0,0.3); }
+  .dark .highlight-card:hover::before { opacity: 0.07; }
+  .highlight-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .dark .highlight-card:hover {
-    border-color: #818cf8;
+  .highlight-card h3 { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+  .dark .highlight-card h3 { color: #f1f5f9; }
+
+  /* === Section heading entrance (CSS-based fade) === */
+  .section-eyebrow, .section-title, .section-sub {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .section-eyebrow.in-view, .section-title.in-view, .section-sub.in-view {
+    opacity: 1; transform: translateY(0);
+  }
+  .section-title { transition-delay: 0.1s; }
+  .section-sub { transition-delay: 0.2s; }
+
+  /* === Section headings (visual) === */
+  .section-eyebrow {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 1rem; border-radius: 9999px;
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .section-title { font-size: 2.5rem; font-weight: 900; line-height: 1.15; letter-spacing: -0.03em; }
+  @media (min-width: 640px) { .section-title { font-size: 3.25rem; } }
+  .section-sub { font-size: 1.05rem; color: var(--text-secondary); max-width: 600px; line-height: 1.6; }
+
+  /* === Why item === */
+  .why-item {
+    display: flex; gap: 1.25rem; padding: 1.25rem; border-radius: 16px; transition: all 0.3s ease;
+  }
+  .why-item:hover { background: rgba(99, 102, 241, 0.04); }
+  .dark .why-item:hover { background: rgba(129, 140, 248, 0.06); }
+  .why-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    margin-top: 0.15rem; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .why-item:hover .why-icon { transform: scale(1.1) rotate(-4deg); border-radius: 14px; }
+  .why-item h4 { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+  .dark .why-item h4 { color: #f1f5f9; }
+
+  /* === Stat item === */
+  .stat-item { opacity: 0; transform: translateY(20px); transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+  .stat-item.in-view { opacity: 1; transform: translateY(0); }
+  .stat-item .stat-number { font-size: 2.5rem; font-weight: 900; }
 
   @media (max-width: 768px) {
     .parallax-bg { background-attachment: scroll; }
+    .section-title { font-size: 2rem; }
   }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  if (typeof anime === 'undefined') return;
+  var hasAnime = typeof anime !== 'undefined';
   var isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (isReduced) { document.querySelectorAll('.reveal').forEach(function(el) { el.style.opacity = '1'; }); return; }
+  if (isReduced) return;
 
-  // === Floating particles ===
+  // ============================================================
+  // 1. Hero — particles (continuous anime loop)
+  // ============================================================
   var hero = document.querySelector('.hero-section');
-  if (hero) {
-    var particlesContainer = hero.querySelector('.particles-container');
-    if (particlesContainer) {
-      for (var i = 0; i < 30; i++) {
-        var dot = document.createElement('div');
-        dot.className = 'particle-dot';
-        dot.style.left = (Math.random() * 100) + '%';
-        dot.style.top = (Math.random() * 100) + '%';
-        dot.style.width = dot.style.height = (2 + Math.random() * 4) + 'px';
-        dot.style.opacity = 0.1 + Math.random() * 0.3;
-        dot.style.background = ['#6366f1', '#8b5cf6', '#ec4899', '#06b6d4'][Math.floor(Math.random() * 4)];
-        particlesContainer.appendChild(dot);
+  if (hero && hasAnime) {
+    var pc = hero.querySelector('.particles-container');
+    if (pc) {
+      for (var i = 0; i < 20; i++) {
+        var d = document.createElement('div');
+        d.className = 'particle-dot';
+        d.style.left = (Math.random() * 100) + '%';
+        d.style.top = (Math.random() * 100) + '%';
+        d.style.width = d.style.height = (2 + Math.random() * 4) + 'px';
+        d.style.opacity = 0.1 + Math.random() * 0.3;
+        d.style.background = ['#6366f1','#8b5cf6','#ec4899','#06b6d4'][Math.floor(Math.random() * 4)];
+        pc.appendChild(d);
       }
-      anime({
-        targets: '.particle-dot',
-        translateX: function() { return anime.random(-60, 60); },
-        translateY: function() { return anime.random(-60, 60); },
-        direction: 'alternate',
-        loop: true,
-        duration: function() { return anime.random(3000, 6000); },
-        easing: 'easeInOutSine',
-        delay: function(el, i) { return i * 200; },
-      });
+      anime({ targets: '.particle-dot', translateX: function() { return anime.random(-50, 50); }, translateY: function() { return anime.random(-50, 50); }, direction: 'alternate', loop: true, duration: function() { return anime.random(3000, 6000); }, easing: 'easeInOutSine', delay: function(el, i) { return i * 200; } });
     }
   }
 
-  // === Floating background blobs ===
-  anime({
-    targets: '.float-blob, .float-blob-2',
-    translateX: [
-      { value: function() { return anime.random(-40, 40) + 'px'; } },
-      { value: function() { return anime.random(-30, 30) + 'px'; } },
-      { value: function() { return anime.random(-40, 40) + 'px'; } },
-    ],
-    translateY: [
-      { value: function() { return anime.random(-40, 40) + 'px'; } },
-      { value: function() { return anime.random(-30, 30) + 'px'; } },
-      { value: function() { return anime.random(-40, 40) + 'px'; } },
-    ],
-    duration: 10000,
-    direction: 'alternate',
-    loop: true,
-    easing: 'easeInOutSine',
-    delay: function(el, i) { return i * 2000; },
-  });
+  // ============================================================
+  // 2. Hero entrance timeline (plays once)
+  // ============================================================
+  if (hasAnime) {
+    var ht = anime.timeline({ easing: 'easeOutExpo' });
+    ht.add({ targets: '.hero-badge', opacity: [0, 1], translateY: [20, 0], duration: 800 })
+      .add({ targets: '.hero-title .line', opacity: [0, 1], translateY: [40, 0], duration: 900, delay: function(el, i) { return i * 120; } })
+      .add({ targets: '.hero-subtitle', opacity: [0, 1], translateY: [24, 0], duration: 700 }, '-=200')
+      .add({ targets: '.hero-buttons a', opacity: [0, 1], translateY: [20, 0], duration: 600, delay: function(el, i) { return i * 120; } }, '-=200');
+  }
 
-  // === Hero entrance timeline ===
-  var heroTimeline = anime.timeline({ easing: 'easeOutExpo' });
-  heroTimeline
-    .add({ targets: '.hero-badge', opacity: [0, 1], translateY: [20, 0], duration: 800 })
-    .add({ targets: '.hero-title .line', opacity: [0, 1], translateY: [40, 0], duration: 900, delay: function(el, i) { return i * 120; } })
-    .add({ targets: '.hero-subtitle', opacity: [0, 1], translateY: [24, 0], duration: 700 }, '-=200')
-    .add({ targets: '.hero-buttons a', opacity: [0, 1], translateY: [20, 0], duration: 600, delay: function(el, i) { return i * 120; } }, '-=200');
+  // ============================================================
+  // 3. Mouse parallax — CSS custom properties, no anime fighting
+  // ============================================================
+  var heroEl = document.querySelector('.hero-section');
+  if (heroEl) {
+    var blobs = document.querySelectorAll('.float-blob, .float-blob-2');
+    var particles = document.querySelectorAll('.particle-dot');
+    var px = 0, py = 0;
+    heroEl.addEventListener('mousemove', function(e) {
+      var rect = heroEl.getBoundingClientRect();
+      px = (e.clientX - rect.left) / rect.width - 0.5;
+      py = (e.clientY - rect.top) / rect.height - 0.5;
+      blobs.forEach(function(b) { b.style.setProperty('--px', px * 20); b.style.setProperty('--py', py * 20); });
+      particles.forEach(function(p) { p.style.setProperty('--px', px * 10); p.style.setProperty('--py', py * 10); });
+    });
+  }
 
-  // === Stats counter animation ===
+  // ============================================================
+  // 4. Stat counter helper
+  // ============================================================
   function animateCounter(el) {
+    if (!hasAnime) return;
     var target = parseFloat(el.getAttribute('data-target'));
     if (!target) return;
     var suffix = el.getAttribute('data-suffix') || '';
-    anime({
-      targets: el,
-      innerHTML: [0, target],
-      duration: 2000,
-      easing: 'easeOutCubic',
-      round: target >= 10 ? 1 : 100,
-      update: function() { el.innerHTML = Math.round(el.innerHTML) + suffix; }
-    });
+    el.innerHTML = '0';
+    anime({ targets: el, innerHTML: [0, target], duration: 2000, easing: 'easeOutCubic', round: target >= 10 ? 1 : 100, update: function() { el.innerHTML = Math.round(el.innerHTML) + suffix; } });
   }
 
-  // === Scroll-triggered animations ===
-  var scrollObserver = new IntersectionObserver(function(entries) {
+  // ============================================================
+  // 5. Scroll-triggered entrance — observes each element directly
+  // ============================================================
+  var entranceObserver = new IntersectionObserver(function(entries) {
     entries.forEach(function(entry) {
-      if (!entry.isIntersecting) return;
       var el = entry.target;
-      scrollObserver.unobserve(el);
 
+      // --- Stats section: toggle .in-view on stat-items ---
       if (el.classList.contains('stats-section')) {
-        el.querySelectorAll('.stat-item .stat-number').forEach(animateCounter);
-        el.querySelectorAll('.stat-item').forEach(function(item, i) {
-          anime({ targets: item, opacity: [0, 1], translateY: [30, 0], duration: 600, delay: i * 120, easing: 'easeOutExpo' });
+        el.querySelectorAll('.stat-item').forEach(function(item) {
+          if (entry.isIntersecting) {
+            item.classList.add('in-view');
+            item.querySelectorAll('.stat-number').forEach(animateCounter);
+          } else {
+            item.classList.remove('in-view');
+          }
         });
-      } else if (el.classList.contains('features-section')) {
-        anime({ targets: el.querySelectorAll('.feature-card'), opacity: [0, 1], translateY: [40, 0], duration: 700, delay: function(el, i) { return i * 120; }, easing: 'easeOutExpo' });
-      } else if (el.classList.contains('highlights-section')) {
-        anime({ targets: el.querySelectorAll('.highlight-card'), opacity: [0, 1], translateY: [30, 0], duration: 600, delay: function(el, i) { return i * 100; }, easing: 'easeOutExpo' });
-      } else if (el.classList.contains('why-section')) {
-        anime({ targets: el.querySelectorAll('.why-item'), opacity: [0, 1], translateX: [-40, 0], duration: 600, delay: function(el, i) { return i * 120; }, easing: 'easeOutExpo' });
-        anime({ targets: el.querySelector('.why-mockup'), opacity: [0, 1], translateX: [40, 0], duration: 700, easing: 'easeOutExpo' });
-      } else if (el.classList.contains('cta-section')) {
-        anime({ targets: el.querySelector('.cta-content'), opacity: [0, 1], scale: [0.92, 1], duration: 700, easing: 'easeOutExpo' });
+        return;
+      }
+
+      // --- Feature cards & highlight cards: anime elastic entrance ---
+      if (el.classList.contains('feature-card') || el.classList.contains('highlight-card')) {
+        if (entry.isIntersecting) {
+          anime({ targets: el, opacity: [0, 1], scale: [0.85, 1], translateY: [50, 0], duration: 900, easing: 'easeOutElastic(1, 0.6)', complete: function() { el.style.transform = ''; } });
+        } else {
+          anime.set(el, { opacity: 0, scale: 0.85, translateY: 50 });
+        }
+        return;
+      }
+
+      // --- Why items: slide in from left ---
+      if (el.classList.contains('why-item')) {
+        if (entry.isIntersecting) {
+          anime({ targets: el, opacity: [0, 1], translateX: [-30, 0], duration: 700, delay: 80, easing: 'easeOutExpo' });
+        } else {
+          anime.set(el, { opacity: 0, translateX: -30 });
+        }
+        return;
+      }
+
+      // --- Why mockup: slide in from right ---
+      if (el.classList.contains('why-mockup')) {
+        if (entry.isIntersecting) {
+          anime({ targets: el, opacity: [0, 1], translateX: [40, 0], scale: [0.95, 1], duration: 800, easing: 'easeOutExpo', complete: function() { el.style.transform = ''; } });
+        } else {
+          anime.set(el, { opacity: 0, translateX: 40, scale: 0.95 });
+        }
+        return;
+      }
+
+      // --- CTA content: scale bounce ---
+      if (el.classList.contains('cta-content')) {
+        if (entry.isIntersecting) {
+          anime({ targets: el, opacity: [0, 1], scale: [0.9, 1], duration: 700, easing: 'easeOutBack(1.5)', complete: function() { el.style.transform = ''; } });
+        } else {
+          anime.set(el, { opacity: 0, scale: 0.9 });
+        }
+        return;
+      }
+
+      // --- Section headings (eyebrow, title, subtitle): CSS toggle ---
+      if (el.classList.contains('section-eyebrow') || el.classList.contains('section-title') || el.classList.contains('section-sub')) {
+        if (entry.isIntersecting) {
+          el.classList.add('in-view');
+        } else {
+          el.classList.remove('in-view');
+        }
+        return;
       }
     });
-  }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+  }, { threshold: 0.2 });
 
-  document.querySelectorAll('.stats-section, .features-section, .highlights-section, .why-section, .cta-section').forEach(function(el) {
-    scrollObserver.observe(el);
-  });
+  // Observe section headings (CSS-based fade)
+  document.querySelectorAll('.section-eyebrow, .section-title, .section-sub').forEach(function(el) { entranceObserver.observe(el); });
+  // Observe stat wrapper
+  var statsSection = document.querySelector('.stats-section');
+  if (statsSection) entranceObserver.observe(statsSection);
+  // Observe individual cards & items
+  document.querySelectorAll('.feature-card, .highlight-card, .why-item, .why-mockup, .cta-content').forEach(function(el) { entranceObserver.observe(el); });
 
-  // === Mouse parallax on hero ===
-  var heroEl = document.querySelector('.hero-section');
-  if (heroEl) {
-    heroEl.addEventListener('mousemove', function(e) {
-      var rect = heroEl.getBoundingClientRect();
-      var x = (e.clientX - rect.left) / rect.width - 0.5;
-      var y = (e.clientY - rect.top) / rect.height - 0.5;
-      anime({
-        targets: '.float-blob, .float-blob-2',
-        translateX: x * 25,
-        translateY: y * 25,
-        duration: 800,
-        easing: 'easeOutQuad',
+  // ============================================================
+  // 6. 3D tilt on feature cards
+  // ============================================================
+  if (hasAnime) {
+    document.querySelectorAll('.feature-card').forEach(function(card) {
+      card.addEventListener('mousemove', function(e) {
+        var r = this.getBoundingClientRect();
+        var x = (e.clientX - r.left) / r.width - 0.5;
+        var y = (e.clientY - r.top) / r.height - 0.5;
+        this.style.transform = this.style.transform.replace(/rotate[XYZ][^)]+\)/g, '') + ' rotateX(' + (y * -6) + 'deg) rotateY(' + (x * 6) + 'deg)';
       });
-      anime({
-        targets: '.particle-dot',
-        translateX: function() { return anime.random(-60, 60) + x * 15; },
-        translateY: function() { return anime.random(-60, 60) + y * 15; },
-        duration: 1000,
-        easing: 'easeOutQuad',
+      card.addEventListener('mouseleave', function() {
+        this.style.transform = this.style.transform.replace(/rotate[XYZ][^)]+\)/g, '');
       });
     });
   }
-
-  // === Feature card tilt effect ===
-  document.querySelectorAll('.feature-card').forEach(function(card) {
-    card.addEventListener('mousemove', function(e) {
-      var rect = this.getBoundingClientRect();
-      var x = (e.clientX - rect.left) / rect.width - 0.5;
-      var y = (e.clientY - rect.top) / rect.height - 0.5;
-      anime({
-        targets: this,
-        rotateX: y * -8,
-        rotateY: x * 8,
-        duration: 300,
-        easing: 'easeOutQuad',
-      });
-    });
-    card.addEventListener('mouseleave', function() {
-      anime({
-        targets: this,
-        rotateX: 0,
-        rotateY: 0,
-        duration: 300,
-        easing: 'easeOutQuad',
-      });
-    });
-  });
 });
 </script>
 
@@ -259,49 +320,42 @@ document.addEventListener('DOMContentLoaded', function() {
   </section>
 
   <section class="stats-section relative border-y border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-    <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-14">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div class="stat-item"><div class="text-3xl font-black text-indigo-600"><span class="stat-number" data-target="10" data-suffix="K+">0</span></div><div class="text-sm text-slate-500 mt-1">Active Users</div></div>
-        <div class="stat-item"><div class="text-3xl font-black text-purple-600"><span class="stat-number" data-target="50" data-suffix="K+">0</span></div><div class="text-sm text-slate-500 mt-1">Tasks Created</div></div>
-        <div class="stat-item"><div class="text-3xl font-black text-blue-600"><span class="stat-number" data-target="99.9" data-suffix="%">0</span></div><div class="text-sm text-slate-500 mt-1">Uptime</div></div>
-        <div class="stat-item"><div class="text-3xl font-black text-emerald-600"><span class="stat-number" data-target="4.9" data-suffix="★">0</span></div><div class="text-sm text-slate-500 mt-1">User Rating</div></div>
+        <div class="stat-item"><div class="text-indigo-600"><span class="stat-number" data-target="10" data-suffix="K+">0</span></div><div class="text-sm font-medium text-slate-500 mt-2">Active Users</div></div>
+        <div class="stat-item"><div class="text-purple-600"><span class="stat-number" data-target="50" data-suffix="K+">0</span></div><div class="text-sm font-medium text-slate-500 mt-2">Tasks Created</div></div>
+        <div class="stat-item"><div class="text-blue-600"><span class="stat-number" data-target="99.9" data-suffix="%">0</span></div><div class="text-sm font-medium text-slate-500 mt-2">Uptime</div></div>
+        <div class="stat-item"><div class="text-emerald-600"><span class="stat-number" data-target="4.9" data-suffix="★">0</span></div><div class="text-sm font-medium text-slate-500 mt-2">User Rating</div></div>
       </div>
     </div>
   </section>
 
   <section class="features-section relative py-20 sm:py-28">
     <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-      <div class="text-center mb-16 reveal">
-        <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Everything you need</h2>
-        <p class="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Powerful features designed to make you more productive</p>
+      <div class="text-center mb-16">
+        <div class="section-eyebrow bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">Core Features</div>
+        <h2 class="section-title text-slate-900 dark:text-white mt-4">Everything you need</h2>
+        <p class="section-sub mt-3 mx-auto text-center">Powerful features designed to make you more productive, all in one beautifully integrated workspace.</p>
       </div>
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600 transition-all" style="perspective: 800px;">
-          <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-sticky-note text-indigo-600 dark:text-indigo-400 text-xl"></i>
-          </div>
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Smart Notes</h3>
+        <div class="feature-card" style="perspective: 800px;">
+          <div class="feature-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-sticky-note"></i></div>
+          <h3>Smart Notes</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Rich-text editor with Markdown, code blocks with syntax highlighting, LaTeX math rendering, and image galleries.</p>
         </div>
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-600 transition-all" style="perspective: 800px;">
-          <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-tasks text-purple-600 dark:text-purple-400 text-xl"></i>
-          </div>
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Task Management</h3>
+        <div class="feature-card" style="perspective: 800px;">
+          <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);"><i class="fas fa-tasks"></i></div>
+          <h3>Task Management</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Organize with priorities (High/Medium/Low), due dates, completion tracking, and smart filters.</p>
         </div>
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all" style="perspective: 800px;">
-          <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-calendar-alt text-blue-600 dark:text-blue-400 text-xl"></i>
-          </div>
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Calendar View</h3>
+        <div class="feature-card" style="perspective: 800px;">
+          <div class="feature-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fas fa-calendar-alt"></i></div>
+          <h3>Calendar View</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">FullCalendar-powered weekly and monthly views with drag-and-drop event management and scheduling.</p>
         </div>
-        <div class="feature-card group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-300 dark:hover:border-emerald-600 transition-all" style="perspective: 800px;">
-          <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-            <i class="fas fa-brain text-emerald-600 dark:text-emerald-400 text-xl"></i>
-          </div>
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">AI Assistant</h3>
+        <div class="feature-card" style="perspective: 800px;">
+          <div class="feature-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fas fa-brain"></i></div>
+          <h3>AI Assistant</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">AI-powered chat with code generation, markdown responses with syntax highlighting, and PDF export.</p>
         </div>
       </div>
@@ -310,50 +364,51 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <section class="highlights-section relative py-20 sm:py-28 bg-slate-50 dark:bg-slate-800/30">
     <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-      <div class="text-center mb-16 reveal">
-        <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Built for productivity</h2>
-        <p class="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Every tool you need to stay organized and get things done</p>
+      <div class="text-center mb-16">
+        <div class="section-eyebrow bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Platform Highlights</div>
+        <h2 class="section-title text-slate-900 dark:text-white mt-4">Built for productivity</h2>
+        <p class="section-sub mt-3 mx-auto text-center">Every tool you need to stay organized and get things done, without switching between apps.</p>
       </div>
       <div class="grid md:grid-cols-3 gap-5">
-        <div class="highlight-card">
+        <div class="highlight-card" style="--card-color: #6366f1;">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-code text-indigo-600 dark:text-indigo-400"></i></div>
-            <h3 class="font-bold text-slate-900 dark:text-white">Code & LaTeX</h3>
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-code text-white text-sm"></i></div>
+            <h3>Code & LaTeX</h3>
           </div>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Write code blocks with Prism.js syntax highlighting supporting 100+ languages. Render mathematical expressions with KaTeX — perfect for technical documentation.</p>
         </div>
-        <div class="highlight-card">
+        <div class="highlight-card" style="--card-color: #a855f7;">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-file-pdf text-purple-600 dark:text-purple-400"></i></div>
-            <h3 class="font-bold text-slate-900 dark:text-white">PDF Export</h3>
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #a855f7, #c084fc);"><i class="fas fa-file-pdf text-white text-sm"></i></div>
+            <h3>PDF Export</h3>
           </div>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Export any AI chat conversation or note to PDF with a single click. Your content, perfectly formatted and ready to share.</p>
         </div>
-        <div class="highlight-card">
+        <div class="highlight-card" style="--card-color: #3b82f6;">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-comments text-blue-600 dark:text-blue-400"></i></div>
-            <h3 class="font-bold text-slate-900 dark:text-white">Real-time Chat</h3>
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fas fa-comments text-white text-sm"></i></div>
+            <h3>Real-time Chat</h3>
           </div>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Instant messaging with typing indicators, online presence, group conversations, file sharing, and emoji reactions powered by Socket.IO.</p>
         </div>
-        <div class="highlight-card">
+        <div class="highlight-card" style="--card-color: #10b981;">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-palette text-emerald-600 dark:text-emerald-400"></i></div>
-            <h3 class="font-bold text-slate-900 dark:text-white">Dark Mode</h3>
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fas fa-palette text-white text-sm"></i></div>
+            <h3>Dark Mode</h3>
           </div>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Full dark mode support across every page. System-aware auto-detection with manual toggle for comfortable viewing day or night.</p>
         </div>
-        <div class="highlight-card">
+        <div class="highlight-card" style="--card-color: #f59e0b;">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-image text-amber-600 dark:text-amber-400"></i></div>
-            <h3 class="font-bold text-slate-900 dark:text-white">Image Gallery</h3>
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fas fa-image text-white text-sm"></i></div>
+            <h3>Image Gallery</h3>
           </div>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Attach and preview images with a beautiful lightbox gallery. Zoom, navigate, and download images directly from your notes.</p>
         </div>
-        <div class="highlight-card">
+        <div class="highlight-card" style="--card-color: #ec4899;">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center flex-shrink-0"><i class="fas fa-chart-simple text-rose-600 dark:text-rose-400"></i></div>
-            <h3 class="font-bold text-slate-900 dark:text-white">Dashboard Insights</h3>
+            <div class="highlight-icon" style="background: linear-gradient(135deg, #ec4899, #f472b6);"><i class="fas fa-chart-simple text-white text-sm"></i></div>
+            <h3>Dashboard Insights</h3>
           </div>
           <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Visual progress tracking with Chart.js — donut charts for completion, bar charts for priority breakdown, and line charts for weekly activity trends.</p>
         </div>
@@ -363,33 +418,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <section class="why-section relative py-20 sm:py-28">
     <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+      <div class="text-center mb-16">
+        <div class="section-eyebrow bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">Why Us</div>
+        <h2 class="section-title text-slate-900 dark:text-white mt-4">Why choose Ahmed—Stack?</h2>
+        <p class="section-sub mt-3 mx-auto text-center">A modern, all-in-one platform designed for how you actually work.</p>
+      </div>
       <div class="grid lg:grid-cols-2 gap-16 items-center">
-        <div>
-          <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Why choose Ahmed—Stack?</h2>
-          <p class="mt-4 text-lg text-slate-500 dark:text-slate-400">A modern, all-in-one platform designed for how you actually work.</p>
-          <div class="mt-10 space-y-6">
-            <div class="why-item flex gap-5">
-              <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-bolt text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Lightning Fast</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Optimized for speed across all devices with instant load times and smooth transitions.</p></div>
-            </div>
-            <div class="why-item flex gap-5">
-              <div class="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-sync text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Always Synced</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Real-time updates powered by Socket.IO — your data stays in sync without page refreshes.</p></div>
-            </div>
-            <div class="why-item flex gap-5">
-              <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-lock text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Privacy First</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Your data encrypted and protected with enterprise-grade security. You control what stays private.</p></div>
-            </div>
-            <div class="why-item flex gap-5">
-              <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-mobile-screen text-white text-sm"></i></div>
-              <div><h4 class="font-bold text-slate-900 dark:text-white">Fully Responsive</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Seamless experience across desktop, tablet, and mobile — with a collapsible sidebar and touch-friendly UI.</p></div>
-            </div>
+        <div class="space-y-4">
+          <div class="why-item">
+            <div class="why-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-bolt text-white"></i></div>
+            <div><h4>Lightning Fast</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Optimized for speed across all devices with instant load times and smooth transitions.</p></div>
+          </div>
+          <div class="why-item">
+            <div class="why-icon" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);"><i class="fas fa-sync text-white"></i></div>
+            <div><h4>Always Synced</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Real-time updates powered by Socket.IO — your data stays in sync without page refreshes.</p></div>
+          </div>
+          <div class="why-item">
+            <div class="why-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fas fa-lock text-white"></i></div>
+            <div><h4>Privacy First</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Your data encrypted and protected with enterprise-grade security. You control what stays private.</p></div>
+          </div>
+          <div class="why-item">
+            <div class="why-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fas fa-mobile-screen text-white"></i></div>
+            <div><h4>Fully Responsive</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Seamless experience across desktop, tablet, and mobile — with a collapsible sidebar and touch-friendly UI.</p></div>
           </div>
         </div>
         <div class="why-mockup">
           <div class="relative">
             <div class="absolute -inset-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl blur-3xl opacity-20"></div>
-            <div class="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:shadow-xl transition-shadow">
+            <div class="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 hover:shadow-xl transition-all hover:-translate-y-1 duration-300">
               <div class="space-y-5">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">AS</div>
@@ -408,14 +464,15 @@ document.addEventListener('DOMContentLoaded', function() {
   <section class="cta-section relative py-20 sm:py-28 bg-slate-50 dark:bg-slate-800/30">
     <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
       <div class="cta-content">
-        <h2 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">Ready to transform your productivity?</h2>
-        <p class="mt-4 text-lg text-slate-500 dark:text-slate-400">Join thousands of users organizing their lives better with notes, tasks, calendar, and AI — all in one workspace.</p>
+        <div class="section-eyebrow bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 mx-auto">Get Started</div>
+        <h2 class="section-title text-slate-900 dark:text-white mt-4">Ready to transform your productivity?</h2>
+        <p class="section-sub mt-3 mx-auto text-center text-lg">Join thousands of users organizing their lives better with notes, tasks, calendar, and AI — all in one workspace.</p>
         <div class="flex flex-wrap gap-4 justify-center mt-10">
-          <a href="{{ url_for('auth.register') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-0.5 transition-all">
+          <a href="{{ url_for('auth.register') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all">
             <i class="fas fa-rocket"></i>
             Start Free Today
           </a>
-          <a href="{{ url_for('auth.login') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold hover:border-indigo-400 dark:hover:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+          <a href="{{ url_for('auth.login') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold hover:border-indigo-400 dark:hover:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:-translate-y-1 transition-all">
             Sign In
           </a>
         </div>

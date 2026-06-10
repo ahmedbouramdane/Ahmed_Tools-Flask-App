@@ -1,0 +1,213 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadScript(url) {
+  return new Promise(function(resolve, reject) {
+    // Check if already loaded via the script's src
+    var scripts = document.querySelectorAll('script[src="' + url.replace(/"/g, '\\"') + '"]');
+    if (scripts.length) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = function() { reject(new Error('Failed to load ' + url)); };
+    document.body.appendChild(s);
+  });
+}
+
+function compileFallback(code, lang, done) {
+  fetch('/tools/api/dev/compile', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({language: lang, code: code})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.success) done(d.result, null); else done(null, d.error || 'Compilation failed');
+  }).catch(function(e){ done(null, e.message); });
+}
+
+function downloadData(filename, dataUrl) {
+  var a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function showToast(msg, icon) {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({ toast:true, position:'top-end', icon:icon||'success', title:msg, showConfirmButton:false, timer:2000 });
+  }
+}
+
+function copyResult(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+    el.select(); el.setSelectionRange(0, 99999);
+  }
+  navigator.clipboard.writeText(el.value || el.textContent);
+  showToast('Copied!', 'success');
+}
+
+function toggleToolFullscreen(el) {
+  if (!el) el = document.getElementById('tool-workspace');
+  if (!el) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+    el.classList.remove('tool-fullscreen-active');
+  } else if (el.requestFullscreen) {
+    el.requestFullscreen().then(function() {
+      el.classList.add('tool-fullscreen-active');
+    }).catch(function() {
+      el.classList.toggle('tool-fullscreen-active');
+    });
+  } else {
+    el.classList.toggle('tool-fullscreen-active');
+  }
+}
+
+// ─── Dynamic CodeMirror loader ────────────────────────────────────────────
+
+var _cmLoaded = false;
+var _cmLoading = false;
+var _cmQueue = [];
+
+var _cmAddonsLoaded = false;
+var _cmEditor = null;
+
+function loadCodeMirror(callback) {
+  if (window.CodeMirror && _cmAddonsLoaded) { callback(); return; }
+  _cmQueue.push(callback);
+  if (_cmLoading) return;
+  _cmLoading = true;
+
+  var cssUrls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css',
+  ];
+  cssUrls.forEach(function(url) {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = url;
+    if (url.indexOf('material-darker') > -1) l.id = 'cm-dark-theme';
+    document.head.appendChild(l);
+  });
+
+  var scriptUrls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/html-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/css-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/xml-hint.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/comment-fold.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js',
+  ];
+  var loaded = 0;
+  var total = scriptUrls.length;
+  function checkDone() {
+    loaded++;
+    if (loaded >= total) {
+      _cmAddonsLoaded = true;
+      _cmLoaded = true;
+      _cmLoading = false;
+      _cmQueue.forEach(function(fn) { fn(); });
+      _cmQueue = [];
+    }
+  }
+  scriptUrls.forEach(function(url) {
+    var s = document.createElement('script');
+    s.src = url;
+    s.async = false;
+    s.onload = checkDone;
+    s.onerror = checkDone;
+    document.body.appendChild(s);
+  });
+}
+
+function loadCodeMirrorMode(mode, callback) {
+  var modes = {
+    sass: 'sass/sass.min.js',
+    css: 'css/css.min.js',
+    javascript: 'javascript/javascript.min.js',
+    typescript: 'javascript/javascript.min.js',
+    html: 'htmlmixed/htmlmixed.min.js',
+    xml: 'xml/xml.min.js',
+    coffeescript: 'coffeescript/coffeescript.min.js',
+  };
+  var suffix = modes[mode];
+  if (!suffix || window['CodeMirror_' + mode]) { callback(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/' + suffix;
+  s.onload = function() { window['CodeMirror_' + mode] = true; callback(); };
+  document.body.appendChild(s);
+}
+
+function createCodeEditor(textareaId, mode) {
+  var ta = document.getElementById(textareaId);
+  if (!ta) return null;
+  // Map friendly mode names to CodeMirror MIME types
+  var modeMap = { typescript: 'text/typescript', jsx: 'text/jsx', coffeescript: 'text/x-coffeescript' };
+  var cmMode = modeMap[mode] || mode;
+  var editor = CodeMirror.fromTextArea(ta, {
+    mode: cmMode,
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    tabSize: 2,
+    indentUnit: 2,
+    indentWithTabs: false,
+    theme: document.documentElement.classList.contains('dark') ? 'material-darker' : 'default',
+    viewportMargin: Infinity,
+    styleActiveLine: true,
+    foldGutter: true,
+    gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+    hintOptions: {
+      completeSingle: false,
+      closeOnUnfocus: true,
+      alignWithWord: true
+    },
+    extraKeys: {
+      'Ctrl-Space': 'autocomplete',
+      'Ctrl-S': function(ed) { ed.execCommand('insertSoftTab'); }
+    }
+  });
+
+  editor.on('inputRead', function(ed, change) {
+    if (change.text && change.text.length === 1 && /[\w.$]$/.test(change.text[0])) {
+      ed.showHint();
+    }
+  });
+
+  _cmEditor = editor;
+
+  // Watch for theme changes
+  var observer = new MutationObserver(function() {
+    editor.setOption('theme', document.documentElement.classList.contains('dark') ? 'material-darker' : 'default');
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return editor;
+}
+
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var r = new FileReader();
+    r.onload = function() { resolve(r.result); };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+

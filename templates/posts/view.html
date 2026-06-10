@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Post - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}Post - Ahmed-Stack{% endblock %}
 {% block content %}
 {% set view_images = post.images if post.images else [] %}
 {% set view_image_urls = view_images | map(attribute='image_url') | list %}
@@ -13,7 +13,7 @@
   </a>
 
   <!-- Post Card -->
-  <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden" id="post-{{ post.uuid }}" data-images="{{ view_image_urls | tojson | safe }}" data-user-reaction="{{ user_reaction or '' }}">
+  <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative" id="post-{{ post.uuid }}" data-images="{{ view_image_urls | tojson | safe }}" data-user-reaction="{{ user_reaction or '' }}">
     <!-- Post Header -->
     <div class="p-6 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -88,14 +88,14 @@
             <ul class="splide__list">
               {% for url in view_image_urls %}
               <li class="splide__slide">
-                <img src="{{ url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, {{ loop.index0 }})" loading="lazy">
+                <img src="{{ url }}" alt="Post image" class="w-full h-80 object-cover cursor-pointer" onclick="openImageGallery('{{ post.uuid }}', {{ loop.index0 }})" loading="lazy">
               </li>
               {% endfor %}
             </ul>
           </div>
         </div>
         {% else %}
-        <img src="{{ view_single }}" alt="Post image" class="w-full max-h-[500px] object-cover cursor-pointer" onclick="openImageGallery({{ post.uuid }}, 0)">
+        <img src="{{ view_single }}" alt="Post image" class="w-full max-h-[500px] object-cover cursor-pointer" onclick="openImageGallery('{{ post.uuid }}', 0)">
         {% endif %}
       </div>
     {% endif %}
@@ -184,9 +184,7 @@
         {% for comment in view_top_comments %}
           <div class="comment-thread" data-comment-id="{{ comment.id }}">
             <div class="flex gap-3" id="comment-{{ comment.id }}">
-              <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">
-                {{ comment.author.username[0] | upper }}
-              </div>
+              {% if comment.author.avatar_url %}<img src="{{ comment.author.avatar_url }}" alt="" class="w-10 h-10 rounded-full object-cover flex-shrink-0">{% else %}<div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">{{ comment.author.username[0] | upper }}</div>{% endif %}
               <div class="flex-1">
                 <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3">
                   <div class="flex items-center justify-between mb-1">
@@ -213,7 +211,7 @@
                 <div class="ml-8 mt-2 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4 comment-replies-container">
                   {% for reply in comment.replies %}
                   <div class="flex gap-2" id="comment-{{ reply.id }}">
-                    <div class="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{{ reply.author.username[0] | upper }}</div>
+                    {% if reply.author.avatar_url %}<img src="{{ reply.author.avatar_url }}" alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0">{% else %}<div class="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{{ reply.author.username[0] | upper }}</div>{% endif %}
                     <div class="flex-1">
                       <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
                         <div class="flex items-center justify-between">
@@ -253,8 +251,7 @@
       <!-- Add Comment Form -->
       <form id="comment-form" class="flex gap-3" onsubmit="return addViewComment(event, {{ post.uuid }})">
         <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">
-          {{ current_user.username[0] | upper }}
-        </div>
+          {% if current_user.avatar_url %}<img src="{{ current_user.avatar_url }}" alt="" class="w-10 h-10 rounded-full object-cover">{% else %}{{ current_user.username[0] | upper }}{% endif %}        </div>
         <div class="flex-1">
           <input type="text" id="comment-input" name="content" placeholder="Write a comment..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
           <input type="hidden" id="comment-parent-id" value="">
@@ -449,6 +446,7 @@ viewSocket.on('new_comment', (data) => {
   if (document.getElementById(`comment-${data.comment_id}`)) return;
   const currentUserId = {{ current_user.id }};
   const authorName = data.author ? data.author.username : '{{ current_user.username }}';
+  const authorAvatar = data.author && data.author.avatar_url ? data.author.avatar_url : '';
   const initial = authorName.charAt(0).toUpperCase();
   const isOwn = data.author && data.author.id === currentUserId;
   const editBtn = isOwn ? `<button onclick="openEditCommentModal(${data.comment_id})" class="text-gray-400 hover:text-indigo-500 p-1 text-xs"><i class="fas fa-pen"></i></button>` : '';
@@ -456,7 +454,7 @@ viewSocket.on('new_comment', (data) => {
 
   const commentHtml = `
     <div class="flex gap-3" id="comment-${data.comment_id}">
-      <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+      ${authorAvatar ? `<img src="${authorAvatar}" alt="" class="w-10 h-10 rounded-full object-cover flex-shrink-0">` : `<div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">${initial}</div>`}
       <div class="flex-1">
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3">
           <div class="flex items-center justify-between mb-1">
@@ -616,17 +614,35 @@ function updateViewLikeUI(postId, data) {
     const reaction = data.reaction || (data.liked ? 'like' : '');
     if (postEl) postEl.dataset.userReaction = reaction || '';
     if (likeBtn) {
-      const oldIcon = document.getElementById(`like-icon-${postId}`);
-      if (oldIcon) oldIcon.remove();
-      const newIcon = document.createElement(reaction ? 'span' : 'i');
-      newIcon.id = `like-icon-${postId}`;
-      if (reaction) {
-        newIcon.className = 'text-lg leading-none';
-        newIcon.textContent = emojiMap[reaction] || '👍';
-      } else {
-        newIcon.className = 'far fa-thumbs-up';
+      let icon = document.getElementById(`like-icon-${postId}`);
+      if (!icon) {
+        icon = document.createElement(reaction ? 'span' : 'i');
+        icon.id = `like-icon-${postId}`;
+        likeBtn.insertBefore(icon, likeBtn.firstChild);
       }
-      likeBtn.insertBefore(newIcon, likeBtn.firstChild);
+      if (reaction) {
+        if (icon.tagName !== 'SPAN') {
+          const span = document.createElement('span');
+          span.id = `like-icon-${postId}`;
+          span.className = 'text-lg leading-none';
+          span.textContent = emojiMap[reaction] || '👍';
+          likeBtn.replaceChild(span, icon);
+          icon = span;
+        } else {
+          icon.textContent = emojiMap[reaction] || '👍';
+        }
+      } else {
+        if (icon.tagName !== 'I') {
+          const i = document.createElement('i');
+          i.id = `like-icon-${postId}`;
+          i.className = 'far fa-thumbs-up';
+          likeBtn.replaceChild(i, icon);
+          icon = i;
+        }
+      }
+      icon.classList.remove('like-animate');
+      void icon.offsetWidth;
+      icon.classList.add('like-animate');
       likeBtn.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
       if (reaction) {
         if (reaction === 'like') likeBtn.classList.add('text-blue-500', 'font-semibold');
@@ -635,7 +651,6 @@ function updateViewLikeUI(postId, data) {
       } else {
         likeBtn.classList.add('text-gray-600', 'dark:text-gray-400');
       }
-      newIcon.classList.add('like-animate');
     }
   }
 }
@@ -646,13 +661,13 @@ function reactToPost(postId, reaction, event) {
   try {
     cancelHideReactions(postId);
     startHideReactions(postId);
-    
+
     const postEl = document.getElementById(`post-${postId}`);
     const prevReaction = postEl ? postEl.dataset.userReaction || '' : '';
-    
+
     let targetReaction = reaction;
     let optimisticReaction = reaction;
-    
+
     if (reaction === 'main') {
       if (prevReaction) {
         targetReaction = prevReaction;
@@ -668,27 +683,45 @@ function reactToPost(postId, reaction, event) {
         optimisticReaction = reaction;
       }
     }
-    
-    const icon = document.getElementById(`like-icon-${postId}`);
-    if (icon) icon.classList.add('like-animate');
+
     const emojiMap = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
-    
+
+    const oldIcon = document.getElementById(`like-icon-${postId}`);
+    if (oldIcon) oldIcon.classList.remove('like-animate');
+
     const setReact = (r) => {
       const bt = document.getElementById(`like-btn-${postId}`);
       const pe = document.getElementById(`post-${postId}`);
-      const oldIcon = document.getElementById(`like-icon-${postId}`);
+      let icon = document.getElementById(`like-icon-${postId}`);
       if (bt) {
-        if (oldIcon) oldIcon.remove();
-        const newIcon = document.createElement(r ? 'span' : 'i');
-        newIcon.id = `like-icon-${postId}`;
-        if (r) {
-          newIcon.className = 'text-lg leading-none';
-          newIcon.textContent = emojiMap[r] || '👍';
-        } else {
-          newIcon.className = 'far fa-thumbs-up';
+        if (!icon) {
+          icon = document.createElement(r ? 'span' : 'i');
+          icon.id = `like-icon-${postId}`;
+          bt.insertBefore(icon, bt.firstChild);
         }
-        bt.insertBefore(newIcon, bt.firstChild);
-        newIcon.classList.add('like-animate');
+        if (r) {
+          if (icon.tagName !== 'SPAN') {
+            const span = document.createElement('span');
+            span.id = `like-icon-${postId}`;
+            span.className = 'text-lg leading-none';
+            span.textContent = emojiMap[r] || '👍';
+            bt.replaceChild(span, icon);
+            icon = span;
+          } else {
+            icon.textContent = emojiMap[r] || '👍';
+          }
+        } else {
+          if (icon.tagName !== 'I') {
+            const i = document.createElement('i');
+            i.id = `like-icon-${postId}`;
+            i.className = 'far fa-thumbs-up';
+            bt.replaceChild(i, icon);
+            icon = i;
+          }
+        }
+        icon.classList.remove('like-animate');
+        void icon.offsetWidth;
+        icon.classList.add('like-animate');
         bt.classList.remove('text-red-500', 'text-blue-500', 'text-pink-500', 'text-yellow-500', 'text-orange-500', 'text-gray-600', 'dark:text-gray-400', 'font-semibold');
         if (r) {
           if (r === 'like') bt.classList.add('text-blue-500', 'font-semibold');
@@ -700,7 +733,7 @@ function reactToPost(postId, reaction, event) {
       }
       if (pe) pe.dataset.userReaction = r || '';
     };
-    
+
     const setCounts = (counts) => {
       const ct = document.getElementById(`like-count-${postId}`);
       const d = document.getElementById('like-count-display');
@@ -708,7 +741,7 @@ function reactToPost(postId, reaction, event) {
       const t = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
       if (ct) ct.textContent = t;
       if (d) d.textContent = t;
-      
+
       if (se) {
         if (counts && t > 0) {
           const sortedReacts = Object.entries(counts)
@@ -727,35 +760,23 @@ function reactToPost(postId, reaction, event) {
           se.innerHTML = `<span class="mr-1">👍</span> <span id="like-count-display">${t}</span>`;
         }
       }
-      
+
       const rb = document.getElementById(`reaction-bar-${postId}`);
       if (rb && counts) {
         rb.innerHTML = Object.entries(counts).map(([r, c]) => c > 0 ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">' + (emojiMap[r] || r) + ' ' + c + '</span>' : '').filter(Boolean).join(' ');
       }
     };
-    
+
     setReact(optimisticReaction);
-    
-    // Optimistic count adjustment
-    const currentCountEl = document.getElementById(`like-count-${postId}`);
-    const currentDisplayEl = document.getElementById('like-count-display');
-    if (currentCountEl || currentDisplayEl) {
-      let currentCount = parseInt(currentCountEl ? currentCountEl.textContent : (currentDisplayEl ? currentDisplayEl.textContent : '0')) || 0;
-      if (prevReaction && !optimisticReaction) {
-        currentCount = Math.max(0, currentCount - 1);
-      } else if (!prevReaction && optimisticReaction) {
-        currentCount = currentCount + 1;
-      }
-      if (currentCountEl) currentCountEl.textContent = currentCount;
-      if (currentDisplayEl) currentDisplayEl.textContent = currentCount;
-    }
-    
+
     const handleResp = (resp) => {
       if (!resp || !resp.success) { setReact(prevReaction); return; }
-      setReact(resp.removed ? '' : (resp.reaction || ''));
-      setCounts(resp.counts);
+      if (!(viewSocket && viewSocket.connected)) {
+        setReact(resp.removed ? '' : (resp.reaction || ''));
+        setCounts(resp.counts);
+      }
     };
-    
+
     if (viewSocket && viewSocket.connected) {
       viewSocket.emit('react_to_post', { post_id: postId, reaction: targetReaction }, handleResp);
     } else {
@@ -802,11 +823,12 @@ function addViewComment(e, postId) {
 }
 
 function handleCommentResponse(data, postId, parentId) {
-  const authorName = data.comment && data.comment.author ? data.comment.author.username : '{{ current_user.username }}';
-  const initial = authorName.charAt(0).toUpperCase();
+  const author = data.comment && data.comment.author ? data.comment.author : {};
+  const authorName = author.username || '{{ current_user.username }}';
+  const authorAvatar = author.avatar_url ? `<img src="${author.avatar_url}" alt="" class="w-10 h-10 rounded-full object-cover flex-shrink-0">` : `<div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">${authorName.charAt(0).toUpperCase()}</div>`;
   const commentHtml = `
     <div class="flex gap-3" id="comment-${data.comment_id}">
-      <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">${initial}</div>
+      ${authorAvatar}
       <div class="flex-1">
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3">
           <div class="flex items-center justify-between mb-1">
@@ -889,11 +911,12 @@ function addViewReply(e, postId, parentId) {
 }
 
 function appendViewReplyHTML(data, parentId) {
-  const authorName = data.comment && data.comment.author ? data.comment.author.username : '{{ current_user.username }}';
-  const initial = authorName.charAt(0).toUpperCase();
+  const author = data.comment && data.comment.author ? data.comment.author : {};
+  const authorName = author.username || '{{ current_user.username }}';
+  const authorAvatar = author.avatar_url ? `<img src="${author.avatar_url}" alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0">` : `<div class="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">${authorName.charAt(0).toUpperCase()}</div>`;
   const replyHtml = `
     <div class="flex gap-2" id="comment-${data.comment_id}">
-      <div class="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">${initial}</div>
+      ${authorAvatar}
       <div class="flex-1">
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
           <div class="flex items-center justify-between">
@@ -1153,7 +1176,7 @@ function saveEditedComment(e) {
 function togglePostMenu() {
   closeAllMenus();
   const menu = document.getElementById('post-menu');
-  menu.classList.toggle('hidden');
+  if (menu) menu.classList.toggle('hidden');
 }
 
 function toggleCommentMenu(commentId) {

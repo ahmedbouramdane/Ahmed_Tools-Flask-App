@@ -1,0 +1,575 @@
+window.tool_dev_formatter = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-3xl">' +
+    '<div class="flex items-center gap-2 flex-wrap">' +
+      '<select id="fmt-lang" class="px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"><option value="json">JSON</option><option value="javascript">JavaScript</option><option value="html">HTML</option><option value="css">CSS</option><option value="python">Python (basic)</option></select>' +
+      '<button id="fmt-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition"><i class="fas fa-indent"></i> Format</button>' +
+      '<button onclick="copyResult(\'fmt-input\')" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-copy"></i> Copy</button>' +
+    '</div>' +
+    '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Input</label><textarea id="fmt-input" rows="12" placeholder="Paste messy code..." class="w-full px-4 py-3 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+      '<div><label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Formatted</label><textarea id="fmt-output" rows="12" readonly placeholder="Formatted output..." class="w-full px-4 py-3 text-sm font-mono border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>' +
+    '</div>' +
+  '</div>';
+
+  document.getElementById('fmt-btn').addEventListener('click', function() {
+    var input = document.getElementById('fmt-input').value;
+    if (!input.trim()) return;
+    var lang = document.getElementById('fmt-lang').value;
+    var result = '';
+    try {
+      if (lang === 'json') {
+        result = JSON.stringify(JSON.parse(input), null, 2);
+      } else if (lang === 'javascript' || lang === 'css') {
+        var lines = input.split('\n');
+        var indent = 0;
+        result = lines.map(function(l) {
+          var trimmed = l.trim();
+          if (!trimmed) return '';
+          var dedent = /^[}\]\)]/.test(trimmed) ? 1 : 0;
+          indent = Math.max(0, indent - dedent);
+          var out = '  '.repeat(indent) + trimmed;
+          if (/[\[{\(]$/.test(trimmed)) indent++;
+          return out;
+        }).join('\n');
+      } else if (lang === 'html') {
+        var tags = input.replace(/>\s*</g, '>\n<').split('\n');
+        var indent = 0;
+        result = tags.map(function(l) {
+          var trimmed = l.trim();
+          if (!trimmed) return '';
+          var dedent = trimmed.startsWith('</') ? 1 : 0;
+          indent = Math.max(0, indent - dedent);
+          var out = '  '.repeat(indent) + trimmed;
+          if (/<[^/][^>]*>[^<]*$/.test(trimmed) && !trimmed.endsWith('/>') && !trimmed.startsWith('</')) indent++;
+          return out;
+        }).join('\n');
+      } else if (lang === 'python') {
+        result = input.split('\n').map(function(l) { return l.trimEnd(); }).join('\n');
+      }
+      document.getElementById('fmt-output').value = result || input;
+    } catch(e) {
+      document.getElementById('fmt-output').value = 'Error: ' + e.message;
+    }
+  });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🧮 MATH TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_math_latex = function() {
+  var ws = document.getElementById('tool-workspace');
+  var _latexEditor = null;
+  var _latexTa = null;
+  var _renderTimer = null;
+
+  ws.innerHTML = '<div class="flex flex-col h-full space-y-3">' +
+    // Top toolbar
+    '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
+      '<span class="text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-lg">LaTeX Editor</span>' +
+      '<button id="latex-copy-code" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-xs hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Copy LaTeX source"><i class="fas fa-copy"></i> Copy Code</button>' +
+      '<button id="latex-copy-image" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition" title="Copy as image to clipboard"><i class="fas fa-image"></i> Copy Image</button>' +
+      '<button id="latex-pdf-btn" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition" title="Download as PDF"><i class="fas fa-file-pdf"></i> Download PDF</button>' +
+      '<span class="flex-1"></span>' +
+      '<button onclick="toggleToolFullscreen()" class="tool-fullscreen-btn px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+      '<label class="flex items-center gap-1 text-[10px] text-gray-400"><input type="checkbox" id="latex-autorender" checked> Auto-render</label>' +
+    '</div>' +
+    // Toolbar categories
+    '<div class="flex flex-wrap gap-1 shrink-0" id="latex-toolbar">' +
+      '<select id="latex-structure" class="ltx-select px-2 py-1 text-[10px] border rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><option value="">— Document Structure —</option><option value="\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\begin{document}\n\n\\end{document}">Blank Article</option><option value="\\documentclass{report}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amsmath,amssymb}\n\\begin{document}\n\n\\end{document}">Blank Report</option><option value="\\documentclass{book}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amsmath}\n\\begin{document}\n\n\\end{document}">Blank Book</option><option value="\\documentclass{beamer}\n\\begin{document}\n\\begin{frame}\n\\frametitle{Title}\n\n\\end{frame}\n\\end{document}">Beamer Slide</option><option value="\\usepackage{amsmath}">\\usepackage{amsmath}</option><option value="\\usepackage{amssymb}">\\usepackage{amssymb}</option><option value="\\usepackage{graphicx}">\\usepackage{graphicx}</option><option value="\\usepackage{hyperref}">\\usepackage{hyperref}</option></select>' +
+      '<select id="latex-sections" class="ltx-select px-2 py-1 text-[10px] border rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><option value="">— Sections —</option><option value="\\section{}">\\section{}</option><option value="\\subsection{}">\\subsection{}</option><option value="\\subsubsection{}">\\subsubsection{}</option><option value="\\chapter{}">\\chapter{}</option><option value="\\paragraph{}">\\paragraph{}</option><option value="\\begin{abstract}\n\n\\end{abstract}">Abstract</option></select>' +
+      '<select id="latex-envs" class="ltx-select px-2 py-1 text-[10px] border rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><option value="">— Environments —</option><option value="\\begin{align}\n  \n\\end{align}">align</option><option value="\\begin{equation}\n  \n\\end{equation}">equation</option><option value="\\begin{cases}\n  \n\\end{cases}">cases</option><option value="\\begin{matrix}\n  \n\\end{matrix}">matrix</option><option value="\\begin{bmatrix}\n  \n\\end{bmatrix}">bmatrix</option><option value="\\begin{pmatrix}\n  \n\\end{pmatrix}">pmatrix</option><option value="\\begin{array}{}\n  \n\\end{array}">array</option><option value="\\begin{tabular}{|c|c|}\n  \\hline\n  \n\\end{tabular}">tabular</option><option value="\\begin{itemize}\n  \\item \n\\end{itemize}">itemize</option><option value="\\begin{enumerate}\n  \\item \n\\end{enumerate}">enumerate</option><option value="\\begin{proof}\n  \n\\end{proof}" disabled>proof</option></select>' +
+    '</div>' +
+    '<div class="flex flex-wrap gap-1 shrink-0" id="latex-math-toolbar">' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Math:</span>' +
+      '<button data-latex="\\frac{}{}" title="Fraction">\\frac</button>' +
+      '<button data-latex="\\sqrt{}" title="Square Root">\\sqrt</button>' +
+      '<button data-latex="\\sum_{i=1}^{n}" title="Summation">\\sum</button>' +
+      '<button data-latex="\\int_{a}^{b}" title="Integral">\\int</button>' +
+      '<button data-latex="\\iint_{D}" title="Double Integral">\\iint</button>' +
+      '<button data-latex="\\prod_{i=1}^{n}" title="Product">\\prod</button>' +
+      '<button data-latex="\\lim_{x \\to \\infty}" title="Limit">\\lim</button>' +
+      '<button data-latex="\\log" title="Log">\\log</button>' +
+      '<button data-latex="\\sin" title="Sine">\\sin</button>' +
+      '<button data-latex="\\cos" title="Cosine">\\cos</button>' +
+      '<button data-latex="\\tan" title="Tangent">\\tan</button>' +
+      '<button data-latex="\\binom{n}{k}" title="Binomial">\\binom</button>' +
+      '<button data-latex="\\underset{x \\to 0}{\\lim}" title="Underset">\\underset</button>' +
+      '<button data-latex="\\overset{}{}" title="Overset">\\overset</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Greek:</span>' +
+      '<button data-latex="\\alpha">\\alpha</button>' +
+      '<button data-latex="\\beta">\\beta</button>' +
+      '<button data-latex="\\gamma">\\gamma</button>' +
+      '<button data-latex="\\delta">\\delta</button>' +
+      '<button data-latex="\\epsilon">\\epsilon</button>' +
+      '<button data-latex="\\zeta">\\zeta</button>' +
+      '<button data-latex="\\eta">\\eta</button>' +
+      '<button data-latex="\\theta">\\theta</button>' +
+      '<button data-latex="\\iota">\\iota</button>' +
+      '<button data-latex="\\kappa">\\kappa</button>' +
+      '<button data-latex="\\lambda">\\lambda</button>' +
+      '<button data-latex="\\mu">\\mu</button>' +
+      '<button data-latex="\\nu">\\nu</button>' +
+      '<button data-latex="\\xi">\\xi</button>' +
+      '<button data-latex="\\pi">\\pi</button>' +
+      '<button data-latex="\\rho">\\rho</button>' +
+      '<button data-latex="\\sigma">\\sigma</button>' +
+      '<button data-latex="\\tau">\\tau</button>' +
+      '<button data-latex="\\upsilon">\\upsilon</button>' +
+      '<button data-latex="\\phi">\\phi</button>' +
+      '<button data-latex="\\chi">\\chi</button>' +
+      '<button data-latex="\\psi">\\psi</button>' +
+      '<button data-latex="\\omega">\\omega</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<button data-latex="\\Gamma" title="Capital Gamma">\\Gamma</button>' +
+      '<button data-latex="\\Delta" title="Capital Delta">\\Delta</button>' +
+      '<button data-latex="\\Theta" title="Capital Theta">\\Theta</button>' +
+      '<button data-latex="\\Lambda" title="Capital Lambda">\\Lambda</button>' +
+      '<button data-latex="\\Xi" title="Capital Xi">\\Xi</button>' +
+      '<button data-latex="\\Pi" title="Capital Pi">\\Pi</button>' +
+      '<button data-latex="\\Sigma" title="Capital Sigma">\\Sigma</button>' +
+      '<button data-latex="\\Phi" title="Capital Phi">\\Phi</button>' +
+      '<button data-latex="\\Psi" title="Capital Psi">\\Psi</button>' +
+      '<button data-latex="\\Omega" title="Capital Omega">\\Omega</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Symbols:</span>' +
+      '<button data-latex="\\times">\\times</button>' +
+      '<button data-latex="\\div">\\div</button>' +
+      '<button data-latex="\\pm">\\pm</button>' +
+      '<button data-latex="\\mp">\\mp</button>' +
+      '<button data-latex="\\cdot">\\cdot</button>' +
+      '<button data-latex="\\circ">\\circ</button>' +
+      '<button data-latex="\\ast">\\ast</button>' +
+      '<button data-latex="\\star">\\star</button>' +
+      '<button data-latex="\\infty">\\infty</button>' +
+      '<button data-latex="\\partial">\\partial</button>' +
+      '<button data-latex="\\nabla">\\nabla</button>' +
+      '<button data-latex="\\hbar">\\hbar</button>' +
+      '<button data-latex="\\ell">\\ell</button>' +
+      '<button data-latex="\\Im">\\Im</button>' +
+      '<button data-latex="\\Re">\\Re</button>' +
+      '<button data-latex="\\approx">\\approx</button>' +
+      '<button data-latex="\\neq">\\neq</button>' +
+      '<button data-latex="\\equiv">\\equiv</button>' +
+      '<button data-latex="\\leq">\\leq</button>' +
+      '<button data-latex="\\geq">\\geq</button>' +
+      '<button data-latex="\\subset">\\subset</button>' +
+      '<button data-latex="\\supset">\\supset</button>' +
+      '<button data-latex="\\subseteq">\\subseteq</button>' +
+      '<button data-latex="\\supseteq">\\supseteq</button>' +
+      '<button data-latex="\\cup">\\cup</button>' +
+      '<button data-latex="\\cap">\\cap</button>' +
+      '<button data-latex="\\emptyset">\\emptyset</button>' +
+      '<button data-latex="\\forall">\\forall</button>' +
+      '<button data-latex="\\exists">\\exists</button>' +
+      '<button data-latex="\\in">\\in</button>' +
+      '<button data-latex="\\notin">\\notin</button>' +
+      '<button data-latex="\\to">\\to</button>' +
+      '<button data-latex="\\mapsto">\\mapsto</button>' +
+      '<span class="w-px h-4 bg-gray-300 dark:bg-gray-600 self-center mx-0.5"></span>' +
+      '<span class="text-[9px] text-gray-400 font-semibold self-center mr-1">Arrows:</span>' +
+      '<button data-latex="\\rightarrow">\\rightarrow</button>' +
+      '<button data-latex="\\leftarrow">\\leftarrow</button>' +
+      '<button data-latex="\\Rightarrow">\\Rightarrow</button>' +
+      '<button data-latex="\\Leftarrow">\\Leftarrow</button>' +
+      '<button data-latex="\\Leftrightarrow">\\Leftrightarrow</button>' +
+      '<button data-latex="\\longrightarrow">\\longrightarrow</button>' +
+      '<button data-latex="\\uparrow">\\uparrow</button>' +
+      '<button data-latex="\\downarrow">\\downarrow</button>' +
+      '<button data-latex="\\nearrow">\\nearrow</button>' +
+      '<button data-latex="\\searrow">\\searrow</button>' +
+    '</div>' +
+    // Main editor + preview grid
+    '<div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">' +
+      '<div class="flex flex-col min-h-0"><div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">LaTeX Source <span class="text-gray-300 font-normal normal-case" id="latex-line-count"></span></div><textarea id="latex-editor-ta" class="flex-1 w-full border rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 font-mono text-sm resize-none" spellcheck="false" placeholder="Type your LaTeX here...">f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi) e^{2 \\pi i \\xi x} \\, d\\xi</textarea></div>' +
+      '<div class="flex flex-col min-h-0"><div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-2">Live Preview <span id="latex-preview-status" class="text-[9px] text-gray-400 font-normal normal-case"></span></div><div id="latex-preview" class="flex-1 border rounded-xl bg-white dark:bg-gray-800 overflow-auto p-4 sm:p-6 flex items-start justify-center min-h-[200px]"><span class="text-gray-400 text-sm mt-8">Preview will appear here...</span></div></div>' +
+    '</div>' +
+  '</div>';
+
+  _latexTa = document.getElementById('latex-editor-ta');
+
+  // ── Toolbar styling ──────────────────────────────────────────────────
+  ws.querySelectorAll('#latex-math-toolbar button').forEach(function(b) {
+    b.className = 'ltx-btn px-1.5 py-0.5 text-[9px] border rounded bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition font-mono';
+  });
+
+  // ── Load html2canvas early for later image/PDF use ───────────────────
+  if (typeof html2canvas === 'undefined') {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  }
+
+  // ── Load CodeMirror with LaTeX mode ───────────────────────────────────
+  loadCodeMirror(function() {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js').then(function() {
+      _latexEditor = CodeMirror.fromTextArea(_latexTa, {
+        mode: 'stex',
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        tabSize: 2,
+        indentUnit: 2,
+        indentWithTabs: false,
+        theme: document.documentElement.classList.contains('dark') ? 'material-darker' : 'default',
+        viewportMargin: Infinity,
+        styleActiveLine: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        extraKeys: {
+          'Ctrl-Space': function(cm) { cm.showHint({ completeSingle: false }); },
+          'Tab': function(cm) { cm.execCommand('insertSoftTab'); }
+        },
+        hintOptions: { completeSingle: false, closeOnUnfocus: true }
+      });
+
+      // Autocomplete for LaTeX commands
+      var latexHints = [
+        '\\frac', '\\sqrt', '\\sum', '\\int', '\\iint', '\\prod', '\\lim',
+        '\\log', '\\ln', '\\sin', '\\cos', '\\tan', '\\cot', '\\sec', '\\csc',
+        '\\arcsin', '\\arccos', '\\arctan', '\\sinh', '\\cosh', '\\tanh',
+        '\\alpha', '\\beta', '\\gamma', '\\delta', '\\epsilon', '\\zeta',
+        '\\eta', '\\theta', '\\iota', '\\kappa', '\\lambda', '\\mu', '\\nu',
+        '\\xi', '\\pi', '\\rho', '\\sigma', '\\tau', '\\upsilon', '\\phi',
+        '\\chi', '\\psi', '\\omega', '\\Gamma', '\\Delta', '\\Theta',
+        '\\Lambda', '\\Xi', '\\Pi', '\\Sigma', '\\Phi', '\\Psi', '\\Omega',
+        '\\times', '\\div', '\\pm', '\\mp', '\\cdot', '\\circ', '\\ast',
+        '\\star', '\\infty', '\\partial', '\\nabla', '\\hbar', '\\ell',
+        '\\Im', '\\Re', '\\approx', '\\neq', '\\equiv', '\\leq', '\\geq',
+        '\\subset', '\\supset', '\\subseteq', '\\supseteq', '\\cup', '\\cap',
+        '\\emptyset', '\\forall', '\\exists', '\\in', '\\notin', '\\to',
+        '\\mapsto', '\\rightarrow', '\\leftarrow', '\\Rightarrow', '\\Leftarrow',
+        '\\Leftrightarrow', '\\uparrow', '\\downarrow', '\\binom', '\\underset',
+        '\\overset', '\\text', '\\mathbf', '\\mathit', '\\mathrm', '\\mathcal',
+        '\\mathbb', '\\mathfrak', '\\widetilde', '\\widehat', '\\bar', '\\dot',
+        '\\ddot', '\\hat', '\\tilde', '\\vec', '\\overline', '\\underline',
+        '\\begin', '\\end', '\\documentclass', '\\usepackage', '\\section',
+        '\\subsection', '\\subsubsection', '\\chapter', '\\paragraph',
+        '\\label', '\\ref', '\\cite', '\\pageref', '\\footnote', '\\item',
+        '\\textbf', '\\textit', '\\emph', '\\underline', '\\textcolor',
+      ];
+      var hintSource = function(cm, opt) {
+        var cur = cm.getCursor(), line = cm.getLine(cur.line);
+        var before = line.slice(0, cur.ch);
+        var m = before.match(/(\\[a-zA-Z]*)$/);
+        if (!m) return;
+        var prefix = m[1];
+        var matches = latexHints.filter(function(h) { return h.startsWith(prefix) && h !== prefix; });
+        return { list: matches.map(function(h) { return { text: h, displayText: h }; }), from: { line: cur.line, ch: cur.ch - prefix.length }, to: cur };
+      };
+      CodeMirror.registerHelper('hint', 'latex', hintSource);
+      _latexEditor.on('inputRead', function(cm, change) {
+        if (change.text && change.text.length === 1 && change.text[0] === '\\') {
+          cm.showHint({ hint: hintSource, completeSingle: false });
+        }
+      });
+
+      function updateLineCount() { var txt = _latexEditor.getValue(); document.getElementById('latex-line-count').textContent = txt ? '(' + _latexEditor.lineCount() + ' lines)' : ''; }
+      _latexEditor.on('change', function() { updateLineCount(); scheduleRender(); });
+
+      updateLineCount();
+      setTimeout(renderLatex, 100);
+
+      var obs = new MutationObserver(function() {
+        _latexEditor.setOption('theme', document.documentElement.classList.contains('dark') ? 'material-darker' : 'default');
+      });
+      obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    });
+  });
+
+  // ── Get current LaTeX code (from CodeMirror or textarea fallback) ───
+  function getLatexCode() {
+    if (_latexEditor) return _latexEditor.getValue();
+    if (_latexTa) return _latexTa.value;
+    return '';
+  }
+
+  // ── Render LaTeX preview ─────────────────────────────────────────────
+  function renderLatex() {
+    var code = getLatexCode().trim();
+    var preview = document.getElementById('latex-preview');
+    var status = document.getElementById('latex-preview-status');
+    if (!code) { preview.innerHTML = '<span class="text-gray-400 text-sm mt-8">Preview will appear here...</span>'; if(status)status.textContent=''; return; }
+    if (typeof katex === 'undefined') { preview.innerHTML = '<span class="text-red-400 text-sm">KaTeX library not loaded</span>'; return; }
+    try {
+      preview.innerHTML = '';
+      katex.render(code, preview, { displayMode: true, throwOnError: false, output: 'html' });
+      if (status) status.textContent = '✓ rendered';
+    } catch(e) {
+      preview.innerHTML = '<span class="text-red-500 text-sm font-mono">Error: ' + escapeHtml(e.message) + '</span>';
+      if (status) status.textContent = '✗ error';
+    }
+  }
+
+  // Also render preview when typing directly in the textarea (CodeMirror fallback)
+  if (_latexTa) {
+    _latexTa.addEventListener('input', function() {
+      if (!_latexEditor) scheduleRender();
+    });
+  }
+
+  function scheduleRender() {
+    var cb = document.getElementById('latex-autorender');
+    if (cb && !cb.checked) return;
+    clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(renderLatex, 350);
+  }
+
+  // ── Toolbar insertion ────────────────────────────────────────────────
+  function insertLatex(text) {
+    if (_latexEditor) {
+      var cur = _latexEditor.getCursor();
+      _latexEditor.replaceRange(text, cur);
+      _latexEditor.focus();
+      _latexEditor.setCursor({ line: cur.line, ch: cur.ch + text.length });
+    } else if (_latexTa) {
+      var start = _latexTa.selectionStart, end = _latexTa.selectionEnd;
+      _latexTa.value = _latexTa.value.substring(0, start) + text + _latexTa.value.substring(end);
+      _latexTa.selectionStart = _latexTa.selectionEnd = start + text.length;
+      _latexTa.focus();
+    }
+  }
+
+  ws.querySelector('#latex-toolbar').addEventListener('change', function(e) {
+    var sel = e.target.closest('.ltx-select');
+    if (!sel) return;
+    var value = sel.value;
+    if (!value) return;
+    insertLatex(value);
+    sel.selectedIndex = 0;
+    scheduleRender();
+  });
+
+  ws.querySelectorAll('.ltx-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var latex = this.getAttribute('data-latex');
+      if (!latex) return;
+      insertLatex(latex);
+      scheduleRender();
+    });
+  });
+
+  // ── Copy LaTeX code ──────────────────────────────────────────────────
+  document.getElementById('latex-copy-code').addEventListener('click', function() {
+    var text = getLatexCode();
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('LaTeX code copied!', 'success');
+    }).catch(function() {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      showToast('Copied!', 'success');
+    });
+  });
+
+  // ── Helper: render LaTeX to a styled div ────────────────────────────
+  function renderLatexToDiv(code) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:20px;background:white;display:inline-block;font-size:18px';
+    try {
+      katex.render(code, div, { displayMode: true, throwOnError: false, output: 'html' });
+    } catch(e) {
+      div.textContent = code;
+      div.style.fontFamily = 'monospace';
+      div.style.fontSize = '14px';
+      div.style.whiteSpace = 'pre-wrap';
+    }
+    return div;
+  }
+
+  // ── Helper: capture div to canvas blob ──────────────────────────────
+  function captureDivToBlob(div, scale, format, quality) {
+    return new Promise(function(resolve, reject) {
+      if (typeof html2canvas !== 'undefined') {
+        html2canvas(div, {
+          scale: scale || 3,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: div.scrollWidth,
+          height: div.scrollHeight
+        }).then(function(canvas) {
+          canvas.toBlob(function(blob) {
+            if (blob) resolve(blob);
+            else reject(new Error('Blob creation failed'));
+          }, format || 'image/png', quality || 1);
+        }).catch(reject);
+      } else {
+        reject(new Error('html2canvas not loaded'));
+      }
+    });
+  }
+
+  // ── Copy as Image ────────────────────────────────────────────────────
+  document.getElementById('latex-copy-image').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    var code = getLatexCode().trim();
+    if (!code) { alert('No content'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Copy Image'; return; }
+
+    var renderDiv = renderLatexToDiv(code);
+    document.body.appendChild(renderDiv);
+
+    if (typeof html2canvas === 'undefined') {
+      document.body.removeChild(renderDiv);
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').then(function() {
+        document.getElementById('latex-copy-image').click();
+      }).catch(function() {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Copy Image';
+        alert('Failed to load image library');
+      });
+      return;
+    }
+
+    captureDivToBlob(renderDiv, 3, 'image/png', 1).then(function(blob) {
+      document.body.removeChild(renderDiv);
+      if (navigator.clipboard && navigator.clipboard.write) {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function() {
+          showToast('Image copied to clipboard!', 'success');
+        }).catch(function() {
+          var url = URL.createObjectURL(blob);
+          downloadData('latex-image.png', url);
+          URL.revokeObjectURL(url);
+          showToast('Image downloaded (clipboard not available)', 'info');
+        });
+      } else {
+        var url = URL.createObjectURL(blob);
+        downloadData('latex-image.png', url);
+        URL.revokeObjectURL(url);
+        showToast('Image downloaded', 'success');
+      }
+    }).catch(function() {
+      document.body.removeChild(renderDiv);
+      showToast('Image capture failed', 'error');
+    }).finally(function() {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Copy Image';
+    });
+  });
+
+  // ── Download PDF ─────────────────────────────────────────────────────
+  document.getElementById('latex-pdf-btn').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    var code = getLatexCode().trim();
+    if (!code) { alert('No content'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF'; return; }
+
+    var renderDiv = renderLatexToDiv(code);
+    document.body.appendChild(renderDiv);
+
+    var _jspdfAvail = typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined';
+    if (typeof html2canvas === 'undefined' || !_jspdfAvail) {
+      document.body.removeChild(renderDiv);
+      Promise.all([
+        typeof html2canvas === 'undefined'
+          ? loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+          : Promise.resolve(),
+        !_jspdfAvail
+          ? loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+          : Promise.resolve()
+      ]).then(function() {
+        document.getElementById('latex-pdf-btn').click();
+      }).catch(function() {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+        alert('Failed to load PDF libraries');
+      });
+      return;
+    }
+
+    captureDivToBlob(renderDiv, 2, 'image/png', 1).then(function(blob) {
+      document.body.removeChild(renderDiv);
+      var reader = new FileReader();
+      reader.onload = function() {
+        var imgData = reader.result;
+        var PDFClass = window.jspdf.jsPDF;
+        var pdf = new PDFClass({
+          orientation: renderDiv.scrollWidth > renderDiv.scrollHeight ? 'landscape' : 'portrait',
+          unit: 'in',
+          format: 'letter'
+        });
+        var pageW = 8.5, pageH = 11;
+        var margin = 0.75;
+        var maxW = pageW - 2 * margin;
+        var maxH = pageH - 2 * margin;
+        var imgW = renderDiv.scrollWidth / 96;
+        var imgH = renderDiv.scrollHeight / 96;
+        var scale = Math.min(maxW / imgW, maxH / imgH, 1);
+        var finalW = imgW * scale;
+        var finalH = imgH * scale;
+        var xOff = (pageW - finalW) / 2;
+        var yOff = (pageH - finalH) / 2;
+        pdf.addImage(imgData, 'PNG', xOff, yOff, finalW, finalH);
+        pdf.save('latex-equation.pdf');
+        showToast('PDF downloaded!', 'success');
+      };
+      reader.readAsDataURL(blob);
+    }).catch(function() {
+      document.body.removeChild(renderDiv);
+      showToast('PDF generation failed', 'error');
+    }).finally(function() {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+    });
+  });
+};
+
+window.tool_math_calculator = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
+    '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-calculator mr-1"></i> Ahmed Calculator</span>' +
+    '<span class="flex-1"></span>' +
+    '<button onclick="toggleToolFullscreen()" class="tool-fullscreen-btn px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Fullscreen"><i class="fas fa-expand"></i></button>' +
+  '</div>' +
+  '<div id="ahmed-calc-mount"></div>';
+
+  // Load CSS
+  if (!document.querySelector('link[href*="ahmed-calc/style.css"]')) {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/static/css/ahmed-calc/style.css';
+    document.head.appendChild(link);
+  }
+
+  // Load math.js CDN (needed by evaluation pipeline)
+  if (typeof math === 'undefined') {
+    var mScript = document.createElement('script');
+    mScript.src = 'https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.js';
+    document.body.appendChild(mScript);
+  }
+
+  // Load Ahmed Calculator modules (MathIO architecture)
+  var scripts = [
+    '/static/js/ahmed-calc/core/state.js',
+    '/static/js/ahmed-calc/core/latex-parser.js',
+    '/static/js/ahmed-calc/core/history.js',
+    '/static/js/ahmed-calc/input/keypad.js',
+    '/static/js/ahmed-calc/input/keyboard.js',
+    '/static/js/ahmed-calc/modes/mode-manager.js',
+    '/static/js/ahmed-calc/modes/graph-mode.js',
+    '/static/js/ahmed-calc/modes/table-mode.js',
+    '/static/js/ahmed-calc/modes/algebra-mode.js',
+    '/static/js/ahmed-calc/ui/indicators.js',
+    '/static/js/ahmed-calc/main.js',
+  ];
+
+  var _calcInstance = null;
+
+  function loadNext(idx) {
+    if (idx >= scripts.length) {
+      _calcInstance = new AhmedCalculator('ahmed-calc-mount');
+      _calcInstance.init();
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = scripts[idx];
+    s.onload = function() { loadNext(idx + 1); };
+    s.onerror = function() { console.error("Failed to load", scripts[idx]); showToast("Calculator: failed to load " + scripts[idx].split('/').pop(), "error"); loadNext(idx + 1); };
+    document.body.appendChild(s);
+  }
+  loadNext(0);
+
+  window._cleanupCalc = function() {
+    if (_calcInstance) {
+      _calcInstance.dispose();
+      _calcInstance = null;
+    }
+    delete window._cleanupCalc;
+  };
+};
+
+

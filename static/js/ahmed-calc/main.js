@@ -589,12 +589,80 @@ class AhmedCalculator {
     this._aiStatusEl.classList.toggle('ck-ai-status-warning', !ready);
   }
 
-  _performAiAction(action) {
-    if (action === 'steps' && !this._aiKeyConfigured) {
-      this._showAiOutput('AI key not configured. Please add GEMINI_API_KEY to your .env and restart the app.');
-      return;
+  _solveLocally(expr) {
+    if (typeof nerdamer === 'undefined') {
+      return 'Local solver unavailable (nerdamer not loaded). Please configure GEMINI_API_KEY.';
     }
+    try {
+      var steps = [];
+      var latex = this._mathField ? this._mathField.value : expr;
+      var hasEquals = expr.indexOf('=') !== -1 || expr.indexOf('==') !== -1;
+      var isFunction = expr.indexOf('x') !== -1 || expr.indexOf('y') !== -1;
 
+      // Try to solve if it has x
+      if (isFunction) {
+        try {
+          var clean = expr.replace(/==/g, '=');
+          if (clean.indexOf('=') !== -1) {
+            var parts = clean.split('=');
+            var eq = nerdamer(parts[0].trim()).subtract(nerdamer(parts[1].trim()));
+            steps.push('Equation: ' + parts[0].trim() + ' = ' + parts[1].trim());
+            steps.push('Set to zero: ' + eq.toString() + ' = 0');
+            var solutions = nerdamer.solve(eq, 'x');
+            if (solutions && solutions.length) {
+              steps.push('Solutions:');
+              for (var i = 0; i < solutions.length; i++) {
+                steps.push('  x = ' + solutions[i].toString());
+              }
+            } else {
+              steps.push('No symbolic solutions found');
+            }
+          } else {
+            var f = nerdamer(expr);
+            var expanded = f.expand();
+            steps.push('Expression: ' + expr);
+            steps.push('Expanded: ' + expanded.toString());
+            var simplified = f.simplify();
+            if (simplified.toString() !== expanded.toString()) {
+              steps.push('Simplified: ' + simplified.toString());
+            }
+          }
+        } catch (e) {
+          steps.push('Algebraic manipulation attempted: ' + expr);
+          steps.push('Note: ' + e.message);
+        }
+      }
+
+      // Try numerical evaluation
+      try {
+        var num = nerdamer(expr.replace(/x/g, '1').replace(/y/g, '1').replace(/\^/g, '**'));
+        var evaluated = math ? math.evaluate(num.toString()) : null;
+        if (evaluated !== null && evaluated !== undefined) {
+          steps.push('Numerical evaluation: ' + evaluated);
+        }
+      } catch (e) {
+        // silent
+      }
+
+      if (steps.length === 0) {
+        steps.push('Expression: ' + expr);
+        try {
+          var parsed = nerdamer(expr);
+          var text = parsed.toString();
+          steps.push('Result: ' + text);
+          steps.push('TeX: \\(' + parsed.toTeX() + '\\)');
+        } catch (e) {
+          steps.push('Could not parse expression. Try using explicit operators (*, /, ^).');
+        }
+      }
+
+      return steps.join('\n');
+    } catch (e) {
+      return 'Local solver error: ' + e.message + '\nPlease configure GEMINI_API_KEY for AI-powered solving.';
+    }
+  }
+
+  _performAiAction(action) {
     var mf = this._mathField;
     var expr = mf ? mf.value.trim() : '';
     if (!expr) {
@@ -607,6 +675,15 @@ class AhmedCalculator {
       this.graphMode.addFunction(graphExpr);
       this.graphMode.render();
       this._showAiOutput('Graph added to GeoGebra-style plot for: ' + graphExpr);
+      return;
+    }
+    if (action === 'steps' && !this._aiKeyConfigured) {
+      this._showAiLoading();
+      var self = this;
+      setTimeout(function() {
+        var result = self._solveLocally(expr);
+        self._showAiOutput(result || 'No solution found.');
+      }, 300);
       return;
     }
     this._showAiLoading();

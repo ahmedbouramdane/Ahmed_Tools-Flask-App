@@ -1,0 +1,180 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  🔐 SECURITY TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Password Generator ────────────────────────────────────────────────────
+
+window.tool_security_password_gen = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-5"><div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Length</label><input type="number" id="pg-len" value="16" min="4" max="128" class="w-full mt-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></div><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Count</label><input type="number" id="pg-count" value="3" min="1" max="20" class="w-full mt-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></div></div><div class="flex flex-wrap gap-4 text-sm"><label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition"><input type="checkbox" id="pg-upper" checked class="accent-indigo-500"> <span>A-Z</span></label><label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition"><input type="checkbox" id="pg-lower" checked class="accent-indigo-500"> <span>a-z</span></label><label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition"><input type="checkbox" id="pg-digits" checked class="accent-indigo-500"> <span>0-9</span></label><label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition"><input type="checkbox" id="pg-symbols" checked class="accent-indigo-500"> <span>!@#$%</span></label></div><button id="pg-gen" class="w-full px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-key"></i> Generate Passwords</button><div id="pg-result" class="space-y-2"></div></div>';
+
+  document.getElementById('pg-gen').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    fetch('/tools/api/security/password', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        length: parseInt(document.getElementById('pg-len').value),
+        count: parseInt(document.getElementById('pg-count').value),
+        use_upper: document.getElementById('pg-upper').checked,
+        use_lower: document.getElementById('pg-lower').checked,
+        use_digits: document.getElementById('pg-digits').checked,
+        use_symbols: document.getElementById('pg-symbols').checked
+      })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Generate Passwords';
+      if (data.success) {
+        document.getElementById('pg-result').innerHTML = data.passwords.map(function(p) {
+          var strength = p.length >= 16 && /[!@#$%^&*]/.test(p) ? 'strong' : p.length >= 10 ? 'medium' : 'weak';
+          var color = strength === 'strong' ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30' : strength === 'medium' ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800/30' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30';
+          return '<div class="flex items-center gap-3 p-3 ' + color + ' rounded-xl border text-sm font-mono"><span class="flex-1 break-all">' + escapeHtml(p) + '</span><span class="text-[10px] font-medium uppercase px-2 py-0.5 rounded ' + (strength === 'strong' ? 'bg-green-200 dark:bg-green-800/30 text-green-700 dark:text-green-300' : strength === 'medium' ? 'bg-yellow-200 dark:bg-yellow-800/30 text-yellow-700 dark:text-yellow-300' : 'bg-red-200 dark:bg-red-800/30 text-red-700 dark:text-red-300') + '">' + strength + '</span><button onclick="navigator.clipboard.writeText(\'' + p.replace(/'/g, "\\'") + '\');showToast(\'Copied\')" class="text-indigo-500 hover:text-indigo-700 p-1 transition" title="Copy"><i class="fas fa-copy"></i></button></div>';
+        }).join('');
+      }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Generate Passwords'; });
+  });
+};
+
+// ─── Password Check ────────────────────────────────────────────────────────
+
+window.tool_security_password_check = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-5"><div><input type="text" id="pc-input" placeholder="Type a password to check..." class="w-full px-4 py-3.5 text-lg border-2 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-mono focus:ring-2 focus:ring-indigo-400 outline-none transition"></div><div id="pc-result" class="hidden space-y-4"><div class="h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"><div id="pc-bar" class="h-full rounded-full transition-all duration-500" style="width:0%"></div></div><div class="flex items-center justify-between"><p id="pc-level" class="text-sm font-medium"></p><p id="pc-length-display" class="text-xs text-gray-400"></p></div><div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs" id="pc-checks"></div></div></div>';
+
+  var checkItems = [
+    { id:'pc-len', label:'Length 8+', check: function(p) { return p.length >= 8; } },
+    { id:'pc-long', label:'Length 12+', check: function(p) { return p.length >= 12; } },
+    { id:'pc-upper', label:'Uppercase letter', check: function(p) { return /[A-Z]/.test(p); } },
+    { id:'pc-lower', label:'Lowercase letter', check: function(p) { return /[a-z]/.test(p); } },
+    { id:'pc-digit', label:'Number', check: function(p) { return /\d/.test(p); } },
+    { id:'pc-symbol', label:'Symbol (!@#...)', check: function(p) { return /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(p); } },
+  ];
+
+  function renderChecks(pwd) {
+    var result = document.getElementById('pc-result');
+    if (!pwd) { result.classList.add('hidden'); return; }
+    result.classList.remove('hidden');
+    fetch('/tools/api/security/check-password', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pwd})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      var pct = (data.score / data.max) * 100;
+      var bar = document.getElementById('pc-bar');
+      bar.style.width = pct + '%';
+      bar.className = 'h-full rounded-full transition-all duration-500 ' + (pct <= 33 ? 'bg-red-500' : pct <= 66 ? 'bg-yellow-500' : 'bg-green-500');
+      document.getElementById('pc-level').textContent = data.level + ' (' + data.score + '/' + data.max + ')';
+      document.getElementById('pc-level').className = 'text-sm font-medium ' + (pct <= 33 ? 'text-red-500' : pct <= 66 ? 'text-yellow-600' : 'text-green-600');
+      document.getElementById('pc-length-display').textContent = data.length + ' characters';
+      document.getElementById('pc-checks').innerHTML = checkItems.map(function(item) {
+        var ok = item.check(pwd);
+        return '<div class="p-3 rounded-xl flex items-center gap-2 ' + (ok ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400') + '">' +
+          '<i class="fas fa-' + (ok ? 'check-circle' : 'times-circle') + '"></i>' +
+          '<span>' + item.label + '</span></div>';
+      }).join('');
+    });
+  }
+
+  document.getElementById('pc-input').addEventListener('input', function() { renderChecks(this.value); });
+};
+
+// ─── Base64 ────────────────────────────────────────────────────────────────
+
+window.tool_security_base64 = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-5"><div class="flex gap-2"><button id="b64-encode" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"><i class="fas fa-lock"></i> Encode</button><button id="b64-decode" class="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition flex items-center justify-center gap-2"><i class="fas fa-unlock"></i> Decode</button></div><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Input</label><textarea id="b64-input" rows="4" placeholder="Enter text to encode or decode..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea></div><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Result</label><textarea id="b64-output" rows="4" placeholder="Result will appear here..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-white"></textarea></div><button onclick="navigator.clipboard.writeText(document.getElementById(\'b64-output\').value);showToast(\'Copied\')" class="text-sm text-indigo-500 hover:text-indigo-700 flex items-center gap-1"><i class="fas fa-copy"></i> Copy result</button></div>';
+
+  function process(mode) {
+    var input = document.getElementById('b64-input').value;
+    try {
+      document.getElementById('b64-output').value = mode === 'encode' ? btoa(input) : atob(input);
+    } catch(e) { document.getElementById('b64-output').value = 'Error: ' + e.message; }
+  }
+
+  document.getElementById('b64-encode').addEventListener('click', function() { process('encode'); });
+  document.getElementById('b64-decode').addEventListener('click', function() { process('decode'); });
+};
+
+// ─── Hash ──────────────────────────────────────────────────────────────────
+
+window.tool_security_hash = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-5"><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Algorithm</label><div class="flex flex-wrap gap-2" id="hash-algos"><button class="hash-algo-btn px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition font-medium" data-algo="md5">MD5</button><button class="hash-algo-btn px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition font-medium" data-algo="sha1">SHA-1</button><button class="hash-algo-btn px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-indigo-600 text-white transition font-medium active" data-algo="sha256">SHA-256</button><button class="hash-algo-btn px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition font-medium" data-algo="sha512">SHA-512</button></div></div><div><textarea id="hash-input" rows="4" placeholder="Enter text to hash..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea></div><button id="hash-btn" class="w-full px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-hashtag"></i> Generate Hash</button><div id="hash-result" class="hidden"><div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600"><div class="flex items-center justify-between mb-2"><span id="hash-algo-label" class="text-xs font-medium text-gray-500 uppercase">SHA-256</span><button onclick="navigator.clipboard.writeText(document.getElementById(\'hash-output\').textContent);showToast(\'Copied\')" class="text-indigo-500 hover:text-indigo-700 text-xs flex items-center gap-1"><i class="fas fa-copy"></i> Copy</button></div><div id="hash-output" class="text-sm font-mono break-all text-gray-800 dark:text-gray-200"></div></div></div></div>';
+
+  var selectedAlgo = 'sha256';
+
+  document.getElementById('hash-algos').addEventListener('click', function(e) {
+    var btn = e.target.closest('.hash-algo-btn');
+    if (!btn) return;
+    this.querySelectorAll('.hash-algo-btn').forEach(function(b) {
+      b.className = 'hash-algo-btn px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition font-medium';
+      b.classList.remove('active');
+    });
+    btn.className = 'hash-algo-btn px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-indigo-600 text-white transition font-medium active';
+    selectedAlgo = btn.dataset.algo;
+  });
+
+  document.getElementById('hash-btn').addEventListener('click', function() {
+    var text = document.getElementById('hash-input').value;
+    if (!text) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Hashing...';
+    fetch('/tools/api/security/hash', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: text, algorithm: selectedAlgo})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-hashtag"></i> Generate Hash';
+      if (data.success) {
+        document.getElementById('hash-result').classList.remove('hidden');
+        document.getElementById('hash-algo-label').textContent = data.algorithm.toUpperCase();
+        document.getElementById('hash-output').textContent = data.result;
+      }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-hashtag"></i> Generate Hash'; });
+  });
+};
+
+// ─── UUID ──────────────────────────────────────────────────────────────────
+
+window.tool_security_uuid = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-5"><div class="flex gap-2 flex-wrap"><button id="uuid-v4" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"><i class="fas fa-fingerprint"></i> UUID v4</button><button id="uuid-v1" class="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition flex items-center justify-center gap-2"><i class="fas fa-clock"></i> UUID v1</button><button id="uuid-nano" class="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition flex items-center justify-center gap-2"><i class="fas fa-bolt"></i> Token</button></div><div class="space-y-2" id="uuid-list"></div><div class="flex gap-2"><button id="uuid-clear" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">Clear all</button><span class="flex-1"></span><span id="uuid-count" class="text-xs text-gray-400 self-center">0 generated</span></div></div>';
+
+  function genUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  function genToken(len) {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var result = '';
+    for (var i = 0; i < len; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    return result;
+  }
+
+  function addUuid(val) {
+    var list = document.getElementById('uuid-list');
+    var div = document.createElement('div');
+    div.className = 'flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-mono';
+    div.innerHTML = '<span class="flex-1 break-all text-gray-800 dark:text-gray-200">' + val + '</span><button onclick="navigator.clipboard.writeText(\'' + val.replace(/'/g, "\\'") + '\');showToast(\'Copied\')" class="text-indigo-500 hover:text-indigo-700 p-1 transition" title="Copy"><i class="fas fa-copy"></i></button>';
+    list.prepend(div);
+    document.getElementById('uuid-count').textContent = list.children.length + ' generated';
+  }
+
+  document.getElementById('uuid-v4').addEventListener('click', function() { addUuid(genUuid()); });
+  document.getElementById('uuid-v1').addEventListener('click', function() { addUuid(genUuid().replace(/4/g, '1')); });
+  document.getElementById('uuid-nano').addEventListener('click', function() { addUuid(genToken(16)); });
+  document.getElementById('uuid-clear').addEventListener('click', function() { document.getElementById('uuid-list').innerHTML = ''; document.getElementById('uuid-count').textContent = '0 generated'; });
+};
+
+// ─── Encrypt ───────────────────────────────────────────────────────────────
+
+window.tool_security_encrypt = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-5"><div class="flex gap-2"><button id="enc-btn" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"><i class="fas fa-shield"></i> Encrypt to Base64</button><button id="dec-btn" class="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition flex items-center justify-center gap-2"><i class="fas fa-shield-halved"></i> Decrypt</button></div><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Input</label><textarea id="enc-input" rows="4" placeholder="Enter text to encrypt or Base64 to decrypt..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea></div><div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Result</label><textarea id="enc-output" rows="4" placeholder="Result will appear here..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-white"></textarea></div><button onclick="navigator.clipboard.writeText(document.getElementById(\'enc-output\').value);showToast(\'Copied\')" class="text-sm text-indigo-500 hover:text-indigo-700 flex items-center gap-1"><i class="fas fa-copy"></i> Copy result</button></div>';
+
+  document.getElementById('enc-btn').addEventListener('click', function() {
+    fetch('/tools/api/security/encrypt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: document.getElementById('enc-input').value}) })
+      .then(function(r) { return r.json(); }).then(function(d) { if (d.success) document.getElementById('enc-output').value = d.result; });
+  });
+  document.getElementById('dec-btn').addEventListener('click', function() {
+    fetch('/tools/api/security/decrypt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: document.getElementById('enc-input').value}) })
+      .then(function(r) { return r.json(); }).then(function(d) { if (d.success) document.getElementById('enc-output').value = d.result; else alert(d.error); });
+  });
+};

@@ -1,0 +1,324 @@
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  🖼️ IMAGE TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+var _imageCurrentFile = null;
+var _imageOrigDataUrl = null;
+
+function imageUploadWorkspace(operation, extraFields, onSubmit, onResult, opts) {
+  _imageCurrentFile = null;
+  _imageOrigDataUrl = null;
+  opts = opts || {};
+  var useCompare = opts.compareSlider === true;
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' +
+    // Drop zone
+    '<label class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-5 sm:p-7 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition group relative block" id="drop-zone" for="tool-file-input">' +
+      '<input type="file" id="tool-file-input" accept="image/*" class="sr-only">' +
+      '<div class="pointer-events-none">' +
+        '<div class="w-12 h-12 mx-auto mb-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-cloud-upload-alt text-xl text-indigo-400"></i></div>' +
+        '<p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold text-indigo-500">Click to upload</span> or drag &amp; drop</p>' +
+        '<p class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">PNG, JPG, WebP &middot; Max 10MB &middot; <span class="text-indigo-400">or paste from clipboard</span></p>' +
+      '</div>' +
+    '</label>' +
+    (extraFields || '') +
+    // Preview area
+    '<div id="tool-preview" class="hidden">' +
+      '<div id="img-result-area" class="relative bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden" style="min-height:200px">' +
+        // Processing overlay
+        '<div id="processing-overlay" class="absolute inset-0 z-30 flex items-center justify-center bg-black/50" style="display:none">' +
+          '<div class="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700">' +
+            '<div class="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center"><i class="fas fa-wand-magic-sparkles text-2xl text-indigo-500" id="proc-stage-icon"></i></div>' +
+            '<div class="text-center"><div id="proc-stage-text" class="text-base font-semibold text-gray-800 dark:text-white">Processing...</div><div id="proc-stage-sub" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Preparing image...</div></div>' +
+            '<div class="w-56"><div class="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"><div id="proc-stage-bar" class="h-full rounded-full proc-bar" style="width:0%"></div></div></div>' +
+          '</div>' +
+        '</div>' +
+        // Grid layout (default — original left, result right)
+        '<div id="img-grid" class="flex" style="display:none;min-height:220px">' +
+          '<div class="flex-1 flex flex-col border-r border-gray-200 dark:border-gray-700">' +
+            '<div class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 py-1.5 bg-gray-50/80 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center gap-1.5"><i class="fas fa-image text-indigo-400 text-[9px]"></i> Original</div>' +
+            '<div class="flex-1 relative bg-gray-50 dark:bg-gray-900 overflow-hidden" id="orig-panel" style="min-height:160px">' +
+              '<img id="orig-preview" class="max-w-full max-h-64 object-contain block mx-auto" style="min-height:100px">' +
+              '<div class="absolute bottom-1.5 right-2 text-[9px] bg-black/50 text-white/80 px-1.5 py-0.5 rounded" id="orig-size"></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="flex-1 flex flex-col">' +
+            '<div class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 py-1.5 bg-gray-50/80 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center gap-1.5"><i class="fas fa-wand-magic text-emerald-400 text-[9px]"></i> Result</div>' +
+            '<div class="flex-1 relative bg-gray-50 dark:bg-gray-900 overflow-hidden flex items-center justify-center" id="result-panel" style="min-height:160px">' +
+              '<img id="result-preview" class="max-w-full max-h-full object-contain block">' +
+              '<div class="absolute bottom-1.5 right-2 text-[9px] bg-black/50 text-white/80 px-1.5 py-0.5 rounded" id="result-size"></div>' +
+              '<div id="result-spinner" class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/60" style="display:none"><i class="fas fa-spinner fa-spin text-xl text-indigo-400"></i></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        // Compare slider (opt-in via opts.compareSlider)
+        '<div id="compare-container" class="relative w-full select-none" style="display:none;min-height:220px">' +
+          '<img id="comp-orig" class="w-full max-h-72 object-contain mx-auto block">' +
+          '<div id="compare-overlay" class="absolute inset-0 overflow-hidden" style="clip-path:inset(0 50% 0 0)">' +
+            '<img id="comp-result" class="w-full max-h-72 object-contain mx-auto block">' +
+          '</div>' +
+          '<div id="compare-handle" class="absolute top-0 bottom-0 z-20" style="left:50%;width:3px;cursor:ew-resize;touch-action:none">' +
+            '<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white shadow-lg border-2 border-indigo-500 flex items-center justify-center text-indigo-500 text-xs"><i class="fas fa-arrows-left-right"></i></div>' +
+          '</div>' +
+        '</div>' +
+        // Placeholder
+        '<div id="img-result-placeholder" class="flex items-center justify-center h-48 text-gray-400 text-sm"><i class="fas fa-image mr-2 text-gray-300"></i> Upload an image to begin</div>' +
+      '</div>' +
+      // Actions
+      '<div id="tool-actions" class="flex flex-wrap gap-2 items-center mt-3">' +
+        '<div class="flex gap-1.5">' +
+          '<button id="download-btn" class="hidden px-3.5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition shadow-sm"><i class="fas fa-download"></i> Download</button>' +
+          '<button id="copy-btn" class="hidden px-3.5 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition shadow-sm" title="Copy image to clipboard"><i class="fas fa-copy"></i></button>' +
+        '</div>' +
+        '<span id="size-info" class="text-xs text-gray-400"></span>' +
+        '<span id="dim-info" class="text-xs text-gray-400"></span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  var _processingOverlay = document.getElementById('processing-overlay');
+  var _grid = document.getElementById('img-grid');
+  var _compareContainer = document.getElementById('compare-container');
+  var _placeholder = document.getElementById('img-result-placeholder');
+  var _resultUrl = null;
+
+  function copyToClipboard(url) {
+    var img = new Image();
+    img.onload = function() {
+      var c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      c.toBlob(function(blob) {
+        if (!blob) return;
+        navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]).then(function() {
+          var btn = document.getElementById('copy-btn');
+          if (btn) { btn.innerHTML = '<i class="fas fa-check text-emerald-400"></i>'; setTimeout(function() { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 1500); }
+        }).catch(function() {
+          var btn = document.getElementById('copy-btn');
+          if (btn) { btn.innerHTML = '<i class="fas fa-times text-red-400"></i>'; setTimeout(function() { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 1500); }
+        });
+      });
+    };
+    img.src = url;
+  }
+
+  function showProcessing() {
+    _processingOverlay.style.display = 'flex';
+    var icons = ['fa-wand-magic-sparkles','fa-crop-alt','fa-expand-arrows-alt','fa-magic','fa-filter','fa-compress-alt'];
+    document.getElementById('proc-stage-icon').className = 'fas ' + icons[Math.floor(Math.random() * icons.length)] + ' text-2xl text-indigo-500';
+    var bar = document.getElementById('proc-stage-bar');
+    bar.style.width = '0%';
+    setTimeout(function() { bar.style.width = '30%'; }, 120);
+    setTimeout(function() { bar.style.width = '60%'; }, 600);
+    setTimeout(function() { bar.style.width = '85%'; }, 1200);
+  }
+
+  function hideProcessing() {
+    var bar = document.getElementById('proc-stage-bar');
+    bar.style.width = '100%';
+    setTimeout(function() { _processingOverlay.style.display = 'none'; }, 300);
+  }
+
+  function showGridResult(origUrl, resultUrl, size) {
+    _resultUrl = resultUrl;
+    _placeholder.style.display = 'none';
+    _grid.style.display = 'flex';
+    document.getElementById('orig-preview').src = origUrl;
+    document.getElementById('result-preview').src = resultUrl;
+    document.getElementById('orig-size').textContent = '';
+    document.getElementById('download-btn').classList.remove('hidden');
+    document.getElementById('download-btn').onclick = function() { downloadData('output.' + (operation === 'to_pdf' ? 'pdf' : 'png'), resultUrl); };
+    document.getElementById('copy-btn').classList.remove('hidden');
+    document.getElementById('copy-btn').onclick = function() { copyToClipboard(resultUrl); };
+    if (size) {
+      document.getElementById('size-info').textContent = (size / 1024).toFixed(1) + ' KB';
+      document.getElementById('result-size').textContent = (size / 1024).toFixed(1) + ' KB';
+    }
+    var img = new Image();
+    img.onload = function() {
+      document.getElementById('dim-info').textContent = img.naturalWidth + '\u00d7' + img.naturalHeight;
+    };
+    img.src = resultUrl;
+  }
+
+  function showCompareResult(origUrl, resultUrl, size) {
+    _resultUrl = resultUrl;
+    _placeholder.style.display = 'none';
+    _compareContainer.style.display = 'block';
+    document.getElementById('comp-orig').src = origUrl;
+    document.getElementById('comp-result').src = resultUrl;
+    document.getElementById('download-btn').classList.remove('hidden');
+    document.getElementById('download-btn').onclick = function() { downloadData('output.png', resultUrl); };
+    document.getElementById('copy-btn').classList.remove('hidden');
+    document.getElementById('copy-btn').onclick = function() { copyToClipboard(resultUrl); };
+    if (size) {
+      document.getElementById('size-info').textContent = (size / 1024).toFixed(1) + ' KB';
+    }
+    var img = new Image();
+    img.onload = function() {
+      document.getElementById('dim-info').textContent = img.naturalWidth + '\u00d7' + img.naturalHeight;
+    };
+    img.src = resultUrl;
+  }
+
+  function processImage() {
+    if (!_imageCurrentFile) return;
+    showProcessing();
+    var fd = new FormData();
+    fd.append('file', _imageCurrentFile);
+    if (onSubmit) onSubmit(fd);
+    fetch('/tools/api/image/' + operation, { method:'POST', body:fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        hideProcessing();
+        if (data.error) { showToast(data.error, 'error'); _placeholder.style.display = 'flex'; _grid.style.display = 'none'; return; }
+        var imgUrl = data.image || data.file;
+        if (imgUrl) {
+          if (onResult) {
+            onResult(_imageOrigDataUrl, imgUrl, data.size);
+          } else if (useCompare) {
+            showCompareResult(_imageOrigDataUrl, imgUrl, data.size);
+            setupCompareDrag();
+          } else {
+            showGridResult(_imageOrigDataUrl, imgUrl, data.size);
+          }
+        }
+      })
+      .catch(function() { hideProcessing(); showToast('Request failed — check your connection', 'error'); });
+  }
+
+  // Paste support
+  function handlePaste(e) {
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') === 0) {
+        e.preventDefault();
+        var file = items[i].getAsFile();
+        if (file) {
+          var dt = new DataTransfer();
+          dt.items.add(file);
+          document.getElementById('tool-file-input').files = dt.files;
+          document.getElementById('tool-file-input').dispatchEvent(new Event('change'));
+        }
+        return;
+      }
+    }
+  }
+  document.addEventListener('paste', handlePaste);
+  window._cleanupPaste = function() { document.removeEventListener('paste', handlePaste); };
+
+  // Drag / drop
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('tool-file-input');
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-900/15'); });
+  dropZone.addEventListener('dragleave', function() { this.classList.remove('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-900/15'); });
+  dropZone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-900/15'); if (e.dataTransfer.files.length) fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); });
+
+  // Compare slider
+  var _compareActive = true;
+  var _savedSliderPos = 'inset(0 50% 0 0)';
+  function setupCompareDrag() {
+    if (!useCompare) return;
+    var container = document.getElementById('compare-container');
+    var overlay = document.getElementById('compare-overlay');
+    var handle = document.getElementById('compare-handle');
+    if (!container || !overlay || !handle) return;
+    var dragging = false;
+    function move(x) {
+      var rect = container.getBoundingClientRect();
+      var pct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
+      overlay.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+      handle.style.left = pct + '%';
+    }
+    handle.addEventListener('pointerdown', function(e) { e.preventDefault(); dragging = true; handle.setPointerCapture(e.pointerId); });
+    handle.addEventListener('pointermove', function(e) { if (dragging) move(e.clientX); });
+    handle.addEventListener('pointerup', function() { dragging = false; });
+    container.addEventListener('pointerdown', function(e) {
+      if (e.target === container || e.target.tagName === 'IMG') { move(e.clientX); dragging = true; }
+    });
+    container.addEventListener('pointermove', function(e) { if (dragging) move(e.clientX); });
+    container.addEventListener('pointerup', function() { dragging = false; });
+    container.addEventListener('pointerleave', function() { dragging = false; });
+  }
+
+  fileInput.addEventListener('change', function() {
+    if (!this.files.length) return;
+    _imageCurrentFile = this.files[0];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      _imageOrigDataUrl = e.target.result;
+      document.getElementById('tool-preview').classList.remove('hidden');
+      document.getElementById('orig-preview').src = e.target.result;
+      document.getElementById('orig-size').textContent = fileSize(_imageCurrentFile.size);
+      _placeholder.style.display = 'none';
+      _grid.style.display = 'flex';
+      _compareContainer.style.display = 'none';
+      document.getElementById('size-info').textContent = '';
+      document.getElementById('dim-info').textContent = '';
+      document.getElementById('download-btn').classList.add('hidden');
+      document.getElementById('copy-btn').classList.add('hidden');
+      processImage();
+    };
+    reader.readAsDataURL(_imageCurrentFile);
+  });
+
+  return processImage;
+}
+
+function fileSize(bytes) {
+  if (!bytes) return '';
+  var kb = bytes / 1024;
+  if (kb < 1024) return kb.toFixed(1) + ' KB';
+  return (kb / 1024).toFixed(1) + ' MB';
+}
+
+function ensureImageToolStyles() {
+  if (document.getElementById('image-tool-styles')) return;
+  var style = document.createElement('style');
+  style.id = 'image-tool-styles';
+  style.innerHTML = `
+    .img-tool-overlay { position: absolute; border: 2px dashed rgba(99,102,241,0.8); background: rgba(99,102,241,0.08); border-radius: 4px; box-sizing: border-box; pointer-events: auto; transition: border-color .15s, background .15s; z-index:10; }
+    .img-tool-overlay.active { border-color: rgba(52,211,153,0.9); background: rgba(52,211,153,0.12); }
+    .img-tool-handle { position: absolute; width: 12px; height: 12px; border: 2px solid #fff; background: #6366f1; box-shadow: 0 0 0 1.5px rgba(0,0,0,0.2); cursor: pointer; z-index:12; border-radius: 1px; }
+    .img-tool-handle[data-handle="nw"] { left:-7px; top:-7px; cursor:nw-resize; }
+    .img-tool-handle[data-handle="n"]  { left:50%; top:-7px; margin-left:-6px; cursor:n-resize; }
+    .img-tool-handle[data-handle="ne"] { right:-7px; top:-7px; cursor:ne-resize; }
+    .img-tool-handle[data-handle="e"]  { right:-7px; top:50%; margin-top:-6px; cursor:e-resize; }
+    .img-tool-handle[data-handle="se"] { right:-7px; bottom:-7px; cursor:se-resize; }
+    .img-tool-handle[data-handle="s"]  { left:50%; bottom:-7px; margin-left:-6px; cursor:s-resize; }
+    .img-tool-handle[data-handle="sw"] { left:-7px; bottom:-7px; cursor:sw-resize; }
+    .img-tool-handle[data-handle="w"]  { left:-7px; top:50%; margin-top:-6px; cursor:w-resize; }
+    .img-tool-grid { position:absolute; inset:0; pointer-events:none; z-index:5; opacity:0.5; }
+    .img-tool-grid::before, .img-tool-grid::after { content:''; position:absolute; background:rgba(255,255,255,0.3); }
+    .img-tool-grid::before { top:33.33%; bottom:33.33%; left:0; right:0; border-top:1px dashed rgba(255,255,255,0.3); border-bottom:1px dashed rgba(255,255,255,0.3); }
+    .img-tool-grid::after { left:33.33%; right:33.33%; top:0; bottom:0; border-left:1px dashed rgba(255,255,255,0.3); border-right:1px dashed rgba(255,255,255,0.3); }
+    .img-tool-dim-label { position:absolute; bottom:6px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#fff; font-size:10px; padding:2px 8px; border-radius:4px; white-space:nowrap; z-index:15; pointer-events:none; font-family:monospace; }
+    .ck-image-tool-panel { display:flex; flex-direction:column; gap:0.85rem; }
+    .ck-image-tool-info { display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin-top:0.5rem; }
+    .ck-image-tool-chip { display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 0.8rem; border-radius:10px; background:rgba(15,23,42,0.08); color:inherit; border:1px solid rgba(148,163,184,0.25); font-size:0.8rem; }
+    .dark .ck-image-tool-chip { background:rgba(15,23,42,0.92); color:#f8fafc; border-color:rgba(148,163,184,0.15); }
+    .ck-image-tool-bar { display:flex; flex-wrap:wrap; gap:0.6rem; margin-top:0.5rem; align-items:center; }
+    .ck-image-tool-bar button, .ck-image-tool-bar label { border-radius:999px; font-size:0.8rem; }
+    .ck-image-tool-bar button { border:none; padding:0.55rem 0.9rem; background:#6366f1; color:#fff; cursor:pointer; transition:transform .12s ease, background .12s ease; }
+    .ck-image-tool-bar button:hover { transform:translateY(-1px); background:#4f46e5; }
+    .ck-image-tool-bar button.secondary { background:rgba(148,163,184,0.15); color:inherit; }
+    .dark .ck-image-tool-bar button.secondary { color:#f8fafc; }
+    .ck-image-tool-bar button.secondary:hover { background:rgba(148,163,184,0.25); }
+    .ck-image-tool-bar label { display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 0.85rem; background:rgba(255,255,255,0.05); border:1px solid rgba(148,163,184,0.15); color:inherit; cursor:pointer; }
+    .dark .ck-image-tool-bar label { color:#f8fafc; }
+    .ck-image-tool-bar input[type="checkbox"] { accent-color:#6366f1; }
+    .ck-preset-btn { padding:0.35rem 0.65rem; border-radius:6px; border:1px solid rgba(148,163,184,0.3); background:transparent; color:inherit; font-size:0.7rem; cursor:pointer; transition:all .12s ease; }
+    .ck-preset-btn:hover { background:rgba(99,102,241,0.12); border-color:rgba(99,102,241,0.4); }
+    .ck-preset-btn.active { background:rgba(99,102,241,0.18); border-color:#6366f1; }
+    .ck-input-group { display:flex; flex-direction:column; gap:0.3rem; }
+    .ck-input-group label { font-size:0.7rem; color:rgba(107,114,128,0.8); font-weight:500; text-transform:uppercase; letter-spacing:0.05em; }
+    .dark .ck-input-group label { color:rgba(148,163,184,0.8); }
+    .ck-input-group input[type="number"], .ck-input-group select { padding:0.4rem 0.55rem; border-radius:6px; border:1px solid rgba(148,163,184,0.3); background:rgba(255,255,255,0.5); color:inherit; font-size:0.8rem; outline:none; min-width:70px; }
+    .dark .ck-input-group input[type="number"], .dark .ck-input-group select { background:rgba(255,255,255,0.04); border-color:rgba(148,163,184,0.2); color:#f8fafc; }
+    .ck-input-group input[type="number"]:focus, .ck-input-group select:focus { border-color:#6366f1; }
+    .ck-aspect-lock { display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.6rem; border-radius:6px; border:1px solid rgba(148,163,184,0.3); cursor:pointer; font-size:0.75rem; transition:all .12s ease; color:inherit; background:rgba(255,255,255,0.3); }
+    .dark .ck-aspect-lock { background:rgba(255,255,255,0.04); border-color:rgba(148,163,184,0.2); color:#f8fafc; }
+

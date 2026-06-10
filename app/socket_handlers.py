@@ -246,6 +246,9 @@ class PostsNamespace(Namespace):
             if existing and existing.reaction == reaction:
                 db.session.delete(existing)
                 removed = True
+                existing_like = PostLike.query.filter_by(post_id=pid, user_id=user.id).first()
+                if existing_like:
+                    db.session.delete(existing_like)
             else:
                 if existing:
                     db.session.delete(existing)

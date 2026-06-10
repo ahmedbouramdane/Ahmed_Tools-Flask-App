@@ -1,7 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import User, Post
 from app import db
+from app.config import Config
+import os, uuid
+from werkzeug.utils import secure_filename
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -18,9 +21,19 @@ def profile():
                          user=current_user, posts=posts,
                          is_following=False)
 
+def ajax_or_redirect(success, msg, category="success"):
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": success, "message": msg, "category": category})
+    flash(msg, category)
+    return redirect(url_for("profile.profile"))
+
 @profile_bp.route("/profile/update", methods=["POST"])
 @login_required
 def update_profile():
+    current_password = request.form.get("current_password", "")
+    if not current_user.check_password(current_password):
+        return ajax_or_redirect(False, "Current password is incorrect.", "danger")
+
     full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email")
     bio = request.form.get("bio", "")
@@ -34,13 +47,11 @@ def update_profile():
     website = request.form.get("website_url", current_user.website_url)
 
     if not email:
-        flash("Email is required.", "danger")
-        return redirect(url_for("profile.profile"))
+        return ajax_or_redirect(False, "Email is required.", "danger")
 
     existing_email = User.query.filter(User.email == email, User.id != current_user.id).first()
     if existing_email:
-        flash("Email already in use.", "danger")
-        return redirect(url_for("profile.profile"))
+        return ajax_or_redirect(False, "Email already in use.", "danger")
 
     current_user.full_name = full_name
     current_user.email = email
@@ -54,8 +65,7 @@ def update_profile():
     current_user.website_url = website
 
     db.session.commit()
-    flash("Profile updated.", "success")
-    return redirect(url_for("profile.profile"))
+    return ajax_or_redirect(True, "Profile updated successfully.", "success")
 
 @profile_bp.route("/profile/change-password", methods=["POST"])
 @login_required
@@ -64,19 +74,34 @@ def change_password():
     new = request.form.get("new_password")
     confirm = request.form.get("confirm_password")
     if not current_user.check_password(old):
-        flash("Current password incorrect.", "danger")
-    elif new != confirm:
-        flash("New passwords don't match.", "danger")
-    elif len(new) < 6:
-        flash("Password too short (min 6 chars).", "danger")
-    else:
-        current_user.set_password(new)
-        db.session.commit()
-        flash("Password changed.", "success")
-    return redirect(url_for("profile.profile"))
+        return ajax_or_redirect(False, "Current password is incorrect.", "danger")
+    if len(new) < 6:
+        return ajax_or_redirect(False, "New password must be at least 6 characters.", "danger")
+    if new != confirm:
+        return ajax_or_redirect(False, "New passwords do not match.", "danger")
+    current_user.set_password(new)
+    db.session.commit()
+    return ajax_or_redirect(True, "Password changed successfully.", "success")
 
 @profile_bp.route("/user/<int:user_id>")
 @login_required
 def view_profile(user_id):
     user = User.query.get_or_404(user_id)
     return redirect(url_for("posts.user_profile", username=user.username))
+
+@profile_bp.route("/profile/upload-image", methods=["POST"])
+@login_required
+def upload_profile_image():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Empty file'}), 400
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    if ext not in Config.ALLOWED_EXTENSIONS:
+        return jsonify({'error': 'Invalid file type'}), 400
+    unique_name = f"profile_{uuid.uuid4().hex}.{ext}"
+    os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+    file.save(os.path.join(Config.UPLOAD_FOLDER, unique_name))
+    url = url_for('static', filename=f'uploads/{unique_name}')
+    return jsonify({'url': url})

@@ -9,13 +9,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Ahmed Bouramdane - All-in-one productivity suite with AI-powered tools, image editor, PDF tools, code playground, translator, and more. Organise your work with notes, tasks, calendar, and chat.">
-  <meta name="keywords" content="productivity, AI tools, image editor, PDF tools, code playground, translator, task manager, notes, calendar, Ahmed Bouramdane">
+  <meta name="keywords" content="productivity, AI tools, image editor, PDF tools, code playground, translator, task manager, notes, calendar, Ahmed Bouramdane, Ahmed Tools, online tools, free tools">
   <meta name="author" content="Ahmed BOURAMDANE">
-  <meta property="og:title" content="Ahmed BOURAMDANE · Organiser">
-  <meta property="og:description" content="All-in-one productivity suite with AI tools, image editor, PDF utilities, code playground & more">
-  <meta property="og:type" content="website">
   <meta name="robots" content="index, follow">
-  <title>{% block title %}Ahmed BOURAMDANE · Organiser{% endblock %}</title>
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Ahmed Tools - All-in-One Productivity Suite">
+  <meta property="og:description" content="AI-powered image editor, PDF tools, code playground, translator, task manager & more. Free online tools for developers and creators.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:site_name" content="Ahmed Tools">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ahmed Tools - All-in-One Productivity Suite">
+  <meta name="twitter:description" content="AI-powered image editor, PDF tools, code playground, translator, task manager & more.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='50%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='40' y='152' width='120' height='14' rx='7' fill='url(%23g)' opacity='1'/%3E%3Crect x='52' y='122' width='96' height='14' rx='7' fill='url(%23g)' opacity='.85'/%3E%3Crect x='64' y='92' width='72' height='14' rx='7' fill='url(%23g)' opacity='.7'/%3E%3Crect x='76' y='62' width='48' height='14' rx='7' fill='url(%23g)' opacity='.55'/%3E%3Crect x='88' y='32' width='24' height='14' rx='7' fill='url(%23g)' opacity='.4'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='50%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='40' y='152' width='120' height='14' rx='7' fill='url(%23g)' opacity='1'/%3E%3Crect x='52' y='122' width='96' height='14' rx='7' fill='url(%23g)' opacity='.85'/%3E%3Crect x='64' y='92' width='72' height='14' rx='7' fill='url(%23g)' opacity='.7'/%3E%3Crect x='76' y='62' width='48' height='14' rx='7' fill='url(%23g)' opacity='.55'/%3E%3Crect x='88' y='32' width='24' height='14' rx='7' fill='url(%23g)' opacity='.4'/%3E%3C/svg%3E">
+
+  <title>{% block title %}Ahmed Tools - All-in-One Productivity Suite{% endblock %}</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,6 +227,114 @@
     .markdown-body tbody tr:last-child td { border-bottom: none; }
     .markdown-body tbody tr:hover { background: #f1f5f9; }
     .dark .markdown-body tbody tr:hover { background: #374151; }
+    
+    /* Skeleton loading */
+    .skeleton {
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    .dark .skeleton {
+      background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+      background-size: 200% 100%;
+    }
+    .skeleton-text { height: 14px; margin-bottom: 8px; width: 100%; }
+    .skeleton-text-sm { height: 10px; width: 60%; margin-bottom: 6px; }
+    .skeleton-avatar { width: 40px; height: 40px; border-radius: 9999px; }
+    .skeleton-avatar-lg { width: 56px; height: 56px; border-radius: 9999px; }
+    .skeleton-image { width: 100%; height: 200px; border-radius: 12px; }
+    .skeleton-btn { width: 70px; height: 32px; border-radius: 8px; }
+    .skeleton-card {
+      background: white; border-radius: 16px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .dark .skeleton-card { background: #1f2937; }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* Image loading skeleton */
+    .img-loading {
+      position: relative;
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      overflow: hidden;
+    }
+    .dark .img-loading {
+      background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+      background-size: 200% 100%;
+    }
+    .img-loading img {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .img-loading.loaded {
+      background: none !important;
+      animation: none !important;
+    }
+    .img-loading.loaded img {
+      opacity: 1;
+    }
+
+    /* Initial page skeleton (fade-out overlay) */
+    .page-skeleton {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      background: #fff;
+      animation: skeletonFadeOut 0.45s ease 0.15s forwards;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .dark .page-skeleton {
+      background: #1f2937;
+    }
+    @keyframes skeletonFadeOut {
+      to { opacity: 0; }
+    }
+
+    /* Post fade-in animation */
+    .post-fade-in {
+      animation: postEnter 0.5s ease-out both;
+    }
+    @keyframes postEnter {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Reaction picker for explore */
+    .reactions-picker {
+      display: flex; gap: 2px; padding: 6px 8px;
+      background: white; border-radius: 9999px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+      position: absolute; bottom: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%); z-index: 50;
+      white-space: nowrap; opacity: 0; visibility: hidden;
+      transition: opacity 0.15s, visibility 0.15s, transform 0.15s;
+    }
+    .dark .reactions-picker { background: #1f2937; border: 1px solid #374151; }
+    .like-btn-wrap:hover .reactions-picker,
+    .reactions-picker:hover { opacity: 1; visibility: visible; }
+    .reaction-btn {
+      width: 32px; height: 32px; border-radius: 9999px; display: flex;
+      align-items: center; justify-content: center; cursor: pointer;
+      transition: transform 0.15s; font-size: 1.1rem; border: none;
+      background: transparent; position: relative;
+    }
+    .reaction-btn:hover { transform: scale(1.3); background: #f3f4f6; }
+    .dark .reaction-btn:hover { background: #374151; }
+    .reaction-tooltip {
+      position: absolute; bottom: calc(100% + 4px); left: 50%;
+      transform: translateX(-50%); font-size: 10px; padding: 2px 6px;
+      background: #1e293b; color: white; border-radius: 4px;
+      white-space: nowrap; opacity: 0; pointer-events: none;
+      transition: opacity 0.15s;
+    }
+    .dark .reaction-tooltip { background: #374151; }
+    .reaction-btn:hover .reaction-tooltip { opacity: 1; }
     .markdown-body pre {
       background: #1e293b; border-radius: 12px; padding: 16px;
       overflow-x: auto; margin: 1em 0;
@@ -903,6 +1028,73 @@
       {% endwith %}
 
       <div id="content">{% block content %}{% endblock %}</div>
+
+      {% block footer %}
+      <footer class="bg-white dark:bg-gray-900 border-t border-gray-200/80 dark:border-gray-800/80 relative overflow-hidden mt-5 mb-[-35px]">
+        <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(99,102,241,0.03),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top_left,_rgba(99,102,241,0.06),_transparent_50%)] pointer-events-none"></div>
+        <div class="max-w-7xl mx-auto px-4 py-8 sm:py-10 relative">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10">
+            <div class="col-span-2 md:col-span-1">
+              <h3 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2 group">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 flex-shrink-0 transition-transform duration-300 group-hover:scale-110" style="filter: drop-shadow(0 0 6px rgba(99,102,241,0.3));">
+                  <defs>
+                    <linearGradient id="footer-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#6366f1"/>
+                      <stop offset="50%" stop-color="#8b5cf6"/>
+                      <stop offset="100%" stop-color="#ec4899"/>
+                    </linearGradient>
+                  </defs>
+                  <rect x="40" y="152" width="120" height="14" rx="7" fill="url(#footer-grad)" opacity="1"/>
+                  <rect x="52" y="122" width="96" height="14" rx="7" fill="url(#footer-grad)" opacity="0.85"/>
+                  <rect x="64" y="92" width="72" height="14" rx="7" fill="url(#footer-grad)" opacity="0.7"/>
+                  <rect x="76" y="62" width="48" height="14" rx="7" fill="url(#footer-grad)" opacity="0.55"/>
+                  <rect x="88" y="32" width="24" height="14" rx="7" fill="url(#footer-grad)" opacity="0.4"/>
+                </svg>
+                <span class="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Ahmed Tools</span>
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400/80 leading-relaxed">A collection of powerful tools for developers, designers, and creators. Built with <i class="fas fa-heart text-red-500 text-[10px]"></i> and passion.</p>
+              <div class="flex gap-2.5 mt-4">
+                <a href="#" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/20"><i class="fab fa-github text-sm"></i></a>
+                <a href="#" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20"><i class="fab fa-twitter text-sm"></i></a>
+                <a href="#" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-blue-600/20"><i class="fab fa-linkedin-in text-sm"></i></a>
+                <a href="#" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/30 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-green-600/20"><i class="fab fa-youtube text-sm"></i></a>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-semibold text-xs text-gray-800 dark:text-white mb-3 uppercase tracking-widest">Tools</h4>
+              <ul class="space-y-2.5 text-sm text-gray-500 dark:text-gray-400">
+                <li><a href="/tools" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Image Tools</a></li>
+                <li><a href="/tools" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>PDF Tools</a></li>
+                <li><a href="/tools" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Text Tools</a></li>
+                <li><a href="/tools" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Security Tools</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-xs text-gray-800 dark:text-white mb-3 uppercase tracking-widest">Community</h4>
+              <ul class="space-y-2.5 text-sm text-gray-500 dark:text-gray-400">
+                <li><a href="{{ url_for('posts.posts_feed') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Feed</a></li>
+                <li><a href="{{ url_for('posts.explore') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Explore</a></li>
+                <li><a href="{{ url_for('tools.tools_page') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Workspace</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-xs text-gray-800 dark:text-white mb-3 uppercase tracking-widest">Support</h4>
+              <ul class="space-y-2.5 text-sm text-gray-500 dark:text-gray-400">
+                <li><a href="#" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>About</a></li>
+                <li><a href="#" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Contact</a></li>
+                <li><a href="#" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Privacy</a></li>
+                <li><a href="#" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 inline-flex items-center gap-1.5 group"><span class="w-0 group-hover:w-1.5 h-0.5 bg-indigo-500 rounded-full transition-all duration-200"></span>Terms</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="mt-8 pt-5 border-t border-gray-200/70 dark:border-gray-800/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p class="text-sm text-gray-400 dark:text-gray-500/70">&copy; 2026 Ahmed BOURAMDANE. All rights reserved.</p>
+            <p class="text-xs text-gray-400/60 dark:text-gray-500/50">Built with <i class="fas fa-heart text-red-500"></i> and Flask</p>
+          </div>
+        </div>
+      </footer>
+      {% endblock %}
     </main>
   </div>
 
@@ -1246,17 +1438,7 @@ function confirmLogout(event) {
 }
 </script>
 
-{% block footer %}
-<!-- Footer -->
-<footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-10">
-  <div class="max-w-7xl mx-auto px-4 py-6">
-    <div class="text-center text-gray-600 dark:text-gray-400">
-      <p>&copy; 2026 Ahmed BOURAMDANE. All rights reserved.</p>
-    </div>
-  </div>
-</footer>
-{% endblock %}
-
 </body>
 </html>
 {% endif %}
+

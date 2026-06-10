@@ -1,0 +1,197 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  🤖 AI TOOLS — each tool with its own distinct UI
+// ═══════════════════════════════════════════════════════════════════════════
+
+function aiToolBase(operation, placeholder, btnLabel, btnIcon, extraHtml, inputRows) {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' + (extraHtml || '') +
+    '<textarea id="ai-input" rows="' + (inputRows || 6) + '" placeholder="' + placeholder + '" class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>' +
+    '<button class="ai-btn w-full px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas ' + (btnIcon || 'fa-magic') + '"></i> ' + (btnLabel || 'Process') + '</button>' +
+    '<div id="ai-result" class="hidden p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200"></div></div>';
+
+  ws.querySelector('.ai-btn').addEventListener('click', function() {
+    var text = document.getElementById('ai-input').value.trim();
+    if (!text) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    var body = {text: text};
+    var langSel = document.getElementById('ai-lang');
+    if (langSel) body.language = langSel.value;
+
+    fetch('/tools/api/ai/' + operation, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas ' + (btnIcon || 'fa-magic') + '"></i> ' + (btnLabel || 'Process');
+      var r = document.getElementById('ai-result');
+      if (data.success) { r.textContent = data.result; r.classList.remove('hidden'); }
+      else { r.textContent = 'Error: ' + data.error; r.classList.remove('hidden'); }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas ' + (btnIcon || 'fa-magic') + '"></i> ' + (btnLabel || 'Process'); alert('Error connecting to server'); });
+  });
+}
+
+// ─── Summarize ─────────────────────────────────────────────────────────────
+
+window.tool_ai_summarize = function() {
+  aiToolBase('summarize',
+    'Paste a long article, document, or text to condense into 3-5 sentences...',
+    'Summarize',
+    'fa-compress-arrows-alt',
+    '<div class="flex items-center gap-2 mb-1"><div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/20 flex items-center justify-center"><i class="fas fa-compress-arrows-alt text-sm text-indigo-500"></i></div><p class="text-sm font-medium text-gray-700 dark:text-gray-300">Condense long text into key points</p></div>',
+    8);
+};
+
+// ─── Keywords ──────────────────────────────────────────────────────────────
+
+window.tool_ai_keywords = function() {
+  aiToolBase('keywords',
+    'Paste any text to extract the most important keywords and phrases...',
+    'Extract Keywords',
+    'fa-tags',
+    '<div class="flex items-center gap-2 mb-1"><div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center"><i class="fas fa-tags text-sm text-blue-500"></i></div><p class="text-sm font-medium text-gray-700 dark:text-gray-300">Automatically identify key terms and topics</p></div>',
+    6);
+};
+
+// ─── Rewrite ───────────────────────────────────────────────────────────────
+
+window.tool_ai_rewrite = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' +
+    '<div class="flex items-center gap-2 mb-1"><div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center"><i class="fas fa-feather-alt text-sm text-purple-500"></i></div><p class="text-sm font-medium text-gray-700 dark:text-gray-300">Improve clarity, tone, and professionalism</p></div>' +
+    '<div class="flex flex-wrap gap-2"><label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="rewrite-style" value="professional" checked class="accent-indigo-500"> <span class="text-sm">Professional</span></label>' +
+    '<label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="rewrite-style" value="simple" class="accent-indigo-500"> <span class="text-sm">Simple</span></label>' +
+    '<label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="rewrite-style" value="creative" class="accent-indigo-500"> <span class="text-sm">Creative</span></label></div>' +
+    '<textarea id="rewrite-input" rows="6" placeholder="Paste text you want to rewrite with better clarity and style..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>' +
+    '<button id="rewrite-btn" class="w-full px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-feather-alt"></i> Rewrite Text</button>' +
+    '<div id="rewrite-result" class="hidden p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200"></div></div>';
+
+  document.getElementById('rewrite-btn').addEventListener('click', function() {
+    var text = document.getElementById('rewrite-input').value.trim();
+    if (!text) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rewriting...';
+    var style = document.querySelector('input[name="rewrite-style"]:checked')?.value || 'professional';
+    fetch('/tools/api/ai/rewrite', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: text, style: style})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-feather-alt"></i> Rewrite Text';
+      var r = document.getElementById('rewrite-result');
+      if (data.success) { r.textContent = data.result; r.classList.remove('hidden'); }
+      else { r.textContent = 'Error: ' + data.error; r.classList.remove('hidden'); }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-feather-alt"></i> Rewrite Text'; alert('Error'); });
+  });
+};
+
+// ─── Caption ───────────────────────────────────────────────────────────────
+
+window.tool_ai_caption = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' +
+    '<div class="flex items-center gap-2 mb-1"><div class="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center"><i class="fas fa-camera text-sm text-rose-500"></i></div><p class="text-sm font-medium text-gray-700 dark:text-gray-300">Generate engaging social media captions for Instagram, Twitter, LinkedIn & more</p></div>' +
+    '<div class="flex flex-wrap gap-2"><label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="caption-platform" value="instagram" checked class="accent-indigo-500"> <span class="text-sm">Instagram</span></label>' +
+    '<label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="caption-platform" value="twitter" class="accent-indigo-500"> <span class="text-sm">Twitter / X</span></label>' +
+    '<label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="caption-platform" value="linkedin" class="accent-indigo-500"> <span class="text-sm">LinkedIn</span></label>' +
+    '<label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-indigo-300 transition"><input type="radio" name="caption-platform" value="facebook" class="accent-indigo-500"> <span class="text-sm">Facebook</span></label></div>' +
+    '<textarea id="caption-input" rows="5" placeholder="Describe your photo, post, or content topic..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>' +
+    '<button id="caption-btn" class="w-full px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-camera"></i> Generate Captions</button>' +
+    '<div id="caption-result" class="hidden p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200"></div></div>';
+
+  document.getElementById('caption-btn').addEventListener('click', function() {
+    var text = document.getElementById('caption-input').value.trim();
+    if (!text) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    var platform = document.querySelector('input[name="caption-platform"]:checked')?.value || 'instagram';
+    fetch('/tools/api/ai/caption', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: text, platform: platform})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-camera"></i> Generate Captions';
+      var r = document.getElementById('caption-result');
+      if (data.success) { r.textContent = data.result; r.classList.remove('hidden'); }
+      else { r.textContent = 'Error: ' + data.error; r.classList.remove('hidden'); }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-camera"></i> Generate Captions'; alert('Error'); });
+  });
+};
+
+// ─── Grammar ───────────────────────────────────────────────────────────────
+
+window.tool_ai_grammar = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' +
+    '<div class="flex items-center gap-2 mb-1"><div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center"><i class="fas fa-spell-check text-sm text-amber-500"></i></div><p class="text-sm font-medium text-gray-700 dark:text-gray-300">Fix grammar, spelling, and punctuation errors instantly</p></div>' +
+    '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
+    '<div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Original (with errors)</label><textarea id="grammar-input" rows="6" placeholder="Paste text with grammar or spelling errors..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"></textarea></div>' +
+    '<div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Corrected</label><textarea id="grammar-output" rows="6" placeholder="Corrected version will appear here..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-white"></textarea></div></div>' +
+    '<button id="grammar-btn" class="w-full px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-spell-check"></i> Fix Grammar</button>' +
+    '<div id="grammar-result" class="hidden p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200"></div></div>';
+
+  document.getElementById('grammar-btn').addEventListener('click', function() {
+    var text = document.getElementById('grammar-input').value.trim();
+    if (!text) return;
+    var btn = this; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fixing...';
+    fetch('/tools/api/ai/grammar', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: text})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-spell-check"></i> Fix Grammar';
+      if (data.success) {
+        document.getElementById('grammar-output').value = data.result;
+        document.getElementById('grammar-result').classList.remove('hidden');
+        document.getElementById('grammar-result').textContent = data.result;
+      } else {
+        document.getElementById('grammar-result').classList.remove('hidden');
+        document.getElementById('grammar-result').textContent = 'Error: ' + data.error;
+      }
+    }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-spell-check"></i> Fix Grammar'; alert('Error'); });
+  });
+};
+
+// ─── Translate (already has full UI, keep as-is) ───────────────────────────
+
+window.tool_ai_translate = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4">' +
+    '<div class="flex items-center gap-2 mb-1"><div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center"><i class="fas fa-language text-sm text-emerald-500"></i></div><p class="text-sm font-medium text-gray-700 dark:text-gray-300">Translate between 15 languages in real-time</p></div>' +
+    '<div class="grid grid-cols-1 md:grid-cols-5 gap-3">' +
+      '<div class="md:col-span-2"><label class="text-xs font-medium text-gray-500 dark:text-gray-400">Source Language</label><div class="flex gap-2 mt-1"><select id="tl-source" class="flex-1 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"><option value="auto">🔍 Auto Detect</option><option value="English">English</option><option value="Arabic">العربية</option><option value="French">Français</option><option value="Spanish">Español</option><option value="German">Deutsch</option><option value="Chinese">中文</option><option value="Japanese">日本語</option><option value="Russian">Русский</option><option value="Portuguese">Português</option><option value="Hindi">हिन्दी</option><option value="Italian">Italiano</option><option value="Korean">한국어</option><option value="Turkish">Türkçe</option><option value="Dutch">Nederlands</option><option value="Polish">Polski</option></select><button id="tl-swap" class="px-3 py-2 text-sm border rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Swap languages"><i class="fas fa-exchange-alt"></i></button></div></div>' +
+      '<div class="md:col-span-2"><label class="text-xs font-medium text-gray-500 dark:text-gray-400">Target Language</label><select id="tl-target" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="English">English</option><option value="Arabic" selected>العربية</option><option value="French">Français</option><option value="Spanish">Español</option><option value="German">Deutsch</option><option value="Chinese">中文</option><option value="Japanese">日本語</option><option value="Russian">Русский</option><option value="Portuguese">Português</option><option value="Hindi">हिन्दी</option><option value="Italian">Italiano</option><option value="Korean">한국어</option><option value="Turkish">Türkçe</option><option value="Dutch">Nederlands</option><option value="Polish">Polski</option></select></div>' +
+      '<div class="md:col-span-1"><label class="text-xs font-medium text-gray-500 dark:text-gray-400">Style</label><select id="tl-style" class="w-full px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white mt-1"><option value="standard">Standard</option><option value="formal">Formal</option><option value="casual">Casual</option></select></div>' +
+    '</div>' +
+    '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
+      '<div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Input</label><textarea id="tl-input" rows="6" placeholder="Type or paste text to translate..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><span class="text-xs text-gray-400" id="tl-chars">0 characters</span></div>' +
+      '<div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Translation</label><div class="relative"><textarea id="tl-output" rows="6" readonly placeholder="Translation will appear here..." class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-white"></textarea><div id="tl-spinner" class="absolute top-2 right-2 hidden"><i class="fas fa-spinner fa-spin text-indigo-500"></i></div></div><div class="flex gap-2 mt-2"><button onclick="copyResult(\'tl-output\')" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"><i class="fas fa-copy"></i> Copy</button><button onclick="document.getElementById(\'tl-output\').value=\'\'" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"><i class="fas fa-times"></i> Clear</button></div></div>' +
+    '</div>' +
+  '</div>';
+
+  var translateTimer;
+  function doTranslate() {
+    var text = document.getElementById('tl-input').value.trim();
+    if (!text) { document.getElementById('tl-output').value = ''; document.getElementById('tl-spinner').classList.add('hidden'); return; }
+    document.getElementById('tl-chars').textContent = text.length + ' characters';
+    document.getElementById('tl-spinner').classList.remove('hidden');
+    var sourceLang = document.getElementById('tl-source').value;
+    var targetLang = document.getElementById('tl-target').value;
+    var style = document.getElementById('tl-style').value;
+    fetch('/tools/api/ai/translate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: text, language: targetLang, source: sourceLang, style: style})
+    }).then(function(r){ return r.json(); }).then(function(data){
+      document.getElementById('tl-spinner').classList.add('hidden');
+      if (data.success) { document.getElementById('tl-output').value = data.result; }
+      else if (data.error) { document.getElementById('tl-output').value = '[Error] ' + data.error; }
+    }).catch(function(){ document.getElementById('tl-spinner').classList.add('hidden'); });
+  }
+
+  document.getElementById('tl-input').addEventListener('input', function() {
+    clearTimeout(translateTimer);
+    translateTimer = setTimeout(doTranslate, 400);
+  });
+  document.getElementById('tl-source').addEventListener('change', doTranslate);
+  document.getElementById('tl-target').addEventListener('change', doTranslate);
+  document.getElementById('tl-style').addEventListener('change', doTranslate);
+  document.getElementById('tl-swap').addEventListener('click', function() {
+    var src = document.getElementById('tl-source');
+    var tgt = document.getElementById('tl-target');
+    if (src.value === 'auto') return;
+    var tmp = src.value; src.value = tgt.value; tgt.value = tmp;
+    var input = document.getElementById('tl-input');
+    var output = document.getElementById('tl-output');
+    if (output.value) { input.value = output.value; output.value = ''; }
+    doTranslate();
+  });
+};

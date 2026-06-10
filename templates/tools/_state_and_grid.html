@@ -1,0 +1,153 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  APP STATE + URL PARAMS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getUrlParams() {
+  var s = new URLSearchParams(window.location.search);
+  return { category: s.get('category'), tool: s.get('tool') };
+}
+
+function setUrlParams(cat, tool) {
+  var s = new URLSearchParams();
+  if (cat) s.set('category', cat);
+  if (tool) s.set('tool', tool);
+  var q = s.toString();
+  var url = window.location.pathname + (q ? '?' + q : '');
+  history.pushState({ category: cat, tool: tool }, '', url);
+}
+
+var params = getUrlParams();
+var currentCat = (params.category && TOOLS[params.category]) ? params.category : 'image';
+var currentTool = null;
+
+function openToolFromUrl() {
+  var p = getUrlParams();
+  if (p.tool && TOOLS[currentCat]) {
+    var tool = TOOLS[currentCat].find(function(t) { return t.id === p.tool; });
+    if (tool) { openTool(tool); return true; }
+  }
+  return false;
+}
+
+// Tabs setup
+(function initTabs() {
+  var tabs = document.getElementById('category-tabs');
+  if (!tabs) return;
+  tabs.addEventListener('click', function(e) {
+    var tab = e.target.closest('.cat-tab');
+    if (!tab) return;
+    currentCat = tab.dataset.cat;
+    currentTool = null;
+    tabs.querySelectorAll('.cat-tab').forEach(function(t) {
+      t.classList.remove('active', 'bg-indigo-600', 'text-white');
+      t.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+    });
+    tab.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+    tab.classList.add('bg-indigo-600', 'text-white');
+    setUrlParams(currentCat, null);
+    renderToolGrid();
+  });
+  // Highlight initial tab from URL
+  tabs.querySelectorAll('.cat-tab').forEach(function(t) {
+    t.classList.remove('active', 'bg-indigo-600', 'text-white');
+    t.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+    if (t.dataset.cat === currentCat) {
+      t.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+      t.classList.add('bg-indigo-600', 'text-white');
+    }
+  });
+})();
+
+// Handle browser back/forward
+window.addEventListener('popstate', function(e) {
+  var p = getUrlParams();
+  var newCat = (p.category && TOOLS[p.category]) ? p.category : 'image';
+  var catChanged = newCat !== currentCat;
+  var toolChanged = p.tool !== (currentTool ? currentTool.id : null);
+
+  if (catChanged || toolChanged) {
+    currentCat = newCat;
+    currentTool = null;
+    var tabs = document.getElementById('category-tabs');
+    if (tabs) {
+      tabs.querySelectorAll('.cat-tab').forEach(function(t) {
+        t.classList.remove('active', 'bg-indigo-600', 'text-white');
+        t.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+        if (t.dataset.cat === currentCat) {
+          t.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+          t.classList.add('bg-indigo-600', 'text-white');
+        }
+      });
+    }
+    renderToolGrid();
+    if (p.tool && TOOLS[currentCat]) {
+      var tool = TOOLS[currentCat].find(function(t) { return t.id === p.tool; });
+      if (tool) openTool(tool);
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RENDER TOOL GRID
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderToolGrid() {
+  if (window._cleanupPaste) { window._cleanupPaste(); }
+  if (window._cleanupCanva) { window._cleanupCanva(); }
+  if (window._cleanupCalc) { window._cleanupCalc(); }
+  if (window._cleanupPlayground) { window._cleanupPlayground(); }
+
+  var tools = TOOLS[currentCat] || [];
+  var container = document.getElementById('tools-content');
+  if (!container) return;
+  container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">' +
+    tools.map(function(t) {
+      return '<div class="tool-card bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4 sm:p-5 cursor-pointer hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-600 hover:-translate-y-0.5 transition-all duration-200" data-tool="' + t.id + '">' +
+        '<div class="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">' +
+        '<div class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl bg-' + t.color + '-100 dark:bg-' + t.color + '-900/30 flex items-center justify-center"><i class="' + t.icon + ' text-base sm:text-lg text-' + t.color + '-600 dark:text-' + t.color + '-400"></i></div>' +
+        '<h3 class="text-sm sm:text-base font-bold text-gray-800 dark:text-white">' + t.title + '</h3></div>' +
+        '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">' + t.desc + '</p>' +
+      '</div>';
+    }).join('') + '</div>';
+
+  container.querySelectorAll('.tool-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var id = this.dataset.tool;
+      var tool = TOOLS[currentCat].find(function(t) { return t.id === id; });
+      if (tool) openTool(tool);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  OPEN TOOL
+// ═══════════════════════════════════════════════════════════════════════════
+
+function openTool(tool) {
+  currentTool = tool;
+  setUrlParams(currentCat, tool.id);
+  if (window._cleanupPaste) { window._cleanupPaste(); }
+  if (window._cleanupCanva) { window._cleanupCanva(); }
+  if (window._cleanupCalc) { window._cleanupCalc(); }
+  if (window._cleanupPlayground) { window._cleanupPlayground(); }
+  var container = document.getElementById('tools-content');
+  if (!container) return;
+  container.innerHTML = '<div class="mb-4 flex items-center gap-3">' +
+    '<button onclick="backToGrid()" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition" title="Back to tools"><i class="fas fa-arrow-left"></i></button>' +
+    '<div><h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white"><i class="' + tool.icon + ' mr-2"></i>' + tool.title + '</h3>' +
+    '<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">' + tool.desc + '</p></div></div><div id="tool-workspace" class="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6"></div>';
+
+  var fnName = 'tool_' + currentCat + '_' + tool.id.replace(/-/g, '_');
+  if (typeof window[fnName] === 'function') {
+    window[fnName]();
+  } else {
+    document.getElementById('tool-workspace').innerHTML = '<p class="text-gray-400 text-center py-8">Tool interface coming soon</p>';
+  }
+}
+
+function backToGrid() {
+  currentTool = null;
+  setUrlParams(currentCat, null);
+  renderToolGrid();
+}
+

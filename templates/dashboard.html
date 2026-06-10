@@ -1,373 +1,179 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Ahmed BOURAMDANE · Organiser{% endblock %}
+{% block title %}Dashboard - Ahmed-Stack{% endblock %}
 {% block content %}
 <style>
-  .stat-card {
-    background: var(--surface);
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    cursor: default;
-  }
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: var(--card-color);
-    opacity: 0.7;
-  }
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: var(--card-color);
-    opacity: 0.04;
-    transform: translate(30%, -30%);
-    pointer-events: none;
-  }
-  .dark .stat-card::after {
-    opacity: 0.06;
-  }
-  .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--card-color);
-  }
-  .dark .stat-card {
-    background: #1e293b;
-    border-color: #334155;
-  }
-  .dark .stat-card:hover {
-    border-color: var(--card-color);
-  }
-  .stat-card-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-  }
-  .stat-card-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    color: white;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
-  .stat-card-value {
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.03em;
-    color: var(--text-primary);
-  }
-  .dark .stat-card-value { color: #f1f5f9; }
-  .stat-card-label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-top: 0.15rem;
-  }
-  .stat-card-sub {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    opacity: 0.65;
-  }
-  .stat-card-bar {
-    margin-top: 0.75rem;
-    height: 4px;
-    border-radius: 4px;
-    background: var(--border);
-    overflow: hidden;
-  }
-  .dark .stat-card-bar { background: #334155; }
-  .stat-card-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: var(--card-color);
-    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 0;
-  }
-  .dashboard-card {
-    background: var(--surface);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border);
-    overflow: hidden;
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
-  }
-  .dashboard-card:hover {
-    box-shadow: var(--shadow-lg);
-    border-color: #6366f1;
-  }
-  .dark .dashboard-card {
-    background: #1e293b;
-    border-color: #334155;
-  }
-  .dark .dashboard-card:hover {
-    border-color: #818cf8;
-  }
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.2rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .dark .card-header { border-color: #334155; }
-  .card-header h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-  .dark .card-header h3 { color: #f1f5f9; }
-  .card-body {
-    padding: 1.5rem;
-  }
-  .note-item, .event-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.9rem 1.5rem;
-    transition: background 0.2s ease;
-    text-decoration: none;
-    color: inherit;
-    border-bottom: 1px solid var(--border);
-  }
-  .dark .note-item, .dark .event-item { border-color: #334155; }
-  .note-item:last-child, .event-item:last-child { border-bottom: none; }
-  .note-item:hover, .event-item:hover { background: rgba(99, 102, 241, 0.04); }
-  .dark .note-item:hover, .dark .event-item:hover { background: rgba(99, 102, 241, 0.08); }
-  .note-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .note-title, .task-title, .event-title {
-    font-weight: 600;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .dark .note-title, .dark .task-title, .dark .event-title { color: #e2e8f0; }
-  .note-meta, .task-meta, .event-time {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    margin-top: 0.1rem;
-  }
-  .task-item-modern {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.9rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.2s ease;
-  }
-  .dark .task-item-modern { border-color: #334155; }
-  .task-item-modern:last-child { border-bottom: none; }
-  .task-item-modern:hover { background: rgba(16, 185, 129, 0.04); }
-  .dark .task-item-modern:hover { background: rgba(16, 185, 129, 0.08); }
-  .priority-indicator {
-    width: 4px;
-    height: 32px;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-  .priority-high { background: #ef4444; }
-  .priority-medium { background: #f59e0b; }
-  .priority-low { background: #3b82f6; }
-  .event-date-badge {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    line-height: 1.2;
-  }
-  .event-month {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .event-day {
-    font-size: 1.1rem;
-    font-weight: 800;
-  }
-  .event-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 2rem;
-    color: var(--text-secondary);
-  }
-  .empty-state p {
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-  .dashboard-quick-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-  .quick-action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.7rem 1.4rem;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: white;
-    text-decoration: none;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    cursor: pointer;
-  }
-  .quick-action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-    color: white;
-  }
-  .quick-action-btn i { font-size: 0.95rem; }
+  /* === Dashboard entrance (prevents FOUC, anime handles all transforms) === */
+  .dash-fade { opacity: 0; }
 
+  /* === Stat card glass === */
+  .stat-glass {
+    background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px; padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    border: 1px solid rgba(255,255,255,0.6);
+    cursor: default; position: relative; overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .stat-glass::before {
+    content: ''; position: absolute; inset: 0; border-radius: 20px;
+    background: linear-gradient(135deg, var(--card-color), transparent);
+    opacity: 0; transition: opacity 0.35s ease; pointer-events: none;
+  }
+  .stat-glass:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 16px 40px -8px color-mix(in srgb, var(--card-color) 25%, transparent); border-color: var(--card-color); }
+  .stat-glass:hover::before { opacity: 0.07; }
+  .stat-glass:hover .stat-icon-wrap { transform: scale(1.12) rotate(-4deg); }
+  .stat-glass:hover .stat-icon-wrap::after { opacity: 1; }
+  .dark .stat-glass {
+    background: rgba(30,41,59,0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-color: rgba(51,65,85,0.6);
+  }
+  .dark .stat-glass:hover { border-color: var(--card-color); box-shadow: 0 16px 40px -8px rgba(0,0,0,0.4); }
+
+  .stat-icon-wrap {
+    width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; color: white; flex-shrink: 0;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1); position: relative;
+  }
+  .stat-icon-wrap::after {
+    content: ''; position: absolute; inset: -3px; border-radius: 17px;
+    background: inherit; opacity: 0.3; filter: blur(6px); z-index: -1;
+    transition: opacity 0.35s ease;
+  }
+  .stat-num { font-size: 2rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+  .dark .stat-num { color: #f1f5f9; }
+  .stat-lbl { font-size: 0.78rem; font-weight: 500; color: var(--text-secondary); }
+  .stat-sub { font-size: 0.7rem; color: var(--text-secondary); opacity: 0.6; }
+  .stat-progress { margin-top: 0.75rem; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; }
+  .dark .stat-progress { background: #334155; }
+  .stat-progress-fill { height: 100%; border-radius: 4px; background: var(--card-color); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); width: 0; }
+
+  /* === Dashboard panel cards === */
+  .dash-panel {
+    border-radius: 20px; background: var(--surface); border: 1px solid var(--border);
+    overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .dash-panel:hover { box-shadow: 0 12px 40px -8px rgba(0,0,0,0.06); border-color: #c7d2fe; }
+  .dark .dash-panel { background: #1e293b; border-color: #334155; }
+  .dark .dash-panel:hover { border-color: #6366f140; }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+  }
+  .dark .panel-head { border-color: #334155; }
+  .panel-head h3 { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+  .dark .panel-head h3 { color: #f1f5f9; }
+  .panel-body { padding: 1.5rem; }
+  .panel-list { padding: 0; }
+
+  /* === List items === */
+  .list-item {
+    display: flex; align-items: center; gap: 0.9rem;
+    padding: 0.8rem 1.5rem; transition: background 0.2s ease;
+    text-decoration: none; color: inherit; border-bottom: 1px solid var(--border);
+  }
+  .dark .list-item { border-color: #334155; }
+  .list-item:last-child { border-bottom: none; }
+  .list-item:hover { background: rgba(99,102,241,0.04); }
+  .dark .list-item:hover { background: rgba(129,140,248,0.06); }
+  .item-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .item-title { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dark .item-title { color: #e2e8f0; }
+  .item-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.05rem; }
+  .item-arrow { color: var(--text-secondary); opacity: 0.25; font-size: 0.7rem; transition: all 0.2s ease; }
+  .list-item:hover .item-arrow { opacity: 0.5; transform: translateX(3px); }
+
+  /* === Task list item === */
+  .task-item {
+    display: flex; align-items: center; gap: 0.9rem;
+    padding: 0.8rem 1.5rem; border-bottom: 1px solid var(--border);
+    transition: background 0.2s ease;
+  }
+  .dark .task-item { border-color: #334155; }
+  .task-item:last-child { border-bottom: none; }
+  .task-item:hover { background: rgba(16,185,129,0.04); }
+  .dark .task-item:hover { background: rgba(16,185,129,0.06); }
+  .prio-bar { width: 4px; height: 30px; border-radius: 4px; flex-shrink: 0; }
+  .prio-high { background: #ef4444; }
+  .prio-med { background: #f59e0b; }
+  .prio-low { background: #3b82f6; }
+
+  /* === Event badge === */
+  .ev-badge {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; flex-shrink: 0; line-height: 1.2;
+  }
+  .ev-mon { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .ev-day { font-size: 1.1rem; font-weight: 800; }
+  .ev-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .empty {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0.5rem; padding: 2rem; color: var(--text-secondary);
+  }
+  .empty p { font-size: 0.9rem; font-weight: 500; }
+
+  /* === Quick actions === */
+  .qaction {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.65rem 1.25rem; border-radius: 12px; font-weight: 600;
+    font-size: 0.85rem; color: white; text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+    border: none; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .qaction::after {
+    content: ''; position: absolute; inset: 0; border-radius: 12px;
+    background: white; opacity: 0; transition: opacity 0.25s ease;
+  }
+  .qaction:hover { transform: translateY(-2px); color: white; }
+  .qaction:hover::after { opacity: 0.1; }
+  .qaction:active { transform: translateY(0); }
+
+  /* === Greeting === */
   .greeting-gradient {
     background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .dark .greeting-gradient {
     background: linear-gradient(135deg, #a78bfa, #c084fc, #f472b6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
 
-  .welcome-cta {
+  /* === CTA === */
+  .dash-cta {
+    border-radius: 20px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: var(--radius-sm);
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    color: white;
-    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
-    position: relative;
-    overflow: hidden;
+    padding: 1.5rem 2rem; display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem; color: white;
+    box-shadow: 0 8px 32px rgba(99,102,241,0.25); position: relative; overflow: hidden;
   }
-  .welcome-cta h3 { font-size: 1.2rem; font-weight: 700; }
-  .welcome-cta p { opacity: 0.9; font-size: 0.9rem; margin-top: 0.2rem; }
-  .welcome-cta .btn-white {
-    background: white;
-    color: #6366f1;
-    padding: 0.6rem 1.5rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    text-decoration: none;
-    transition: all 0.2s;
-    white-space: nowrap;
+  .dash-cta::before {
+    content: ''; position: absolute; top: -50%; right: -20%;
+    width: 300px; height: 300px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); pointer-events: none;
   }
-  .welcome-cta .btn-white:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  .dash-cta h3 { font-size: 1.15rem; font-weight: 700; }
+  .dash-cta p { opacity: 0.9; font-size: 0.88rem; margin-top: 0.15rem; }
+  .dash-cta .btn-ghost {
+    background: rgba(255,255,255,0.2); color: white;
+    padding: 0.6rem 1.5rem; border-radius: 12px; font-weight: 700;
+    font-size: 0.88rem; text-decoration: none; transition: all 0.25s;
+    white-space: nowrap; backdrop-filter: blur(4px);
+  }
+  .dash-cta .btn-ghost:hover {
+    background: white; color: #6366f1; transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
   }
 
-  /* ===== Skeleton Loading ===== */
-  .skeleton-dash {
-    position: relative;
-  }
-  .skeleton-dash .skeleton-content {
-    transition: opacity 0.5s ease;
-  }
-  .skeleton-dash.loaded .skeleton-content {
-    opacity: 1;
-  }
-  .skeleton-dash .skeleton-overlay {
-    position: absolute;
-    inset: 0;
-    background: var(--surface);
-    border-radius: inherit;
-    z-index: 10;
-    transition: opacity 0.4s ease;
-  }
-  .dark .skeleton-dash .skeleton-overlay {
-    background: #1e293b;
-  }
-  .skeleton-dash.loaded .skeleton-overlay {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  @keyframes shimmer-anim {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .skeleton-shimmer {
-    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer-anim 1.5s ease-in-out infinite;
-    border-radius: 8px;
-  }
-  .dark .skeleton-shimmer {
-    background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
-    background-size: 200% 100%;
-  }
-  .skeleton-stat {
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    padding: 1.5rem;
-  }
-  .skeleton-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    flex-shrink: 0;
-  }
-  .skeleton-text-line {
-    height: 14px;
-    border-radius: 8px;
-    margin-bottom: 6px;
-  }
+  /* === Misc === */
+  .view-link { font-size: 0.78rem; font-weight: 600; transition: all 0.2s; }
+  .view-link:hover { opacity: 0.7; }
 
   @media (max-width: 768px) {
-    .welcome-cta { flex-direction: column; text-align: center; }
-    .stat-card-value { font-size: 1.6rem; }
-    .stat-card-icon { width: 36px; height: 36px; font-size: 1rem; }
+    .dash-cta { flex-direction: column; text-align: center; }
+    .stat-num { font-size: 1.6rem; }
   }
 </style>
 
@@ -387,10 +193,10 @@
       </p>
     </div>
     <div class="flex flex-wrap gap-2" id="quick-actions">
-      <a href="{{ url_for('notes.notes') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+      <a href="{{ url_for('notes.notes') }}" class="qaction" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
         <i class="fas fa-plus"></i> New Note
       </a>
-      <a href="{{ url_for('tasks.tasks') }}" class="quick-action-btn" style="background: linear-gradient(135deg, #10b981, #34d399);">
+      <a href="{{ url_for('tasks.tasks') }}" class="qaction" style="background: linear-gradient(135deg, #10b981, #34d399);">
         <i class="fas fa-plus"></i> New Task
       </a>
     </div>
@@ -400,61 +206,61 @@
 {% set td = tasks_done|default(0) %}{% set tt = tasks_total|default(0) %}{% set completion_pct = (td / tt * 100)|round|int if tt > 0 else 0 %}
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8" id="stat-cards-grid">
-  <div class="stat-card" style="--card-color: #6366f1;">
-    <div class="stat-card-top">
-      <div class="stat-card-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-sticky-note"></i></div>
-      <span class="stat-card-sub">total</span>
+  <div class="stat-glass dash-fade" style="--card-color: #6366f1;">
+    <div class="flex items-start justify-between mb-3">
+      <div class="stat-icon-wrap" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-sticky-note"></i></div>
+      <span class="stat-sub">total</span>
     </div>
-    <div class="stat-card-value"><span class="counter" data-target="{{ notes_count|default(0) }}">0</span></div>
-    <div class="stat-card-label">Notes</div>
+    <div class="stat-num"><span class="counter" data-target="{{ notes_count|default(0) }}">0</span></div>
+    <div class="stat-lbl">Notes</div>
   </div>
-  <div class="stat-card" style="--card-color: #10b981;">
-    <div class="stat-card-top">
-      <div class="stat-card-icon" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fas fa-check-double"></i></div>
-      <span class="stat-card-sub">{{ completion_pct }}%</span>
+  <div class="stat-glass dash-fade" style="--card-color: #10b981;">
+    <div class="flex items-start justify-between mb-3">
+      <div class="stat-icon-wrap" style="background: linear-gradient(135deg, #10b981, #34d399);"><i class="fas fa-check-double"></i></div>
+      <span class="stat-sub">{{ completion_pct }}%</span>
     </div>
-    <div class="stat-card-value"><span class="counter" data-target="{{ tasks_done }}">0</span><span class="text-base font-semibold opacity-50 ml-1">/{{ tasks_total }}</span></div>
-    <div class="stat-card-label">Tasks Done</div>
-    <div class="stat-card-bar"><div class="stat-card-bar-fill" style="--card-color: #10b981;" data-pct="{{ completion_pct }}"></div></div>
+    <div class="stat-num"><span class="counter" data-target="{{ tasks_done }}">0</span><span class="text-base font-semibold opacity-50 ml-1">/{{ tasks_total }}</span></div>
+    <div class="stat-lbl">Tasks Done</div>
+    <div class="stat-progress"><div class="stat-progress-fill" style="--card-color: #10b981;" data-pct="{{ completion_pct }}"></div></div>
   </div>
-  <div class="stat-card" style="--card-color: #f59e0b;">
-    <div class="stat-card-top">
-      <div class="stat-card-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fas fa-newspaper"></i></div>
-      {% if upcoming_events|default([]) %}<span class="stat-card-sub">{{ (upcoming_events|default([]))|length }} upcoming</span>{% endif %}
+  <div class="stat-glass dash-fade" style="--card-color: #f59e0b;">
+    <div class="flex items-start justify-between mb-3">
+      <div class="stat-icon-wrap" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);"><i class="fas fa-newspaper"></i></div>
+      {% if upcoming_events|default([]) %}<span class="stat-sub">{{ (upcoming_events|default([]))|length }} upcoming</span>{% endif %}
     </div>
-    <div class="stat-card-value"><span class="counter" data-target="{{ events_total|default(0) }}">0</span></div>
-    <div class="stat-card-label">Events</div>
+    <div class="stat-num"><span class="counter" data-target="{{ events_total|default(0) }}">0</span></div>
+    <div class="stat-lbl">Events</div>
   </div>
-  <div class="stat-card" style="--card-color: #ec4899;">
-    <div class="stat-card-top">
-      <div class="stat-card-icon" style="background: linear-gradient(135deg, #ec4899, #f472b6);"><i class="fab fa-facebook-messenger"></i></div>
-      <span class="stat-card-sub">unread</span>
+  <div class="stat-glass dash-fade" style="--card-color: #ec4899;">
+    <div class="flex items-start justify-between mb-3">
+      <div class="stat-icon-wrap" style="background: linear-gradient(135deg, #ec4899, #f472b6);"><i class="fab fa-facebook-messenger"></i></div>
+      <span class="stat-sub">unread</span>
     </div>
-    <div class="stat-card-value"><span class="counter" data-target="{{ unread_messages|default(0) }}">0</span></div>
-    <div class="stat-card-label">Messages</div>
+    <div class="stat-num"><span class="counter" data-target="{{ unread_messages|default(0) }}">0</span></div>
+    <div class="stat-lbl">Messages</div>
   </div>
-  <div class="stat-card" style="--card-color: #3b82f6;">
-    <div class="stat-card-top">
-      <div class="stat-card-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fas fa-users"></i></div>
-      <span class="stat-card-sub">published</span>
+  <div class="stat-glass dash-fade" style="--card-color: #3b82f6;">
+    <div class="flex items-start justify-between mb-3">
+      <div class="stat-icon-wrap" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);"><i class="fas fa-users"></i></div>
+      <span class="stat-sub">published</span>
     </div>
-    <div class="stat-card-value"><span class="counter" data-target="{{ posts_count|default(0) }}">0</span></div>
-    <div class="stat-card-label">Posts</div>
+    <div class="stat-num"><span class="counter" data-target="{{ posts_count|default(0) }}">0</span></div>
+    <div class="stat-lbl">Posts</div>
   </div>
-  <div class="stat-card" style="--card-color: #8b5cf6;">
-    <div class="stat-card-top">
-      <div class="stat-card-icon" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);"><i class="fas fa-bell"></i></div>
-      <span class="stat-card-sub">unread</span>
+  <div class="stat-glass dash-fade" style="--card-color: #8b5cf6;">
+    <div class="flex items-start justify-between mb-3">
+      <div class="stat-icon-wrap" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);"><i class="fas fa-bell"></i></div>
+      <span class="stat-sub">unread</span>
     </div>
-    <div class="stat-card-value"><span class="counter" data-target="{{ notif_count|default(0) }}">0</span></div>
-    <div class="stat-card-label">Notifications</div>
+    <div class="stat-num"><span class="counter" data-target="{{ notif_count|default(0) }}">0</span></div>
+    <div class="stat-lbl">Notifications</div>
   </div>
 </div>
 
 {% if (tasks_total|default(0)) > 0 or (events_total|default(0)) > 0 %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <div class="dashboard-card">
-    <div class="card-header">
+  <div class="dash-panel dash-fade">
+    <div class="panel-head">
       <h3><i class="fas fa-chart-pie" style="color:#6366f1;"></i> Tasks Completion</h3>
       {% if (tasks_done_week|default(0)) > 0 %}
       <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:#ecfdf5;color:#059669;">
@@ -462,7 +268,7 @@
       </span>
       {% endif %}
     </div>
-    <div class="card-body flex flex-col items-center">
+    <div class="panel-body flex flex-col items-center">
       <div style="position:relative; width:180px; height:180px;">
         <canvas id="tasksDonutChart" width="180" height="180"></canvas>
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
@@ -482,16 +288,16 @@
       </div>
     </div>
   </div>
-  <div class="dashboard-card">
-    <div class="card-header">
+  <div class="dash-panel dash-fade">
+    <div class="panel-head">
       <h3><i class="fas fa-layer-group" style="color:#f59e0b;"></i> Priority Breakdown</h3>
     </div>
-    <div class="card-body">
+    <div class="panel-body">
       <canvas id="priorityChart" height="200"></canvas>
     </div>
   </div>
-  <div class="dashboard-card">
-    <div class="card-header">
+  <div class="dash-panel dash-fade">
+    <div class="panel-head">
       <h3><i class="fas fa-wave-square" style="color:#ec4899;"></i> Weekly Activity</h3>
       {% if (tasks_created_week|default(0)) > 0 %}
       <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:#fef2f2;color:#dc2626;">
@@ -499,7 +305,7 @@
       </span>
       {% endif %}
     </div>
-    <div class="card-body">
+    <div class="panel-body">
       <canvas id="activityChart" height="200"></canvas>
     </div>
   </div>
@@ -507,45 +313,45 @@
 {% endif %}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <div class="dashboard-card">
-    <div class="card-header">
+  <div class="dash-panel dash-fade">
+    <div class="panel-head">
       <h3><i class="fas fa-sticky-note" style="color:#6366f1;"></i> Recent Notes</h3>
-      <a href="{{ url_for('notes.notes') }}" class="text-xs font-semibold" style="color:#6366f1;">View All</a>
+      <a href="{{ url_for('notes.notes') }}" class="view-link" style="color:#6366f1;">View All</a>
     </div>
-    <div class="card-body p-0">
+    <div class="panel-body p-0">
       {% if recent_notes|default([]) %}
         {% for note in recent_notes|default([]) %}
-          <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="note-item">
-            <div class="note-dot" style="background: {{ note.color or '#6366f1' }}; box-shadow: 0 0 0 3px color-mix(in srgb, {{ note.color or '#6366f1' }} 20%, transparent);"></div>
+          <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="list-item">
+            <div class="item-dot" style="background: {{ note.color or '#6366f1' }}; box-shadow: 0 0 0 3px color-mix(in srgb, {{ note.color or '#6366f1' }} 20%, transparent);"></div>
             <div class="flex-1 min-w-0">
-              <p class="note-title">{{ note.title }}</p>
-              <p class="note-meta">{{ note.updated_at.strftime('%b %d · %H:%M') }}</p>
+              <p class="item-title">{{ note.title }}</p>
+              <p class="item-meta">{{ note.updated_at.strftime('%b %d · %H:%M') }}</p>
             </div>
-            <i class="fas fa-chevron-right" style="color:var(--text-secondary);opacity:0.3;font-size:0.75rem;"></i>
+            <i class="fas fa-chevron-right item-arrow"></i>
           </a>
         {% endfor %}
       {% else %}
-        <div class="empty-state">
+        <div class="empty">
           <i class="fas fa-sticky-note" style="opacity:0.2;font-size:2.5rem;"></i>
-          <p style="font-size:0.9rem;">No notes yet</p>
+          <p>No notes yet</p>
           <a href="{{ url_for('notes.notes') }}" class="btn btn-primary btn-sm mt-2">Create Note</a>
         </div>
       {% endif %}
     </div>
   </div>
-  <div class="dashboard-card">
-    <div class="card-header">
+  <div class="dash-panel dash-fade">
+    <div class="panel-head">
       <h3><i class="fas fa-tasks" style="color:#10b981;"></i> Pending Tasks</h3>
-      <a href="{{ url_for('tasks.tasks') }}" class="text-xs font-semibold" style="color:#10b981;">View All</a>
+      <a href="{{ url_for('tasks.tasks') }}" class="view-link" style="color:#10b981;">View All</a>
     </div>
-    <div class="card-body p-0">
+    <div class="panel-body p-0">
       {% if recent_tasks|default([]) %}
         {% for task in recent_tasks|default([]) %}
-          <div class="task-item-modern">
-            <div class="priority-indicator priority-{{ task.priority }}"></div>
+          <div class="task-item">
+            <div class="prio-bar prio-{{ task.priority }}"></div>
             <div class="flex-1 min-w-0">
-              <p class="task-title">{{ task.title }}</p>
-              <p class="task-meta">
+              <p class="item-title">{{ task.title }}</p>
+              <p class="item-meta">
                 {% if task.due_date %}
                   <i class="far fa-clock"></i> {{ task.due_date.strftime('%b %d') }}
                 {% else %}
@@ -556,40 +362,40 @@
           </div>
         {% endfor %}
       {% else %}
-        <div class="empty-state">
+        <div class="empty">
           <i class="fas fa-check-circle" style="color:#10b981;opacity:0.3;font-size:2.5rem;"></i>
-          <p style="font-size:0.9rem;">All tasks completed!</p>
+          <p>All tasks completed!</p>
         </div>
       {% endif %}
     </div>
   </div>
-  <div class="dashboard-card">
-    <div class="card-header">
+  <div class="dash-panel dash-fade">
+    <div class="panel-head">
       <h3><i class="fas fa-calendar-alt" style="color:#3b82f6;"></i> Upcoming</h3>
-      <a href="{{ url_for('calendar.calendar') }}" class="text-xs font-semibold" style="color:#3b82f6;">View All</a>
+      <a href="{{ url_for('calendar.calendar') }}" class="view-link" style="color:#3b82f6;">View All</a>
     </div>
-    <div class="card-body p-0">
+    <div class="panel-body p-0">
       {% if upcoming_events %}
         {% for ev in upcoming_events %}
-          <div class="event-item">
-            <div class="event-date-badge">
-              <span class="event-month">{{ ev.start.strftime('%b') }}</span>
-              <span class="event-day">{{ ev.start.strftime('%d') }}</span>
+          <div class="list-item">
+            <div class="ev-badge">
+              <span class="ev-mon">{{ ev.start.strftime('%b') }}</span>
+              <span class="ev-day">{{ ev.start.strftime('%d') }}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="event-title">{{ ev.title }}</p>
-              <p class="event-time">
+              <p class="item-title">{{ ev.title }}</p>
+              <p class="item-meta">
                 <i class="far fa-clock"></i> {{ ev.start.strftime('%I:%M %p') }}
                 {% if ev.location %} · <i class="fas fa-map-marker-alt"></i> {{ ev.location }}{% endif %}
               </p>
             </div>
-            <div class="event-dot" style="background: {{ ev.color or '#6366f1' }};"></div>
+            <div class="ev-dot" style="background: {{ ev.color or '#6366f1' }};"></div>
           </div>
         {% endfor %}
       {% else %}
-        <div class="empty-state">
+        <div class="empty">
           <i class="fas fa-calendar-plus" style="opacity:0.2;font-size:2.5rem;"></i>
-          <p style="font-size:0.9rem;">No upcoming events</p>
+          <p>No upcoming events</p>
           <a href="{{ url_for('calendar.calendar') }}" class="btn btn-primary btn-sm mt-2">Add Event</a>
         </div>
       {% endif %}
@@ -597,12 +403,12 @@
   </div>
 </div>
 
-<div class="welcome-cta">
+<div class="dash-cta dash-fade">
   <div>
     <h3><i class="fas fa-rocket"></i> Boost Your Productivity</h3>
     <p>Stay organized with notes, tasks, calendar, and AI-powered tools — all in one place.</p>
   </div>
-  <a href="{{ url_for('tools.tools_page') }}" class="btn-white">
+  <a href="{{ url_for('tools.tools_page') }}" class="btn-ghost">
     <i class="fas fa-toolbox"></i> Explore Tools
   </a>
 </div>
@@ -615,73 +421,64 @@
   if (typeof anime === 'undefined') { return; }
   var isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // --- Entrance Animations ---
+  // --- Entrance Animations (replayable via IntersectionObserver) ---
   if (!isReduced) {
+    // Initial page-load timeline for top elements (no replay needed)
     var mainTimeline = anime.timeline({ easing: 'easeOutExpo' });
-    mainTimeline.add({
-      targets: '#greeting-text',
-      opacity: [0, 1],
-      translateY: [15, 0],
-      duration: 600,
+    mainTimeline.add({ targets: '#greeting-text', opacity: [0, 1], translateY: [15, 0], duration: 600 });
+    mainTimeline.add({ targets: '#date-subtitle', opacity: [0, 1], translateY: [10, 0], duration: 400 }, 400);
+    mainTimeline.add({ targets: '#quick-actions a', opacity: [0, 1], translateX: [20, 0], duration: 500, delay: function(el, i) { return i * 100; } }, 600);
+
+    // IntersectionObserver for replayable dash-fade elements
+    var dashObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        var el = entry.target;
+        var isStatGroup = el.id === 'stat-cards-grid';
+        if (entry.isIntersecting) {
+          if (isStatGroup) {
+            // Stagger stat cards inside the grid
+            var statCards = el.querySelectorAll('.stat-glass');
+            statCards.forEach(function(card, i) {
+              card.style.opacity = '0';
+              card.style.transform = 'translateY(25px)';
+              anime({
+                targets: card, opacity: [0, 1], translateY: [25, 0],
+                duration: 600, delay: i * 80, easing: 'easeOutElastic(1,0.6)',
+              });
+            });
+            // Animate progress bars once
+            setTimeout(function() {
+              el.querySelectorAll('.stat-progress-fill').forEach(function(bar) {
+                bar.style.width = (bar.getAttribute('data-pct') || 0) + '%';
+              });
+            }, 900);
+          } else {
+            anime({
+              targets: el, opacity: [0, 1], translateY: [20, 0],
+              duration: 500, delay: el.classList.contains('dash-cta') ? 200 : 0,
+              easing: 'easeOutElastic(1,0.6)',
+              complete: function() { el.style.transform = ''; }
+            });
+          }
+        } else {
+          // Reset on leave for replay
+          if (isStatGroup) {
+            el.querySelectorAll('.stat-glass').forEach(function(card) {
+              anime.set(card, { opacity: 0, translateY: 25 });
+            });
+            el.querySelectorAll('.stat-progress-fill').forEach(function(bar) { bar.style.width = '0'; });
+          } else {
+            anime.set(el, { opacity: 0, translateY: 20 });
+          }
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('#stat-cards-grid, .dash-panel, .dash-cta').forEach(function(el) {
+      dashObserver.observe(el);
     });
-    mainTimeline.add({
-      targets: '#date-subtitle',
-      opacity: [0, 1],
-      translateY: [10, 0],
-      duration: 400,
-    }, 400);
-    mainTimeline.add({
-      targets: '#quick-actions a',
-      opacity: [0, 1],
-      translateX: [20, 0],
-      duration: 500,
-      delay: function(el, i) { return i * 100; },
-    }, 600);
-    var statCards = document.querySelectorAll('.stat-card');
-    if (statCards.length) {
-      mainTimeline.add({
-        targets: statCards,
-        opacity: [0, 1],
-        translateY: [25, 0],
-        duration: 600,
-        delay: function(el, i) { return i * 80; },
-        easing: 'easeOutExpo',
-      }, 900);
-      // Animate progress bars after cards appear
-      setTimeout(function() {
-        document.querySelectorAll('.stat-card-bar-fill').forEach(function(bar) {
-          var pct = bar.getAttribute('data-pct') || 0;
-          bar.style.width = pct + '%';
-        });
-      }, 1600);
-    }
-    var chartCards = document.querySelectorAll('.dashboard-card');
-    if (chartCards.length) {
-      setTimeout(function() {
-        anime({
-          targets: chartCards,
-          opacity: [0, 1],
-          translateY: [20, 0],
-          duration: 500,
-          delay: function(el, i) { return i * 100; },
-          easing: 'easeOutExpo',
-        });
-      }, 200);
-    }
-    var ctaBanner = document.querySelector('.welcome-cta');
-    if (ctaBanner) {
-      setTimeout(function() {
-        anime({
-          targets: ctaBanner,
-          opacity: [0, 1],
-          scale: [0.95, 1],
-          duration: 600,
-          easing: 'easeOutExpo',
-        });
-      }, 400);
-    }
   } else {
-    document.querySelectorAll('#greeting-text, #date-subtitle, #quick-actions a, .stat-card, .dashboard-card, .welcome-cta').forEach(function(el) {
+    document.querySelectorAll('#greeting-text, #date-subtitle, #quick-actions a, .stat-glass, .dash-panel, .dash-cta').forEach(function(el) {
       el.style.opacity = '1';
     });
   }
@@ -865,17 +662,17 @@
   }
 
   // --- Hover micro-interactions ---
-  document.querySelectorAll('.stat-card').forEach(function(card) {
+  document.querySelectorAll('.stat-glass').forEach(function(card) {
     card.addEventListener('mouseenter', function() {
-      var icon = this.querySelector('.stat-card-icon');
-      var val = this.querySelector('.stat-card-value');
-      if (icon && anime) { anime({ targets: icon, scale: [1, 1.15], duration: 300, easing: 'easeOutQuad' }); }
+      var icon = this.querySelector('.stat-icon-wrap');
+      var val = this.querySelector('.stat-num');
+      if (icon && anime) { anime({ targets: icon, scale: [1, 1.12], rotate: [0, -4], duration: 300, easing: 'easeOutQuad' }); }
       if (val && anime) { anime({ targets: val, translateY: [-2, 0], duration: 300, easing: 'easeOutQuad' }); }
     });
     card.addEventListener('mouseleave', function() {
-      var icon = this.querySelector('.stat-card-icon');
-      var val = this.querySelector('.stat-card-value');
-      if (icon && anime) { anime({ targets: icon, scale: [1.15, 1], duration: 300, easing: 'easeOutQuad' }); }
+      var icon = this.querySelector('.stat-icon-wrap');
+      var val = this.querySelector('.stat-num');
+      if (icon && anime) { anime({ targets: icon, scale: [1.12, 1], rotate: [-4, 0], duration: 300, easing: 'easeOutQuad' }); }
       if (val && anime) { anime({ targets: val, translateY: [0, 0], duration: 300, easing: 'easeOutQuad' }); }
     });
   });

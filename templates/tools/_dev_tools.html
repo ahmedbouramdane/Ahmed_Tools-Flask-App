@@ -1,0 +1,322 @@
+window.tool_dev_sass = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('sass', 'Sass / SCSS', '// Write your Sass/SCSS code here...', 'Compiled CSS', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/sass.js@0.13.0/dist/sass.min.js').then(function() {
+        try { Sass.compile(code, function(r) { done(r.text || r, null); }); }
+        catch(e) { compileFallback(code, 'sass', done); }
+      }).catch(function() { compileFallback(code, 'sass', done); });
+    });
+    loadCodeMirrorMode('sass', function() {
+      var editor = createCodeEditor('dev-input', 'sass');
+      if (editor) { editor.setValue('// SCSS Example\n$primary: #6366f1;\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  \n  .header {\n    background: $primary;\n    color: white;\n    padding: 1rem;\n  }\n}'); }
+    });
+  });
+};
+
+window.tool_dev_less = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('less', 'Less', '// Write your Less code here...', 'Compiled CSS', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/less@4.2.0/dist/less.min.js').then(function() {
+        try { less.render(code, function(e, r) { if (e) compileFallback(code, 'less', done); else done(r.css, null); }); }
+        catch(e) { compileFallback(code, 'less', done); }
+      }).catch(function() { compileFallback(code, 'less', done); });
+    });
+    loadCodeMirrorMode('css', function() {
+      var editor = createCodeEditor('dev-input', 'css');
+      if (editor) { editor.setValue('// Less Example\n@primary: #6366f1;\n@secondary: #10b981;\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  \n  .header {\n    background: @primary;\n    color: white;\n    padding: 1rem;\n    \n    nav {\n      ul {\n        list-style: none;\n        li {\n          display: inline;\n          margin: 0 0.5rem;\n        }\n      }\n    }\n  }\n}'); }
+    });
+  });
+};
+
+window.tool_dev_pug = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('pug', 'Pug / Jade', '// Write your Pug code here...', 'Compiled HTML', function(code, done) {
+      // Pug has no reliable frontend-only compiler; always use backend
+      compileFallback(code, 'pug', done);
+    });
+    loadCodeMirrorMode('html', function() {
+      var editor = createCodeEditor('dev-input', 'html');
+      if (editor) { editor.setValue('// Pug Example\ndoctype html\nhtml\n  head\n    title My Page\n    link(rel="stylesheet", href="style.css")\n  body\n    .container\n      h1 Welcome to Pug\n      p This is a paragraph\n      ul\n        li Item 1\n        li Item 2\n        li Item 3\n      footer\n        p &copy; 2024'); }
+    });
+  });
+};
+
+window.tool_dev_coffeescript = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('coffeescript', 'CoffeeScript', '# Write your CoffeeScript code here...', 'Compiled JavaScript', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/coffeescript@2.7.0/browser-compiler/coffeescript.min.js').then(function() {
+        try { done(CoffeeScript.compile(code, {bare: true}), null); }
+        catch(e) { compileFallback(code, 'coffeescript', done); }
+      }).catch(function() { compileFallback(code, 'coffeescript', done); });
+    });
+    loadCodeMirrorMode('coffeescript', function() {
+      var editor = createCodeEditor('dev-input', 'coffeescript');
+      if (editor) { editor.setValue('# CoffeeScript Example\nsquare = (x) -> x * x\n\nnumbers = [1, 2, 3, 4, 5]\nsquares = numbers.map square\n\nconsole.log squares\n\n# Class example\nclass Animal\n  constructor: (@name) ->\n  \n  speak: ->\n    console.log \"#{@name} makes a noise\"\n\nclass Dog extends Animal\n  speak: ->\n    console.log \"#{@name} barks\"\n\ndog = new Dog \"Rex\"\ndog.speak()'); }
+    });
+  });
+};
+
+window.tool_dev_typescript = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('typescript', 'TypeScript', '// Write your TypeScript code here...', 'Compiled JavaScript', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/typescript@5.3.3/lib/typescript.min.js').then(function() {
+        try {
+          var result = ts.transpileModule(code, {
+            compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2015 }
+          });
+          done(result.outputText, null);
+        }
+        catch(e) { compileFallback(code, 'typescript', done); }
+      }).catch(function() { compileFallback(code, 'typescript', done); });
+    });
+    loadCodeMirrorMode('typescript', function() {
+      var editor = createCodeEditor('dev-input', 'typescript');
+      if (editor) { editor.setValue('// TypeScript Example\ninterface User {\n  name: string;\n  age: number;\n  email?: string;\n}\n\nfunction greet(user: User): string {\n  return `Hello, ${user.name}!`;\n}\n\nconst user: User = {\n  name: "Alice",\n  age: 30,\n  email: "alice@example.com"\n};\n\nconsole.log(greet(user));'); }
+    });
+  });
+};
+
+window.tool_dev_jsx = function() {
+  loadCodeMirror(function() {
+    devToolWorkspace('jsx', 'JSX / React', '// Write your JSX code here...', 'Compiled JavaScript', function(code, done) {
+      loadScript('https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js').then(function() {
+        try { done(Babel.transform(code, {presets: ['react']}).code, null); }
+        catch(e) { compileFallback(code, 'jsx', done); }
+      }).catch(function() { compileFallback(code, 'jsx', done); });
+    });
+    loadCodeMirrorMode('javascript', function() {
+      var editor = createCodeEditor('dev-input', 'javascript');
+      if (editor) { editor.setValue('// JSX Example\nfunction Welcome(props) {\n  return <h1>Hello, {props.name}</h1>;\n}\n\nfunction App() {\n  return (\n    <div>\n      <Welcome name="Alice" />\n      <Welcome name="Bob" />\n      <Welcome name="Charlie" />\n    </div>\n  );\n}\n\nconsole.log(App());'); }
+    });
+  });
+};
+
+// ─── HTML Preview ──────────────────────────────────────────────────────────
+
+window.tool_dev_html_preview = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML =
+    '<div class="space-y-3">' +
+      '<div class="flex items-center gap-2">' +
+        '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-code mr-1"></i> HTML / CSS / JS</span>' +
+        '<span class="flex-1"></span>' +
+        '<button id="hp-run" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium flex items-center gap-1.5"><i class="fas fa-play"></i> Run</button>' +
+        '<button id="hp-responsive" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition flex items-center gap-1.5"><i class="fas fa-mobile-screen-button"></i></button>' +
+      '</div>' +
+      '<div class="grid grid-cols-1 lg:grid-cols-2 gap-3">' +
+        '<textarea id="hp-input" rows="16" spellcheck="false" class="w-full px-3 py-2.5 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none resize-y" placeholder="<html>...</html>">' +
+        escapeHtml('<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: system-ui; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f0f0; }\n    .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }\n    h1 { color: #6366f1; margin: 0 0 0.5rem; }\n    p { color: #666; line-height: 1.6; }\n    button { background: #6366f1; color: white; border: none; padding: 0.75rem 2rem; border-radius: 999px; font-size: 1rem; cursor: pointer; transition: transform 0.2s; }\n    button:hover { transform: scale(1.05); }\n  </style>\n</head>\n<body>\n  <div class="card">\n    <h1>Hello, World!</h1>\n    <p>Edit the HTML on the left<br>to see changes live here.</p>\n    <button onclick="alert(\'Hi there!\')">Click Me</button>\n  </div>\n</body>\n</html>') +
+        '</textarea>' +
+        '<div class="flex flex-col">' +
+          '<div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 px-1"><i class="fas fa-eye text-emerald-400 text-[9px] mr-1"></i> Preview</div>' +
+          '<div id="hp-frame-wrap" class="flex-1 border rounded-xl overflow-hidden bg-white dark:bg-gray-900" style="min-height:300px">' +
+            '<iframe id="hp-frame" class="w-full h-full" style="min-height:300px" sandbox="allow-scripts allow-same-origin"></iframe>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  var _responsive = false;
+  var frame = document.getElementById('hp-frame');
+  var input = document.getElementById('hp-input');
+
+  function render() {
+    var doc = input.value;
+    frame.srcdoc = doc;
+    if (_responsive) {
+      var wrap = document.getElementById('hp-frame-wrap');
+      wrap.style.maxWidth = '375px';
+      wrap.style.margin = '0 auto';
+    } else {
+      var wrap = document.getElementById('hp-frame-wrap');
+      wrap.style.maxWidth = '';
+      wrap.style.margin = '';
+    }
+  }
+
+  document.getElementById('hp-run').addEventListener('click', render);
+  document.getElementById('hp-responsive').addEventListener('click', function() {
+    _responsive = !_responsive;
+    this.classList.toggle('bg-indigo-600', _responsive);
+    this.classList.toggle('text-white', _responsive);
+    this.classList.toggle('bg-gray-200', !_responsive);
+    this.classList.toggle('dark:bg-gray-600', !_responsive);
+    this.classList.toggle('text-gray-700', !_responsive);
+    this.classList.toggle('dark:text-gray-300', !_responsive);
+    render();
+  });
+  autoResize(input);
+
+  // Auto-run on Ctrl+Enter
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) render();
+  });
+
+  // Initial render
+  setTimeout(render, 100);
+};
+
+// ─── Regex Tester ──────────────────────────────────────────────────────────
+
+window.tool_dev_regex = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML =
+    '<div class="space-y-4">' +
+      '<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">' +
+        '<div class="space-y-3 lg:col-span-1">' +
+          '<div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Regular Expression</label>' +
+            '<input type="text" id="rx-pattern" value="(\\w+)@(\\w+)\\.(\\w+)" placeholder="([a-z]+)" class="w-full px-3 py-2.5 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none">' +
+          '</div>' +
+          '<div class="flex gap-2 items-center">' +
+            '<div class="flex-1"><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Flags</label>' +
+              '<div class="flex gap-1.5">' +
+                '<label class="flex items-center gap-1 px-2 py-1 border rounded-lg text-[10px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"><input type="checkbox" id="rx-flag-g" class="accent-indigo-500"> g</label>' +
+                '<label class="flex items-center gap-1 px-2 py-1 border rounded-lg text-[10px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"><input type="checkbox" id="rx-flag-i" class="accent-indigo-500"> i</label>' +
+                '<label class="flex items-center gap-1 px-2 py-1 border rounded-lg text-[10px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"><input type="checkbox" id="rx-flag-m" class="accent-indigo-500"> m</label>' +
+                '<label class="flex items-center gap-1 px-2 py-1 border rounded-lg text-[10px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"><input type="checkbox" id="rx-flag-s" class="accent-indigo-500"> s</label>' +
+                '<label class="flex items-center gap-1 px-2 py-1 border rounded-lg text-[10px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"><input type="checkbox" id="rx-flag-u" class="accent-indigo-500"> u</label>' +
+              '</div>' +
+            '</div>' +
+            '<div class="flex-shrink-0 self-end"><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Replace</label>' +
+              '<input type="text" id="rx-replace" placeholder="$1-$2-$3" class="w-28 px-2 py-2 text-xs font-mono border rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none">' +
+            '</div>' +
+          '</div>' +
+          '<button id="rx-match-btn" class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-play"></i> Test Match</button>' +
+        '</div>' +
+        '<div class="lg:col-span-2 space-y-3">' +
+          '<div><label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Test String</label>' +
+            '<textarea id="rx-input" rows="6" spellcheck="false" placeholder="Enter text to test against..." class="w-full px-3 py-2.5 text-sm font-mono border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none">support@example.com and hello@world.org</textarea>' +
+          '</div>' +
+          '<div id="rx-results" class="hidden space-y-2">' +
+            '<div class="flex items-center gap-2"><span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"><i class="fas fa-list text-indigo-400 text-[9px] mr-1"></i> Matches</span><span class="flex-1"></span><span id="rx-count" class="text-xs text-gray-400"></span></div>' +
+            '<div id="rx-matches" class="space-y-1"></div>' +
+            '<div id="rx-replaced-wrap" class="hidden">' +
+              '<div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-2"><i class="fas fa-exchange-alt text-emerald-400 text-[9px] mr-1"></i> Replaced</div>' +
+              '<div id="rx-replaced" class="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-mono break-all text-gray-800 dark:text-white mt-1"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  function test() {
+    var pattern = document.getElementById('rx-pattern').value;
+    var input = document.getElementById('rx-input').value;
+    var flags = '';
+    ['g','i','m','s','u'].forEach(function(f) {
+      if (document.getElementById('rx-flag-' + f).checked) flags += f;
+    });
+    var results = document.getElementById('rx-results');
+    var matchesDiv = document.getElementById('rx-matches');
+    var countSpan = document.getElementById('rx-count');
+    var replaceWrap = document.getElementById('rx-replaced-wrap');
+    var replacedDiv = document.getElementById('rx-replaced');
+    var replaceStr = document.getElementById('rx-replace').value;
+
+    if (!pattern) { results.classList.add('hidden'); return; }
+
+    try {
+      var re = new RegExp(pattern, flags);
+      var matches = [];
+      var m;
+      while ((m = re.exec(input)) !== null) {
+        matches.push(m);
+        if (!re.global) break;
+      }
+
+      results.classList.remove('hidden');
+      countSpan.textContent = matches.length + ' match' + (matches.length !== 1 ? 'es' : '');
+
+      if (matches.length === 0) {
+        matchesDiv.innerHTML = '<div class="text-sm text-gray-400 italic">No matches found</div>';
+      } else {
+        var h = '';
+        for (var i = 0; i < matches.length; i++) {
+          var m = matches[i];
+          h += '<div class="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600">' +
+            '<div class="flex items-center gap-2 text-xs"><span class="text-gray-400">#' + (i+1) + '</span><span class="font-mono text-indigo-500">' + escapeHtml(m[0]) + '</span><span class="flex-1"></span><span class="text-[10px] text-gray-400">index: ' + m.index + '</span></div>';
+          if (m.length > 1) {
+            h += '<div class="mt-1 flex flex-wrap gap-1">';
+            for (var j = 1; j < m.length; j++) {
+              h += '<span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-mono">$' + j + ': ' + (m[j] !== undefined ? escapeHtml(m[j]) : '(undefined)') + '</span>';
+            }
+            h += '</div>';
+          }
+          h += '</div>';
+        }
+        matchesDiv.innerHTML = h;
+      }
+
+      // Replace
+      if (replaceStr && matches.length > 0) {
+        var re2 = new RegExp(pattern, flags.replace('g','') + 'g');
+        var result = input.replace(re2, replaceStr);
+        replaceWrap.classList.remove('hidden');
+        replacedDiv.textContent = result;
+      } else {
+        replaceWrap.classList.add('hidden');
+      }
+
+    } catch(e) {
+      results.classList.remove('hidden');
+      countSpan.textContent = 'Error';
+      matchesDiv.innerHTML = '<div class="text-sm text-red-500">' + escapeHtml(e.message) + '</div>';
+      replaceWrap.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('rx-match-btn').addEventListener('click', test);
+  // Live test on input
+  ['rx-pattern','rx-input','rx-replace'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', test);
+  });
+  ['rx-flag-g','rx-flag-i','rx-flag-m','rx-flag-s','rx-flag-u'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', test);
+  });
+  // Initially check g flag and run test
+  document.getElementById('rx-flag-g').checked = true;
+  setTimeout(test, 100);
+};
+
+window.tool_dev_playground = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="flex items-center gap-2 mb-2">' +
+    '<span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"><i class="fas fa-laptop-code mr-1"></i> Code Playground</span>' +
+    '<span class="flex-1"></span>' +
+    '<button onclick="var el=document.getElementById(\'pg-mount\');if(el)el.classList.toggle(\'playground-fullscreen\');" class="px-2 py-1 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>' +
+    '<button onclick="__playground&&__playground.palette&&__playground.palette._exportZip()" class="px-2 py-1 text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition" title="Download project as ZIP"><i class="fas fa-download"></i> Project</button>' +
+  '</div>' +
+  '<div id="pg-mount" class="h-[600px] sm:h-[700px] lg:h-[75vh]"></div>';
+
+  // Load playground modules dynamically
+  var scripts = [
+    '/static/js/playground/state.js',
+    '/static/js/playground/utils.js',
+    '/static/js/playground/filesystem.js',
+    '/static/js/playground/editor.js',
+    '/static/js/playground/preview.js',
+    '/static/js/playground/console.js',
+    '/static/js/playground/terminal.js',
+    '/static/js/playground/layout.js',
+    '/static/js/playground/palette.js',
+    '/static/js/playground/shortcuts.js',
+    '/static/js/playground/theme.js',
+    '/static/js/playground/extensions.js',
+    '/static/js/playground/main.js',
+  ];
+  function loadNext(idx) {
+    if (idx >= scripts.length) {
+      var pg = new Playground('pg-mount');
+      pg.init();
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = scripts[idx];
+    s.onload = function() { loadNext(idx + 1); };
+    s.onerror = function() { console.error('Failed to load', scripts[idx]); loadNext(idx + 1); };
+    document.body.appendChild(s);
+  }
+  loadNext(0);
+};
+
+

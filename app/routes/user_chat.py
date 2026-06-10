@@ -83,10 +83,11 @@ def get_conversations():
             "type": "user",
             "id": other_id,
             "name": other.username,
+            "full_name": other.full_name or other.username,
             "avatar_url": other.avatar_url or "",
             "last_message": last_content,
             "last_message_time": last_msg.created_at.isoformat() if last_msg else "",
-            "last_message_sender": "You" if last_msg and last_msg.sender_id == uid else (other.username if last_msg else ""),
+            "last_message_sender": "You" if last_msg and last_msg.sender_id == uid else (other.full_name or other.username if last_msg else ""),
             "unread": unread_counts.get(other_id, 0),
             "is_online": other_id in online_users
         })
@@ -476,7 +477,7 @@ def get_users():
         User.username.ilike(f'%{search}%')
     ).all()
     return jsonify([{
-        'id': u.id, 'username': u.username, 'email': u.email,
+        'id': u.id, 'username': u.username, 'full_name': u.full_name or u.username, 'email': u.email,
         'avatar_url': u.avatar_url or ''
     } for u in users])
 

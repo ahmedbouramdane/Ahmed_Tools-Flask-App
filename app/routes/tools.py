@@ -23,7 +23,12 @@ def gemini_response(prompt):
         return "Gemini API key not configured"
 
     genai.configure(api_key=key)
-    models_to_try = [Config.GEMINI_MODEL, "gemini-2.0-flash-lite", "gemini-1.5-flash"]
+    models_to_try = [
+        Config.GEMINI_MODEL,
+        "gemini-2.0-flash-001",
+        "gemini-2.0-flash-lite",
+        "gemini-2.0-flash-exp",
+    ]
     last_error = None
     for model_name in filter(None, models_to_try):
         try:
@@ -84,34 +89,52 @@ def process_image(file, operation, params):
         return {"success": True, "image": f"data:image/{original_format.lower()};base64,{b64}", "size": len(buf.getvalue())}
 
     if operation == 'filters':
-        filter_type = params.get('filter', 'grayscale')
-        if filter_type == 'grayscale':
-            img = img.convert('L').convert('RGB')
-        elif filter_type == 'sepia':
-            gray = img.convert('L')
-            w, h = img.size
-            sepia = Image.new('RGB', (w, h))
-            for x in range(w):
-                for y in range(h):
-                    g = gray.getpixel((x, y))
-                    sepia.putpixel((x, y), (min(int(g * 1.2), 255), min(int(g * 1.0), 255), min(int(g * 0.8), 255)))
-            img = sepia
-        elif filter_type == 'blur':
-            img = img.filter(PILFilter.BLUR)
-        elif filter_type == 'sharpen':
-            img = img.filter(PILFilter.SHARPEN)
-        elif filter_type == 'edge':
-            img = img.filter(PILFilter.FIND_EDGES)
-        elif filter_type == 'emboss':
-            img = img.filter(PILFilter.EMBOSS)
-        elif filter_type == 'smooth':
-            img = img.filter(PILFilter.SMOOTH)
-        elif filter_type == 'contrast':
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(1.5)
-        elif filter_type == 'brightness':
-            enhancer = ImageEnhance.Brightness(img)
-            img = enhancer.enhance(1.3)
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        filters_json = params.get('filters', '[]')
+        import json as _json
+        try:
+            filter_list = _json.loads(filters_json)
+        except Exception:
+            filter_list = [{"id": params.get('filter', 'grayscale'), "strength": float(params.get('strength', 50))}]
+        for f_entry in filter_list:
+            filter_type = f_entry.get('id', 'grayscale')
+            strength = float(f_entry.get('strength', 50)) / 100.0
+            before = img.copy()
+            if filter_type == 'grayscale':
+                img = img.convert('L').convert('RGB')
+            elif filter_type == 'sepia':
+                gray = img.convert('L')
+                w, h = img.size
+                sepia = Image.new('RGB', (w, h))
+                for x in range(w):
+                    for y in range(h):
+                        g = gray.getpixel((x, y))
+                        sepia.putpixel((x, y), (min(int(g * 1.2), 255), min(int(g * 1.0), 255), min(int(g * 0.8), 255)))
+                img = sepia
+            elif filter_type == 'blur':
+                radius = strength * 10
+                img = img.filter(PILFilter.GaussianBlur(radius=radius))
+            elif filter_type == 'sharpen':
+                sharp = img.filter(PILFilter.SHARPEN)
+                img = Image.blend(before, sharp, strength)
+            elif filter_type == 'edge':
+                edges = img.filter(PILFilter.FIND_EDGES)
+                img = Image.blend(before, edges, strength)
+            elif filter_type == 'emboss':
+                emb = img.filter(PILFilter.EMBOSS)
+                img = Image.blend(before, emb, strength)
+            elif filter_type == 'smooth':
+                radius = strength * 3
+                img = img.filter(PILFilter.GaussianBlur(radius=radius))
+            elif filter_type == 'contrast':
+                factor = 1.0 + strength * 2.0
+                img = ImageEnhance.Contrast(img).enhance(factor)
+            elif filter_type == 'brightness':
+                factor = 1.0 + strength * 1.5
+                img = ImageEnhance.Brightness(img).enhance(factor)
+            if filter_type in ('grayscale', 'sepia') and strength < 1.0:
+                img = Image.blend(before, img, strength)
         buf = io.BytesIO()
         img.save(buf, format=original_format)
         b64 = base64.b64encode(buf.getvalue()).decode()
@@ -417,17 +440,33 @@ def fallback_summarize(text):
     sentences = re.split(r'(?<=[.!?])\s+', text)
     if len(sentences) <= 3:
         return text
-    return " ".join(sentences[:3]) + " [...]"
+    total = len(sentences)
+    third = max(1, total // 3)
+    summary = " ".join(sentences[:third])
+    middle_idx = total // 2
+    summary += " " + " ".join(sentences[middle_idx:middle_idx + 1])
+    summary += " " + " ".join(sentences[-third:])
+    return summary.strip() + " [...]"
 
 def fallback_keywords(text):
     import collections
-    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
-    stop_words = {'the','and','for','are','but','not','you','all','can','had','her','was','one','our','out','has','have','been','some','them','than','its','over','very','just','also','make','their','what','when','with','this','that','from','they','which','would','could','should','about','into','after','other','there','more','these','those','until','while','where','each','before','after'}
-    words = [w for w in words if w not in stop_words]
+    text_lower = text.lower()
+    words = re.findall(r'\b[a-zA-Z]{3,}\b', text_lower)
+    stop_words = {'the','and','for','are','but','not','you','all','can','had','her','was','one','our','out','has','have','been','some','them','than','its','over','very','just','also','make','their','what','when','with','this','that','from','they','which','would','could','should','about','into','after','other','there','more','these','those','until','while','where','each','before','after','then','because','such'}
+    words = [w for w in words if w not in stop_words and len(w) > 2]
+    if not words:
+        words = re.findall(r'\b[a-zA-Z]{2,}\b', text_lower)
+        words = [w for w in words if len(w) > 2]
     if not words:
         return "No significant keywords found."
-    freq = collections.Counter(words).most_common(10)
-    return ", ".join(word for word, count in freq if count > 0)
+    freq = collections.Counter(words).most_common(15)
+    unique = []
+    seen = set()
+    for word, count in freq:
+        if word not in seen and count > 0:
+            unique.append(f"{word} ({count}x)")
+            seen.add(word)
+    return ", ".join(unique[:10])
 
 def fallback_rewrite(text):
     replacements = {
@@ -439,28 +478,53 @@ def fallback_rewrite(text):
         r"\bgive\b": "provide", r"\btake\b": "acquire", r"\bcome\b": "arrive",
         r"\bgo\b": "proceed", r"\blook\b": "examine", r"\bfind\b": "discover",
         r"\btry\b": "attempt", r"\bneed\b": "require", r"\bwant\b": "desire",
+        r"\bdont\b": "do not", r"\bcant\b": "cannot", r"\bwont\b": "will not",
     }
     result = text
     for pattern, replacement in replacements.items():
         result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
-    return f"{result}\n\n[Note: Basic rewrite applied]"
+    sentences = re.split(r'(?<=[.!?])\s+', result)
+    sentences = [s.strip().capitalize() for s in sentences if s.strip()]
+    result = " ".join(sentences)
+    return f"{result}\n\n[Basic rewrite applied — vocabulary enhanced, structure improved]"
 
 def fallback_caption(text):
     words = text.split()
-    topic = " ".join(words[:5]) if len(words) > 5 else text
-    return f"1. ✨ Here's my take on {topic} — what do you think?\n2. 📌 {topic} — something worth sharing today\n3. 💡 Thinking about {topic} lately. Your thoughts?"
+    topic = " ".join(words[:8]) if len(words) > 8 else text
+    platform_info = ""
+    if 'platform' in text.lower():
+        for p in ['instagram', 'twitter', 'linkedin', 'facebook', 'tiktok']:
+            if p in text.lower():
+                platform_info = f" for {p}"
+                break
+    return (
+        f"1. ✨ {topic.title()} — Here's my take on this{platform_info}. What do you think?\n\n"
+        f"2. 📌 {topic.title()} — Something worth sharing today{platform_info}. Double tap if you agree!\n\n"
+        f"3. 💡 Thinking about {topic.lower()}{platform_info}. Your thoughts? Drop a comment below.\n\n"
+        f"4. 🔥 {topic.title()} — This is the content you didn't know you needed{platform_info}. Save for later!"
+    )
 
 def fallback_grammar(text):
     result = text
-    # Capitalize first letter after period
     result = re.sub(r'\.\s+([a-z])', lambda m: '. ' + m.group(1).upper(), result)
-    # Fix i → I
     result = re.sub(r'\bi\b', 'I', result)
-    # Remove double spaces
+    result = re.sub(r'\bi\'m\b', "I'm", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bi\'ve\b', "I've", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bi\'ll\b', "I'll", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bi\'d\b', "I'd", result, flags=re.IGNORECASE)
+    result = re.sub(r'\byou\'re\b', "you're", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bthey\'re\b', "they're", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bdon\'t\b', "don't", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bcan\'t\b', "can't", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bwon\'t\b', "won't", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bit\'s\b', "it's", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bisn\'t\b', "isn't", result, flags=re.IGNORECASE)
+    result = re.sub(r'\bdoesn\'t\b', "doesn't", result, flags=re.IGNORECASE)
     result = re.sub(r'  +', ' ', result)
-    # Capitalize first word
     if result and result[0].islower():
         result = result[0].upper() + result[1:]
+    if result and result[-1] not in '.!?':
+        result += '.'
     return result
 
 def google_translate(text, target_lang, source_lang="auto"):
@@ -652,13 +716,17 @@ def json_validate():
 @login_required
 def qr_generator_api():
     import qrcode
+    from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
     data = request.json or request.form
     text = data.get("text", "").strip()
     if not text: return jsonify({"error": "Text required"}), 400
     fill = data.get("fill_color", "#000000")
     back = data.get("back_color", "#FFFFFF")
-    box = int(data.get("box_size", 10))
-    qr = qrcode.QRCode(box_size=box, border=2)
+    ec_map = {"L": ERROR_CORRECT_L, "M": ERROR_CORRECT_M, "Q": ERROR_CORRECT_Q, "H": ERROR_CORRECT_H}
+    ec = ec_map.get(data.get("ec", "M"), ERROR_CORRECT_M)
+    size = int(data.get("size", 300))
+    box_size = max(1, size // 35)
+    qr = qrcode.QRCode(box_size=box_size, border=2, error_correction=ec)
     qr.add_data(text)
     qr.make(fit=True)
     img = qr.make_image(fill_color=fill, back_color=back)

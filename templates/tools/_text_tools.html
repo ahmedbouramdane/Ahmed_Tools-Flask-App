@@ -1,0 +1,91 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  📝 TEXT TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.tool_text_case = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="case-input" rows="5" placeholder="Enter text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="flex flex-wrap gap-2"><button onclick="transformCase(\'upper\')" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">UPPER CASE</button><button onclick="transformCase(\'lower\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">lower case</button><button onclick="transformCase(\'title\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Title Case</button><button onclick="transformCase(\'camel\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">camelCase</button><button onclick="transformCase(\'toggle\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">tOGGLE cASE</button><button onclick="transformCase(\'sentence\')" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Sentence case</button></div><textarea id="case-output" rows="5" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  window.transformCase = function(mode) {
+    var input = document.getElementById('case-input').value;
+    var output = '';
+    switch (mode) {
+      case 'upper': output = input.toUpperCase(); break;
+      case 'lower': output = input.toLowerCase(); break;
+      case 'title': output = input.replace(/\w\S*/g, function(w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); }); break;
+      case 'camel': output = input.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, function(m, c) { return c.toUpperCase(); }); break;
+      case 'toggle': output = input.split('').map(function(c) { return c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase(); }).join(''); break;
+      case 'sentence': output = input.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, function(c) { return c.toUpperCase(); }); break;
+    }
+    document.getElementById('case-output').value = output;
+  };
+};
+
+window.tool_text_counter = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="counter-input" rows="6" placeholder="Type or paste text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><div class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-indigo-600" id="c-words">0</div><div class="text-xs text-gray-500">Words</div></div><div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-emerald-600" id="c-chars">0</div><div class="text-xs text-gray-500">Characters</div></div><div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-amber-600" id="c-sentences">0</div><div class="text-xs text-gray-500">Sentences</div></div><div class="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-xl text-center"><div class="text-2xl font-bold text-rose-600" id="c-lines">0</div><div class="text-xs text-gray-500">Lines</div></div></div></div>';
+
+  document.getElementById('counter-input').addEventListener('input', function() {
+    var t = this.value;
+    document.getElementById('c-words').textContent = t.trim() ? t.trim().split(/\s+/).length : 0;
+    document.getElementById('c-chars').textContent = t.length;
+    document.getElementById('c-sentences').textContent = t.split(/[.!?]+/).filter(function(s) { return s.trim(); }).length;
+    document.getElementById('c-lines').textContent = t.split('\n').filter(function(l) { return l.trim(); }).length;
+  });
+};
+
+window.tool_text_dedupe = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="dedupe-input" rows="6" placeholder="Paste text with duplicate lines..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button onclick="removeDuplicates()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-eraser"></i> Remove Duplicates</button><textarea id="dedupe-output" rows="6" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  window.removeDuplicates = function() {
+    var lines = document.getElementById('dedupe-input').value.split('\n');
+    var seen = {};
+    document.getElementById('dedupe-output').value = lines.filter(function(l) {
+      var trimmed = l.trim();
+      if (!trimmed || seen[trimmed]) return false;
+      seen[trimmed] = true;
+      return true;
+    }).join('\n');
+  };
+};
+
+window.tool_text_reverse = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="rev-input" rows="5" placeholder="Enter text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="flex flex-wrap gap-2"><button onclick="revText()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 transition">Reverse Text</button><button onclick="sortLines()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Sort Lines A→Z</button><button onclick="sortLinesRev()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition">Sort Lines Z→A</button></div><textarea id="rev-output" rows="5" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  window.revText = function() {
+    document.getElementById('rev-output').value = document.getElementById('rev-input').value.split('').reverse().join('');
+  };
+  window.sortLines = function() {
+    document.getElementById('rev-output').value = document.getElementById('rev-input').value.split('\n').sort(function(a,b) { return a.localeCompare(b); }).join('\n');
+  };
+  window.sortLinesRev = function() {
+    document.getElementById('rev-output').value = document.getElementById('rev-input').value.split('\n').sort(function(a,b) { return b.localeCompare(a); }).join('\n');
+  };
+};
+
+window.tool_text_lorem = function() {
+  var ws = document.getElementById('tool-workspace');
+  var lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><div class="flex items-center gap-3"><label class="text-sm font-medium text-gray-600 dark:text-gray-400">Paragraphs:</label><input type="number" id="lorem-count" value="3" min="1" max="20" class="w-20 px-3 py-2 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></div><button onclick="genLorem()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"><i class="fas fa-paragraph"></i> Generate</button><textarea id="lorem-output" rows="8" readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById(\'lorem-output\').value);showToast(\'Copied\')" class="text-sm text-indigo-500 hover:text-indigo-700"><i class="fas fa-copy"></i> Copy</button></div>';
+
+  window.genLorem = function() {
+    var count = parseInt(document.getElementById('lorem-count').value) || 3;
+    document.getElementById('lorem-output').value = Array(count).fill(lorem).join('\n\n');
+  };
+  genLorem();
+};
+
+window.tool_text_clean = function() {
+  var ws = document.getElementById('tool-workspace');
+  ws.innerHTML = '<div class="space-y-4 max-w-2xl"><textarea id="clean-input" rows="6" placeholder="Paste messy text..." class="w-full px-4 py-3 text-sm border rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea><div class="flex flex-wrap gap-2"><button onclick="cleanExtraSpaces()" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">Extra Spaces</button><button onclick="cleanEmptyLines()" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Empty Lines</button><button onclick="cleanSpecialChars()" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">Special Chars</button><button onclick="cleanAll()" class="px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition">Clean All</button></div><textarea id="clean-output" rows="6" placeholder="Result..." readonly class="w-full px-4 py-3 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"></textarea></div>';
+
+  function getClean() { return document.getElementById('clean-input').value; }
+  function setClean(v) { document.getElementById('clean-output').value = v; }
+  window.cleanExtraSpaces = function() { setClean(getClean().replace(/  +/g, ' ').trim()); };
+  window.cleanEmptyLines = function() { setClean(getClean().split('\n').filter(function(l) { return l.trim(); }).join('\n')); };
+  window.cleanSpecialChars = function() { setClean(getClean().replace(/[^\w\s.,!?;:'"()-]/g, '')); };
+  window.cleanAll = function() { setClean(getClean().replace(/  +/g, ' ').split('\n').filter(function(l) { return l.trim(); }).join('\n').replace(/[^\w\s.,!?;:'"()-]/g, '').trim()); };
+};
+
